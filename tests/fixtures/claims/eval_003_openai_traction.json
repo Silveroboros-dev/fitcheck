@@ -1,0 +1,38 @@
+{
+  "_origin": "Wholly authored synthetic public ambiguity fixture.",
+  "input_text": "OpenAI is going to lose enterprise traction by the end of 2026.",
+  "proposal": {
+    "structure": {
+      "schema_version": 1,
+      "claim_summary": "OpenAI loses enterprise traction by end of 2026",
+      "entities": [
+        {"name": "OpenAI", "role": "subject"}
+      ],
+      "event_stage": "measured",
+      "metric": {
+        "what": "enterprise traction (unoperationalized)",
+        "measured_by": "unspecified",
+        "objective": false
+      },
+      "horizon": {
+        "window_start": null,
+        "window_end": "2026-12-31",
+        "timezone": "UTC",
+        "precision": "year"
+      },
+      "mechanism": {
+        "asserted_causal_chain": null,
+        "is_composite": false
+      },
+      "stance": "decrease",
+      "resolution_source_class": "none",
+      "ambiguities": [
+        "'traction' is not operationalized (revenue share? seat count? logo churn?)",
+        "no resolution source named",
+        "decline threshold unspecified"
+      ],
+      "contractible_version": "OpenAI's enterprise revenue share declines year-over-year by 2026-12-31 per company or analyst reporting."
+    },
+    "clarifying_question": "By 'enterprise traction', do you mean enterprise revenue share, enterprise seat count, or named-customer churn?"
+  }
+}

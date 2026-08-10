@@ -1,0 +1,197 @@
+{
+  "snapshot_id": "phase0-frozen-20260522",
+  "as_of_ts": "2026-05-22T00:00:00+00:00",
+  "name": "phase0_fixture",
+  "markets": [
+    {
+      "market_id": "mkt_gemini_lmsys_1",
+      "title": "Will a Google Gemini model rank #1 on LMSYS Chatbot Arena leaderboard on December 31, 2026?",
+      "venue": "SyntheticPhase0",
+      "description": "This market resolves to YES if any model officially released by Google Gemini is listed as rank #1 (or tied for #1) on the English LMSYS Chatbot Arena Leaderboard on Dec 31, 2026, 11:59 PM EST. Otherwise, NO.",
+      "resolution_rules": "This market resolves to YES if any model officially released by Google Gemini is listed as rank #1 (or tied for #1) on the English LMSYS Chatbot Arena Leaderboard on Dec 31, 2026, 11:59 PM EST. Otherwise, NO.",
+      "close_date": "2026-12-31",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "current_probability": 0.45,
+      "liquidity_usd": null,
+      "taxonomy_l1": null,
+      "taxonomy_confidence": null,
+      "taxonomy_low_confidence": null,
+      "tags": [],
+      "source_url": "https://example.invalid/markets/gemini-lmsys-rank-1-2026"
+    },
+    {
+      "market_id": "mkt_gpt5_release_1",
+      "title": "Will OpenAI announce GPT-5 before December 31, 2026?",
+      "venue": "SyntheticPhase0",
+      "description": "This market resolves to YES if OpenAI officially announces a frontier model explicitly named 'GPT-5' or designated as the direct major successor to GPT-4/GPT-4o on or before Dec 31, 2026, 11:59 PM EST. Otherwise, NO.",
+      "resolution_rules": "This market resolves to YES if OpenAI officially announces a frontier model explicitly named 'GPT-5' or designated as the direct major successor to GPT-4/GPT-4o on or before Dec 31, 2026, 11:59 PM EST. Otherwise, NO.",
+      "close_date": "2026-12-31",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "current_probability": 0.65,
+      "liquidity_usd": null,
+      "taxonomy_l1": null,
+      "taxonomy_confidence": null,
+      "taxonomy_low_confidence": null,
+      "tags": [],
+      "source_url": "https://example.invalid/markets/gpt5-announce-2026"
+    },
+    {
+      "market_id": "mkt_msft_stock_high",
+      "title": "Will Microsoft (MSFT) stock close above $500 in 2026?",
+      "venue": "SyntheticPhase0",
+      "description": "This market resolves to YES if Microsoft (MSFT) stock closes above $500 on any trading day on the NASDAQ in the year 2026. Otherwise, NO.",
+      "resolution_rules": "This market resolves to YES if Microsoft (MSFT) stock closes above $500 on any trading day on the NASDAQ in the year 2026. Otherwise, NO.",
+      "close_date": "2026-12-31",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "current_probability": 0.38,
+      "liquidity_usd": null,
+      "taxonomy_l1": null,
+      "taxonomy_confidence": null,
+      "taxonomy_low_confidence": null,
+      "tags": [],
+      "source_url": "https://example.invalid/markets/msft-stock-500-2026"
+    },
+    {
+      "market_id": "mkt_chatgpt_mau_decline",
+      "title": "Will ChatGPT monthly active users decrease in 2026?",
+      "venue": "SyntheticPhase0",
+      "description": "This market resolves to YES if ChatGPT's monthly active users (MAU) as reported by Similarweb or a mutually agreed analyst report falls below the December 2025 baseline in any month of 2026. Otherwise, NO.",
+      "resolution_rules": "This market resolves to YES if ChatGPT's monthly active users (MAU) as reported by Similarweb or a mutually agreed analyst report falls below the December 2025 baseline in any month of 2026. Otherwise, NO.",
+      "close_date": "2026-12-31",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "current_probability": 0.22,
+      "liquidity_usd": null,
+      "taxonomy_l1": null,
+      "taxonomy_confidence": null,
+      "taxonomy_low_confidence": null,
+      "tags": [],
+      "source_url": "https://example.invalid/markets/chatgpt-mau-decline-2026"
+    },
+    {
+      "market_id": "mkt_anthropic_ipo",
+      "title": "Will Anthropic go public or announce an IPO in 2026?",
+      "venue": "SyntheticPhase0",
+      "description": "This market resolves to YES if Anthropic Inc. completes an initial public offering (IPO) or files a Form S-1 with the SEC to list on a major public exchange before Dec 31, 2026, 11:59 PM EST. Otherwise, NO.",
+      "resolution_rules": "This market resolves to YES if Anthropic Inc. completes an initial public offering (IPO) or files a Form S-1 with the SEC to list on a major public exchange before Dec 31, 2026, 11:59 PM EST. Otherwise, NO.",
+      "close_date": "2026-12-31",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "current_probability": 0.15,
+      "liquidity_usd": null,
+      "taxonomy_l1": null,
+      "taxonomy_confidence": null,
+      "taxonomy_low_confidence": null,
+      "tags": [],
+      "source_url": "https://example.invalid/markets/anthropic-ipo-2026"
+    },
+    {
+      "market_id": "mkt_us_ai_act_law",
+      "title": "Will the US pass a major federal AI safety bill into law in 2026?",
+      "venue": "SyntheticPhase0",
+      "description": "This market resolves to YES if the United States Congress passes, and the President signs into law, a federal bill establishing binding safety compliance audits or licensing requirements for AI frontier models in 2026. Otherwise, NO.",
+      "resolution_rules": "This market resolves to YES if the United States Congress passes, and the President signs into law, a federal bill establishing binding safety compliance audits or licensing requirements for AI frontier models in 2026. Otherwise, NO.",
+      "close_date": "2026-12-31",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "current_probability": 0.28,
+      "liquidity_usd": null,
+      "taxonomy_l1": null,
+      "taxonomy_confidence": null,
+      "taxonomy_low_confidence": null,
+      "tags": [],
+      "source_url": "https://example.invalid/markets/us-federal-ai-bill-2026"
+    },
+    {
+      "market_id": "mkt_apple_siri_llm",
+      "title": "Will Apple release a fully on-device local LLM version of Siri by Dec 31, 2026?",
+      "venue": "SyntheticPhase0",
+      "description": "This market resolves to YES if Apple officially ships an iOS version containing a redesigned Siri that executes general conversational queries on-device without cloud routing, using a local Apple LLM, on or before Dec 31, 2026. Otherwise, NO.",
+      "resolution_rules": "This market resolves to YES if Apple officially ships an iOS version containing a redesigned Siri that executes general conversational queries on-device without cloud routing, using a local Apple LLM, on or before Dec 31, 2026. Otherwise, NO.",
+      "close_date": "2026-12-31",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "current_probability": 0.55,
+      "liquidity_usd": null,
+      "taxonomy_l1": null,
+      "taxonomy_confidence": null,
+      "taxonomy_low_confidence": null,
+      "tags": [],
+      "source_url": "https://example.invalid/markets/apple-siri-local-llm-2026"
+    },
+    {
+      "market_id": "mkt_nvidia_revenue_drop",
+      "title": "Will Nvidia quarterly revenue decline year-over-year in 2026?",
+      "venue": "SyntheticPhase0",
+      "description": "This market resolves to YES if Nvidia's reported quarterly revenue in any fiscal quarter of 2026 shows a year-over-year (YoY) percentage decline. Otherwise, NO.",
+      "resolution_rules": "This market resolves to YES if Nvidia's reported quarterly revenue in any fiscal quarter of 2026 shows a year-over-year (YoY) percentage decline. Otherwise, NO.",
+      "close_date": "2026-12-31",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "current_probability": 0.3,
+      "liquidity_usd": null,
+      "taxonomy_l1": null,
+      "taxonomy_confidence": null,
+      "taxonomy_low_confidence": null,
+      "tags": [],
+      "source_url": "https://example.invalid/markets/nvidia-quarterly-revenue-decline-2026"
+    },
+    {
+      "market_id": "mkt_waymo_robotaxi_cities",
+      "title": "Will Waymo operate commercial driverless rides in 5 or more US cities by end-2026?",
+      "venue": "SyntheticPhase0",
+      "description": "This market resolves to YES if Waymo officially opens commercial driverless operations (paid passenger service without safety drivers) to the general public in at least 5 distinct US cities by Dec 31, 2026. Otherwise, NO.",
+      "resolution_rules": "This market resolves to YES if Waymo officially opens commercial driverless operations (paid passenger service without safety drivers) to the general public in at least 5 distinct US cities by Dec 31, 2026. Otherwise, NO.",
+      "close_date": "2026-12-31",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "current_probability": 0.72,
+      "liquidity_usd": null,
+      "taxonomy_l1": null,
+      "taxonomy_confidence": null,
+      "taxonomy_low_confidence": null,
+      "tags": [],
+      "source_url": "https://example.invalid/markets/waymo-5-cities-2026"
+    },
+    {
+      "market_id": "mkt_agentic_payments_volume",
+      "title": "Will Stripe or another major processor announce a dedicated agent-to-agent payment API by Dec 31, 2026?",
+      "venue": "SyntheticPhase0",
+      "description": "This market resolves to YES if Stripe, Adyen, PayPal, or another payments firm with >$10B valuation officially launches a product line or API specifically marketed for autonomous AI agent identity wallet payments. Otherwise, NO.",
+      "resolution_rules": "This market resolves to YES if Stripe, Adyen, PayPal, or another payments firm with >$10B valuation officially launches a product line or API specifically marketed for autonomous AI agent identity wallet payments. Otherwise, NO.",
+      "close_date": "2026-12-31",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "current_probability": 0.4,
+      "liquidity_usd": null,
+      "taxonomy_l1": null,
+      "taxonomy_confidence": null,
+      "taxonomy_low_confidence": null,
+      "tags": [],
+      "source_url": "https://example.invalid/markets/stripe-agent-payment-api-2026"
+    }
+  ]
+}

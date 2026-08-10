@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitCheck — Epistemic Ledger</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23111214'/%3E%3Crect x='4' y='4' width='8' height='8' fill='none' stroke='%23b3905a' stroke-width='1.2'/%3E%3C/svg%3E">
+<style>
+  /* ——— the catalogue of judgments: charcoal room, archival serif, sparse brass ——— */
+  :root {
+    --room:#101113; --panel:#16171a; --panel-2:#1b1c20; --well:#0c0d0f;
+    --ink:#e9e4d8; --ink-dim:#c9c4b8; --mut:#8f8c83; --faint:#6b6960;
+    --line:rgba(233,228,216,.10); --line-soft:rgba(233,228,216,.055);
+    --brass:#b3905a; --brass-bright:#d2ab6e; --brass-dim:rgba(179,144,90,.38);
+    --paper:#ede7d9; --paper-rim:#dcd4c2; --paper-ink:#282520;
+    --bone:#d8d3c6;
+    --serif:"Hoefler Text","Iowan Old Style",Palatino,"Palatino Linotype",Georgia,serif;
+    --sans:"Avenir Next","Helvetica Neue",Helvetica,Arial,sans-serif;
+    --mono:"SF Mono",Menlo,Consolas,monospace;
+  }
+  * { box-sizing:border-box; }
+  html { background:var(--room); }
+  body { margin:0; font:15px/1.55 var(--sans); color:var(--ink);
+         background:
+           radial-gradient(1200px 500px at 18% -8%, rgba(233,228,216,.045), transparent 60%),
+           radial-gradient(900px 420px at 88% 4%, rgba(179,144,90,.05), transparent 55%),
+           var(--room); }
+  /* archival grain — one quiet layer, never decoration-loud */
+  body::after { content:""; position:fixed; inset:0; pointer-events:none; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E"); }
+
+  header { padding:26px 30px 22px; border-bottom:1px solid var(--line);
+           display:flex; justify-content:space-between; align-items:baseline;
+           background:linear-gradient(rgba(233,228,216,.02), transparent); }
+  header h1 { margin:0; font:400 15px/1 var(--sans); letter-spacing:.42em;
+              text-transform:uppercase; color:var(--ink); }
+  header h1::after { content:""; display:inline-block; width:8px; height:8px;
+              margin-left:14px; border:1px solid var(--brass); vertical-align:1px; }
+  header .sub { color:var(--mut); font-size:12.5px; letter-spacing:.02em; }
+  header .sub .tag { margin-left:10px; }
+
+  main { max-width:1020px; margin:0 auto; padding:34px 30px 110px; }
+
+  /* catalogue plates — authored asymmetry: entries step across the room */
+  section { position:relative; background:var(--panel);
+            border:1px solid var(--line-soft); border-top:1px solid var(--line);
+            padding:24px 28px 26px 92px; margin:0 0 26px;
+            box-shadow:0 1px 0 rgba(0,0,0,.5), 0 18px 40px -30px rgba(0,0,0,.85); }
+  section::before { content:attr(data-plate); position:absolute; left:26px; top:20px;
+            font:400 30px/1 var(--serif); color:var(--brass-dim);
+            font-feature-settings:"onum" 1; }
+  #s2 { width:88%; margin-left:auto; }
+  #s4 { width:88%; margin-right:auto; }
+  #s5 { background:transparent; border:none; box-shadow:none; padding-left:92px; }
+  section.stale { opacity:.38; pointer-events:none; filter:saturate(.6); }
+  section { transition:opacity .35s ease; }
+
+  h2 { margin:0 0 14px; font:400 12px/1.4 var(--sans); letter-spacing:.24em;
+       text-transform:uppercase; color:var(--mut); }
+  h2 .tag { letter-spacing:.08em; }
+  .tag { font-size:11px; text-transform:uppercase; letter-spacing:.14em;
+         color:var(--faint); }
+
+  textarea { width:100%; min-height:104px; padding:14px 16px; resize:vertical;
+             background:var(--well); color:var(--ink); border:1px solid var(--line);
+             font:15.5px/1.6 var(--serif); }
+  textarea::placeholder, input::placeholder { color:var(--faint); font-family:var(--sans); font-size:13.5px; }
+  textarea:focus, input:focus, select:focus { outline:none; border-color:var(--brass-dim); }
+
+  button { font:13px/1 var(--sans); letter-spacing:.08em; text-transform:uppercase;
+           padding:11px 20px 10px; cursor:pointer; color:var(--brass-bright);
+           background:linear-gradient(rgba(233,228,216,.045), rgba(233,228,216,.015));
+           border:1px solid var(--brass-dim); transition:border-color .18s, transform .18s; }
+  button:hover:not(:disabled) { border-color:var(--brass); transform:translateY(-1px); }
+  button.secondary { color:var(--ink-dim); border-color:var(--line); }
+  button.secondary:hover:not(:disabled) { border-color:var(--mut); }
+  button:disabled { opacity:.35; cursor:not-allowed; }
+
+  input[type=number], input[type=text], select {
+    font:14px var(--sans); padding:9px 11px; background:var(--well);
+    color:var(--ink); border:1px solid var(--line); }
+  select { appearance:none; padding-right:26px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238f8c83' fill='none'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 9px center; }
+  label { color:var(--mut); font-size:13px; }
+
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:14px; }
+  .status { font-size:11.5px; letter-spacing:.18em; text-transform:uppercase;
+            color:var(--faint); margin-top:10px; }
+  .status .step { margin-right:18px; transition:color .3s; }
+  .step.done { color:var(--brass); }
+  .step.done::before { content:"● "; }
+  .step.pending::before { content:"○ "; }
+  .step.failed { color:var(--bone); }
+  .step.failed::before { content:"✕ "; }
+
+  .error { color:#cfa9a0; font-size:13.5px; margin-top:12px; white-space:pre-wrap;
+           border-left:1px solid #7a5148; padding-left:12px; }
+  .notice { color:var(--ink-dim); font-size:14px; margin-top:8px;
+            font-family:var(--serif); font-style:italic; }
+
+  .kv { display:grid; grid-template-columns:190px 1fr; gap:7px 18px; font-size:14px; }
+  .kv dt { color:var(--faint); font-size:11.5px; letter-spacing:.14em;
+           text-transform:uppercase; padding-top:2px; }
+  .kv dd { margin:0; overflow-wrap:anywhere; }
+  .kv dd.id, .mono { font-family:var(--mono); font-size:12px; color:var(--mut); }
+
+  /* ——— the exhibited judgment ——— */
+  #card { margin-top:22px; animation:reveal .45s ease-out both; }
+  @keyframes reveal { from { opacity:0; transform:translateY(8px); } }
+  .cardhead { display:flex; justify-content:space-between; align-items:flex-end;
+              gap:20px; border-bottom:1px solid var(--line); padding-bottom:16px; }
+  .fitclass { display:inline-block; padding:7px 16px 6px; font:400 13px/1 var(--sans);
+              letter-spacing:.22em; text-transform:uppercase; }
+  .fit-direct { color:#131313; background:var(--brass); }
+  .fit-indirect { color:var(--brass-bright); border:1px solid var(--brass); }
+  .fit-weak_proxy { color:var(--ink-dim); border:1px solid var(--line); }
+  .fit-no_clean_expression { color:var(--bone); border:1px dashed var(--bone); }
+  #fit-conf { margin-left:12px; }
+  .odds { font:400 44px/1 var(--serif); color:var(--brass-bright);
+          font-feature-settings:"onum" 1; letter-spacing:.01em; white-space:nowrap; }
+  .odds small { font:11px/1.3 var(--sans); letter-spacing:.18em; text-transform:uppercase;
+                color:var(--faint); display:block; margin-top:6px; }
+  #market-title { font:400 21px/1.35 var(--serif); color:var(--ink); }
+
+  /* condition report — the intellectual centerpiece */
+  .capmiss { display:grid; grid-template-columns:1fr 1.15fr; gap:0;
+             margin:22px 0 6px; border:1px solid var(--line); }
+  .capmiss > div { padding:18px 20px 20px; }
+  .capmiss .captures { background:var(--panel-2); border-right:1px solid var(--line); }
+  .capmiss .misses { background:linear-gradient(rgba(179,144,90,.05), transparent 65%); }
+  .capmiss h3 { margin:0 0 4px; font:400 11.5px/1.4 var(--sans);
+                letter-spacing:.22em; text-transform:uppercase; color:var(--mut); }
+  .capmiss .misses h3 { color:var(--brass-bright); }
+  .capmiss .lens { font-size:11px; color:var(--faint); font-style:italic;
+                   font-family:var(--serif); display:block; margin-bottom:10px; }
+  .capmiss .body { font:15.5px/1.6 var(--serif); color:var(--ink-dim); }
+  .capmiss .misses .body { color:var(--ink); }
+
+  details { margin-top:18px; border:1px solid var(--line-soft); background:var(--panel-2); }
+  summary { cursor:pointer; padding:12px 16px; list-style:none; }
+  summary::-webkit-details-marker { display:none; }
+  summary::before { content:"—"; color:var(--brass); margin-right:10px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th, td { text-align:left; padding:10px 16px; border-top:1px solid var(--line-soft);
+           vertical-align:top; }
+  th { color:var(--faint); font-weight:400; font-size:11px; letter-spacing:.18em;
+       text-transform:uppercase; }
+  td:first-child { font-family:var(--serif); font-size:14.5px; color:var(--ink-dim);
+                   width:42%; }
+  td:last-child { color:var(--mut); }
+
+  .evidence { font:11.5px/1.7 var(--mono); color:var(--faint);
+              border-top:1px solid var(--line-soft); margin-top:18px; padding-top:12px; }
+
+  /* correction strip — intake, never verdict-adjacent styling */
+  .correction { margin-top:18px; padding:14px 16px; border:1px solid var(--line-soft);
+                background:var(--panel-2); }
+  .correction h3 { margin:0 0 2px; font:400 11.5px/1.4 var(--sans);
+                   letter-spacing:.22em; text-transform:uppercase; color:var(--mut); }
+  .correction .lens { font-size:11px; color:var(--faint); font-style:italic;
+                      font-family:var(--serif); display:block; margin-bottom:6px; }
+  .ack { margin-top:10px; font-size:13px; color:var(--brass);
+         border-left:1px solid var(--brass-dim); padding-left:12px; }
+  td .rowbtn { font-size:10.5px; padding:5px 9px 4px; letter-spacing:.1em; }
+
+  /* the draft: the one archival-paper object in the room */
+  .draft { margin-top:16px; padding:22px 26px; background:var(--paper);
+           color:var(--paper-ink); border:1px solid var(--paper-rim);
+           font:15px/1.65 var(--serif); white-space:pre-wrap;
+           box-shadow:0 14px 34px -18px rgba(0,0,0,.9), inset 0 0 60px rgba(120,100,60,.07); }
+
+  #prior-status { margin-top:12px; color:var(--brass); font-size:13px;
+                  letter-spacing:.04em; }
+  #save-hint { font-size:12.5px; color:var(--faint); }
+  #justification { font-family:var(--serif); }
+
+  /* ledger — the catalogue index */
+  #entries { margin:0; padding:0; list-style:none; }
+  li.entry { cursor:pointer; padding:12px 2px; border-bottom:1px solid var(--line-soft);
+             font:15.5px/1.5 var(--serif); color:var(--ink-dim);
+             transition:color .15s, padding-left .15s; }
+  li.entry::before { content:"№ "; color:var(--brass-dim); font-size:13px; }
+  li.entry:hover { color:var(--ink); padding-left:8px; }
+  #entries-empty { color:var(--faint); font-style:italic; font-family:var(--serif); }
+  #entry-detail { animation:reveal .45s ease-out both; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #card, #entry-detail { animation:none; }
+    button, section, .step, li.entry { transition:none; }
+  }
+  @media (max-width:760px) {
+    section, #s5 { padding-left:28px; width:auto; }
+    section::before { position:static; display:block; margin-bottom:8px; }
+    .capmiss { grid-template-columns:1fr; }
+    .capmiss .captures { border-right:none; border-bottom:1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>FitCheck</h1>
+  <div class="sub">event-risk legibility — the model proposes, deterministic gates decide
+    <span id="mode" class="tag"></span></div>
+</header>
+<main>
+
+<section id="s1" data-plate="01">
+  <h2>Thesis intake</h2>
+  <textarea id="input_text" placeholder="Paste a messy thesis, post, or source text…"></textarea>
+  <div class="row">
+    <button id="run">Run analysis</button>
+    <span class="status">
+      <span class="step pending" id="st-extract">extract</span>
+      <span class="step pending" id="st-retrieve">retrieve</span>
+      <span class="step pending" id="st-fit">fit</span>
+      <span class="step pending" id="st-ledger">ledger-ready</span>
+    </span>
+  </div>
+  <div id="s1-out" hidden>
+    <dl class="kv" style="margin-top:18px">
+      <dt>Normalized thesis</dt><dd style="font-family:var(--serif); font-size:16px" id="norm-summary"></dd>
+      <dt>Analysis id</dt><dd id="thesis-id" class="id"></dd>
+    </dl>
+  </div>
+  <div class="error" id="s1-err" hidden></div>
+</section>
+
+<section id="s2" class="stale" data-plate="02">
+  <h2>Blind prior <span class="tag">before market context</span></h2>
+  <p class="notice" style="margin:0 0 6px">Record your probability before any market
+     odds are shown. This is write-once for this thesis.</p>
+  <div class="row">
+    <label>P(thesis true) <input id="prior-p" type="number" min="0" max="1" step="0.01" style="width:90px"></label>
+    <select id="prior-conf">
+      <option value="">confidence…</option>
+      <option value="low">low</option>
+      <option value="medium">medium</option>
+      <option value="high">high</option>
+    </select>
+    <input id="prior-reason" type="text" placeholder="optional note" style="flex:1">
+    <button id="submit-prior" class="secondary">Lock blind prior</button>
+  </div>
+  <div class="status" id="prior-status"></div>
+  <div class="error" id="s2-err" hidden></div>
+</section>
+
+<section id="s3" class="stale" data-plate="03">
+  <h2>Market Fit Card</h2>
+  <div class="row"><button id="classify">Classify market fit</button></div>
+  <div id="card" hidden>
+    <div class="cardhead">
+      <div>
+        <span class="fitclass" id="fit-class"></span>
+        <span class="tag" id="fit-conf"></span>
+        <div id="market-title" style="margin-top:14px"></div>
+      </div>
+      <div class="odds" id="odds"></div>
+    </div>
+    <dl class="kv" style="margin-top:16px">
+      <dt>Best available expression</dt><dd id="market-id" class="id"></dd>
+      <dt>Horizon match</dt><dd id="horizon"></dd>
+      <dt>Resolution risk</dt><dd id="res-risk"></dd>
+    </dl>
+    <div class="capmiss">
+      <div class="captures">
+        <h3>What this market captures</h3>
+        <span class="lens">what the resolution rules can actually see</span>
+        <div class="body" id="captures"></div>
+      </div>
+      <div class="misses">
+        <h3>What it misses</h3>
+        <span class="lens">the gap where a false-strong temptation hides</span>
+        <div class="body" id="misses"></div>
+      </div>
+    </div>
+    <div id="noclean" hidden>
+      <p class="notice">No clean expression exists for this thesis in the candidate
+         set — that is the verdict, not a failure. A draft contract candidate can
+         describe the market that <em>would</em> test it.</p>
+      <div class="row"><button id="draft-btn" class="secondary">Preview draft contract candidate</button></div>
+      <div class="draft" id="draft" hidden></div>
+    </div>
+    <details open>
+      <summary class="tag">Rejected tempting markets — why the gate said no</summary>
+      <table id="rejected"><thead><tr><th>market</th><th>reason</th><th></th></tr></thead><tbody></tbody></table>
+    </details>
+    <div class="correction" id="correction-strip">
+      <h3>Disagree with this judgment?</h3>
+      <span class="lens">a correction becomes a review candidate for human review — this card does not change</span>
+      <div class="row">
+        <select id="correct-class">
+          <option value="">the fit class should be…</option>
+          <option value="direct">direct</option>
+          <option value="indirect">indirect</option>
+          <option value="weak_proxy">weak proxy</option>
+          <option value="no_clean_expression">no clean expression</option>
+        </select>
+        <input id="correct-note" type="text" placeholder="required: what did the gate miss?" style="flex:1">
+        <button id="correct-btn" class="secondary">Record correction</button>
+      </div>
+      <div class="row" id="reject-form" hidden>
+        <span class="tag">market <span id="reject-market-label" class="mono"></span> — does not express my thesis:</span>
+        <input id="reject-reason" type="text" placeholder="required: why not?" style="flex:1">
+        <button id="reject-btn" class="secondary">Record rejection</button>
+      </div>
+      <div class="ack" id="correction-ack" hidden></div>
+      <div class="error" id="correction-err" hidden></div>
+    </div>
+    <div class="evidence" id="evidence"></div>
+  </div>
+  <div class="error" id="s3-err" hidden></div>
+</section>
+
+<section id="s4" class="stale" data-plate="04">
+  <h2>Conviction &amp; save</h2>
+  <div class="row">
+    <select id="conviction">
+      <option value="">conviction…</option>
+      <option value="exploring">exploring</option>
+      <option value="leaning">leaning</option>
+      <option value="conviction">conviction</option>
+    </select>
+    <select id="exposure">
+      <option value="">hypothetical exposure…</option>
+      <option>$10</option><option>$25</option><option>$50</option>
+      <option>$100</option><option>$250</option><option>$500+</option>
+    </select>
+  </div>
+  <textarea id="justification" placeholder="Required: why do you hold this view? (your words become part of the ledger record)" style="min-height:76px; margin-top:14px"></textarea>
+  <div class="row">
+    <button id="save" disabled>Save to ledger</button>
+    <span id="save-hint">conviction, exposure and justification are required</span>
+  </div>
+  <div class="error" id="s4-err" hidden></div>
+</section>
+
+<section id="s5" data-plate="05">
+  <h2>Ledger</h2>
+  <ul id="entries"></ul>
+  <div id="entries-empty">no saved entries yet</div>
+  <div id="entry-detail" hidden>
+    <dl class="kv" style="margin-top:18px">
+      <dt>Original thesis</dt><dd style="font-family:var(--serif); font-size:16px" id="e-thesis"></dd>
+      <dt>Fit class</dt><dd id="e-fit"></dd>
+      <dt>Linked market</dt><dd id="e-market"></dd>
+      <dt>Odds at entry</dt><dd id="e-odds"></dd>
+      <dt>Conviction record</dt><dd id="e-justification" style="font-family:var(--serif)"></dd>
+      <dt>Attestation</dt><dd id="e-attest"></dd>
+      <dt>Saved</dt><dd id="e-created" class="id"></dd>
+    </dl>
+  </div>
+</section>
+
+</main>
+<script>
+"use strict";
+// Current chain identity — every downstream render is bound to these ids.
+// A response whose ids do not match the current chain is dropped (contract
+// §Stale-state clearing rules).
+const chain = { thesisId: null, fitCardId: null };
+
+const $ = (id) => document.getElementById(id);
+const stale = (id, on) => $(id).classList.toggle("stale", on);
+const err = (id, msg) => { const el = $(id); el.hidden = !msg; el.textContent = msg || ""; };
+const step = (id, state) => { $(id).className = "step " + state; };
+
+function resetDownstream() {
+  // A new/changed thesis clears ALL downstream state (AC-4).
+  chain.thesisId = null; chain.fitCardId = null;
+  ["s2","s3","s4"].forEach((s) => stale(s, true));
+  $("s1-out").hidden = true;
+  $("card").hidden = true; $("draft").hidden = true; $("noclean").hidden = true;
+  $("prior-status").textContent = "";
+  ["st-extract","st-retrieve","st-fit","st-ledger"].forEach((s) => step(s, "pending"));
+  ["s1-err","s2-err","s3-err","s4-err"].forEach((e) => err(e, null));
+  // Contract §Stale-state: the conviction form is part of the cleared chain —
+  // a justification written for one thesis must never ride into the next.
+  $("conviction").value = ""; $("exposure").value = "";
+  $("justification").value = ""; $("prior-p").value = "";
+  $("prior-conf").value = ""; $("prior-reason").value = "";
+  // Correction-loop contract: correction forms and acknowledgments are
+  // chain state too — never carried across theses.
+  $("correct-class").value = ""; $("correct-note").value = "";
+  $("reject-form").hidden = true; $("reject-reason").value = "";
+  $("correction-ack").hidden = true; err("correction-err", null);
+  $("save").disabled = true;
+}
+
+async function api(path, opts) {
+  const res = await fetch(path, Object.assign({
+    headers: { "Content-Type": "application/json" } }, opts));
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(body.detail || body.error || res.status), body, { httpStatus: res.status });
+  return body;
+}
+
+$("input_text").addEventListener("input", resetDownstream);
+
+$("run").onclick = async () => {
+  resetDownstream();
+  try {
+    const out = await api("/api/thesis", { method: "POST",
+      body: JSON.stringify({ input_text: $("input_text").value }) });
+    chain.thesisId = out.thesis_analysis_id;
+    $("norm-summary").textContent = out.normalized_claim_summary;
+    $("thesis-id").textContent = out.thesis_analysis_id;
+    $("s1-out").hidden = false;
+    step("st-extract", "done");
+    stale("s2", false); stale("s3", false);
+  } catch (e) {
+    step("st-extract", "failed");
+    const reasons = e.reasons ? "\n· " + e.reasons.join("\n· ") : "";
+    err("s1-err", (e.httpStatus === 503 ?
+      "model service unavailable — " + (e.detail || "") :
+      "analysis refused — no analysis was created") + reasons);
+  }
+};
+
+$("submit-prior").onclick = async () => {
+  if (!chain.thesisId) return;
+  const thesisAtCall = chain.thesisId;
+  err("s2-err", null);
+  try {
+    const out = await api(`/api/thesis/${thesisAtCall}/blind-prior`, { method: "POST",
+      body: JSON.stringify({
+        prior_probability: parseFloat($("prior-p").value),
+        prior_confidence: $("prior-conf").value || null,
+        prior_reason: $("prior-reason").value || null }) });
+    if (thesisAtCall !== chain.thesisId) return; // stale response — drop
+    $("prior-status").textContent = "blind prior locked (" + out.status + ") — odds may now be revealed";
+  } catch (e) { err("s2-err", e.message); }
+};
+
+$("classify").onclick = async () => {
+  if (!chain.thesisId) return;
+  const thesisAtCall = chain.thesisId;
+  err("s3-err", null);
+  step("st-retrieve", "pending"); step("st-fit", "pending");
+  try {
+    const c = await api(`/api/thesis/${thesisAtCall}/classify`, { method: "POST" });
+    if (thesisAtCall !== chain.thesisId || c.thesis_analysis_id !== chain.thesisId) return;
+    chain.fitCardId = c.fit_card_id;
+    step("st-retrieve", "done"); step("st-fit", "done");
+    renderCard(c);
+    stale("s4", false);
+    updateSaveGate();
+    step("st-ledger", "done");
+  } catch (e) {
+    if (e.error === "blind_prior_required") {
+      err("s3-err", "a blind prior is required before odds can be revealed — lock it in step 2 first");
+      step("st-fit", "failed");
+    } else if (e.httpStatus === 503) {
+      err("s3-err", "retrieval/model service unavailable — " + (e.detail || ""));
+      step("st-retrieve", "failed");
+    } else { err("s3-err", e.message); step("st-fit", "failed"); }
+  }
+};
+
+function renderCard(c) {
+  $("card").hidden = false;
+  const cls = c.semantic_fit_class;
+  const label = { direct: "direct", indirect: "indirect", weak_proxy: "weak proxy",
+                  no_clean_expression: "no clean expression" }[cls] || cls;
+  const fc = $("fit-class"); fc.textContent = label; fc.className = "fitclass fit-" + cls;
+  $("fit-conf").textContent = c.fit_confidence == null ? "" :
+    "gate confidence " + c.fit_confidence.toFixed(2);
+  const oddsEl = $("odds");
+  if (c.current_odds == null) { oddsEl.innerHTML = ""; }
+  else {
+    oddsEl.textContent = (100 * c.current_odds).toFixed(0) + "%";
+    const side = document.createElement("small");
+    side.textContent = "market · " + (c.odds_side || "?") + " side";
+    oddsEl.append(side);
+  }
+  $("market-title").textContent = c.recommended_market ?
+    (c.recommended_market.title || "(title unavailable)") : "— none recommended";
+  $("market-id").textContent = c.recommended_market_id || "—";
+  $("horizon").textContent = c.horizon_match || "—";
+  $("res-risk").textContent = c.resolution_risk || "—";
+  $("captures").textContent = c.what_it_captures || "—";
+  $("misses").textContent = c.what_it_misses || "—";
+  $("noclean").hidden = cls !== "no_clean_expression";
+  const tbody = $("rejected").querySelector("tbody");
+  tbody.innerHTML = "";
+  const surfaced = [];
+  if (c.recommended_market_id) surfaced.push(c.recommended_market_id);
+  for (const r of c.rejected_markets) {
+    surfaced.push(r.market_id);
+    const tr = document.createElement("tr");
+    const name = document.createElement("td");
+    name.textContent = (r.title || r.market_id);
+    const why = document.createElement("td"); why.textContent = r.reason;
+    const act = document.createElement("td");
+    const btn = document.createElement("button");
+    btn.className = "secondary rowbtn";
+    btn.textContent = "does not express my thesis";
+    btn.onclick = () => openRejectForm(r.market_id);
+    act.append(btn);
+    tr.append(name, why, act); tbody.append(tr);
+  }
+  // The recommended market is contestable too — same intake path.
+  const midEl = $("market-id");
+  midEl.textContent = c.recommended_market_id || "—";
+  if (c.recommended_market_id) {
+    const btn = document.createElement("button");
+    btn.className = "secondary rowbtn";
+    btn.style.marginLeft = "12px";
+    btn.textContent = "does not express my thesis";
+    btn.onclick = () => openRejectForm(c.recommended_market_id);
+    midEl.append(btn);
+  }
+  const ev = c.candidate_evidence;
+  $("evidence").textContent =
+    "candidate markets — retrieval evidence, not a verdict · snapshot " + ev.snapshot_id +
+    " · " + ev.candidate_count + " candidates, " + ev.structures_extracted +
+    " structured, " + ev.rejected_count + " rejected, " + ev.skipped_ineligible +
+    " ineligible · gate " + (c.provenance.gate_policy_version || "?");
+}
+
+// --- correction loop: intake only; the card is never altered -------------
+function openRejectForm(marketId) {
+  $("reject-form").hidden = false;
+  $("reject-market-label").textContent = marketId;
+  $("reject-reason").value = "";
+  $("reject-reason").focus();
+}
+
+function showAck(out) {
+  const el = $("correction-ack"); el.hidden = false;
+  el.textContent = out.already_recorded
+    ? "already recorded (review candidate " + out.review_candidate_id + ") — pending human review; this card is unchanged"
+    : "recorded as review candidate " + out.review_candidate_id + " — pending human review; this card is unchanged";
+}
+
+$("correct-btn").onclick = async () => {
+  if (!chain.fitCardId) return;
+  const cardAtCall = chain.fitCardId;
+  err("correction-err", null);
+  if (!$("correct-class").value || !$("correct-note").value.trim()) {
+    err("correction-err", "a corrected class and a note are both required");
+    return;
+  }
+  try {
+    const out = await api(`/api/fit-card/${cardAtCall}/correct`, { method: "POST",
+      body: JSON.stringify({
+        corrected_class: $("correct-class").value,
+        note: $("correct-note").value }) });
+    if (cardAtCall !== chain.fitCardId) return; // stale response — drop
+    showAck(out);
+  } catch (e) { err("correction-err", e.message); }
+};
+
+$("reject-btn").onclick = async () => {
+  if (!chain.fitCardId) return;
+  const cardAtCall = chain.fitCardId;
+  err("correction-err", null);
+  if (!$("reject-reason").value.trim()) {
+    err("correction-err", "a reason is required");
+    return;
+  }
+  try {
+    const out = await api(`/api/fit-card/${cardAtCall}/reject-market`, { method: "POST",
+      body: JSON.stringify({
+        market_id: $("reject-market-label").textContent,
+        reason: $("reject-reason").value }) });
+    if (cardAtCall !== chain.fitCardId) return;
+    showAck(out);
+  } catch (e) { err("correction-err", e.message); }
+};
+
+$("draft-btn").onclick = async () => {
+  if (!chain.fitCardId) return;
+  const cardAtCall = chain.fitCardId;
+  try {
+    const d = await api(`/api/fit-card/${cardAtCall}/draft-preview`, { method: "POST" });
+    if (cardAtCall !== chain.fitCardId) return;
+    const el = $("draft"); el.hidden = false;
+    el.textContent = d.generated
+      ? "shape-valid draft candidate — NOT a live market\n\n" + d.proposed_title +
+        "\n\n" + d.proposed_resolution_logic + "\n\nresolution source: " +
+        d.resolution_source + " · deadline: " + d.resolution_deadline
+      : "no draft candidate available (gate verdict: " + (d.gate_verdict || "none") + ")";
+  } catch (e) { err("s3-err", e.message); }
+};
+
+function updateSaveGate() {
+  const ready = chain.fitCardId && $("conviction").value && $("exposure").value &&
+    $("justification").value.trim().length > 0;
+  $("save").disabled = !ready;
+}
+["conviction","exposure","justification"].forEach((id) =>
+  $(id).addEventListener("input", updateSaveGate));
+
+$("save").onclick = async () => {
+  if (!chain.fitCardId) return;
+  const cardAtCall = chain.fitCardId;
+  err("s4-err", null);
+  try {
+    const e = await api(`/api/fit-card/${cardAtCall}/ledger`, { method: "POST",
+      body: JSON.stringify({
+        conviction_level: $("conviction").value,
+        intended_exposure_bucket: $("exposure").value,
+        user_justification: $("justification").value }) });
+    if (cardAtCall !== chain.fitCardId) return;
+    await loadLedger();
+    showEntry(e);
+  } catch (ex) {
+    const v = ex.violations ? "\n· " + ex.violations.join("\n· ") : "";
+    err("s4-err", "save rejected" + v);
+  }
+};
+
+async function loadLedger() {
+  const out = await api("/api/ledger");
+  const ul = $("entries"); ul.innerHTML = "";
+  $("entries-empty").hidden = out.entries.length > 0;
+  for (const e of out.entries) {
+    const li = document.createElement("li");
+    li.className = "entry";
+    li.textContent = (e.thesis_summary || e.id) + " — " +
+      (e.fit_class || "?") + (e.linked_market_id ? " · " + e.linked_market_id : "");
+    li.onclick = () => api(`/api/ledger/${e.id}`).then(showEntry);
+    ul.append(li);
+  }
+}
+
+function showEntry(e) {
+  $("entry-detail").hidden = false;
+  $("e-thesis").textContent = e.thesis_summary || "—";
+  $("e-fit").textContent = e.fit_class || "—";
+  $("e-market").textContent = e.linked_market_title
+    ? e.linked_market_title + " (" + e.linked_market_id + ")"
+    : (e.linked_market_id || "— no linked market (no clean expression)");
+  $("e-odds").textContent = e.odds_at_entry == null ? "— (saved without market odds)" :
+    (100 * e.odds_at_entry).toFixed(0) + "% on the " + (e.odds_at_entry_side || "?") + " side at save time";
+  $("e-justification").textContent = e.user_justification || "—";
+  $("e-attest").textContent = (e.attestation_status || "?") + " · " + (e.client_type || "");
+  $("e-created").textContent = e.created_at || "";
+}
+
+api("/api/health").then((h) => { $("mode").textContent = "mode: " + h.mode; });
+loadLedger();
+</script>
+</body>
+</html>

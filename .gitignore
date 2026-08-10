@@ -1,0 +1,35 @@
+# Environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+.venv/
+venv/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Local runtime state
+*.db
+*.sqlite
+*.sqlite3
+outputs/
+
+# Private working material
+.agents/
+.claude/
+.obsidian/
+data/
+vendor/
+
+# Editor and operating-system state
+.DS_Store
+.idea/
+.vscode/
+*.swp

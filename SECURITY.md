@@ -1,0 +1,52 @@
+# Security policy
+
+## Reporting a vulnerability
+
+Use GitHub private vulnerability reporting for suspected vulnerabilities. Do
+not open a public issue for an unpatched security problem, credential exposure,
+authentication bypass, private-data disclosure, or dependency exploit.
+
+Before publication, the repository owner must enable private vulnerability
+reporting, secret scanning, push protection, dependency alerts, and code
+scanning in the repository security settings.
+
+Include the affected revision, a minimal reproduction, expected and observed
+behavior, impact, and any suggested mitigation. Do not include real
+credentials, governed review rows, provider responses, or production data in a
+report. Maintainers should acknowledge a valid private report before discussing
+disclosure timing.
+
+## Supported surface
+
+Only the current default branch is supported. Historical snapshots, forks,
+local modifications, optional third-party integrations, and deployments made
+from this fixture Dockerfile are not supported security surfaces.
+
+## Deployment security boundary
+
+Source availability is not an authorization mechanism. A deployment derived
+from this code must independently enforce, at minimum:
+
+- IAM authentication at the Cloud Run edge; application API keys are not a
+  substitute for platform authentication.
+- A dedicated least-privilege runtime service account rather than a default
+  project-wide identity.
+- Per-secret access in Secret Manager, with deployed versions pinned.
+- Cloud SQL connector enforcement, encrypted connections, bounded connection
+  pools, backups, point-in-time recovery, and deletion protection.
+- Instance, quota, and billing limits suitable for an internet-discoverable
+  workload.
+- Log redaction for thesis text, model/provider payloads, credentials, and
+  database connection material.
+
+The included Dockerfile intentionally runs only the credential-free fixture UI.
+It does not implement production identity, migrations, or external-provider
+access.
+
+## Maintainer handling rules
+
+- Never request that a reporter paste a secret into an issue or pull request.
+- Revoke exposed credentials before attempting repository-history cleanup.
+- Treat governed review data and external-provider payloads as private even
+  when they do not contain credentials.
+- Test security fixes with synthetic data and a non-production project.

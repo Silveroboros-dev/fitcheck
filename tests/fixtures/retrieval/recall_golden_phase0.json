@@ -1,0 +1,384 @@
+{
+  "name": "synthetic_recall_sentinels_v1",
+  "provenance": "Wholly authored synthetic recall sentinels for deterministic regression tests; not governed review data or a statistical benchmark.",
+  "cases": [
+    {
+      "case_id": "eval_001",
+      "structure": {
+        "schema_version": 1,
+        "claim_summary": "Gemini ranks #1 on LMSYS Chatbot Arena by the end of 2026.",
+        "entities": [
+          {
+            "name": "Google Gemini",
+            "role": "subject"
+          },
+          {
+            "name": "LMSYS Chatbot Arena",
+            "role": "venue"
+          }
+        ],
+        "event_stage": "measured",
+        "metric": {
+          "what": "LMSYS Chatbot Arena #1 rank",
+          "measured_by": "LMSYS leaderboard",
+          "objective": true
+        },
+        "horizon": {
+          "window_start": null,
+          "window_end": "2026-12-31",
+          "timezone": "UTC",
+          "precision": "day"
+        },
+        "mechanism": {
+          "asserted_causal_chain": null,
+          "is_composite": false
+        },
+        "stance": "yes",
+        "resolution_source_class": "leaderboard",
+        "ambiguities": [],
+        "contractible_version": "Will a Google Gemini model rank #1 on the LMSYS Chatbot Arena English leaderboard on December 31, 2026?"
+      },
+      "recommended_market_id": "mkt_gemini_lmsys_1",
+      "tempting_market_ids": []
+    },
+    {
+      "case_id": "eval_002",
+      "structure": {
+        "schema_version": 1,
+        "claim_summary": "OpenAI releases GPT-5 by December 2026.",
+        "entities": [
+          {
+            "name": "OpenAI",
+            "role": "subject"
+          },
+          {
+            "name": "GPT-5",
+            "role": "object"
+          }
+        ],
+        "event_stage": "launched",
+        "metric": {
+          "what": "GPT-5 public release",
+          "measured_by": "OpenAI announcement",
+          "objective": true
+        },
+        "horizon": {
+          "window_start": null,
+          "window_end": "2026-12-31",
+          "timezone": "UTC",
+          "precision": "day"
+        },
+        "mechanism": {
+          "asserted_causal_chain": null,
+          "is_composite": false
+        },
+        "stance": "yes",
+        "resolution_source_class": "press",
+        "ambiguities": [],
+        "contractible_version": "Will OpenAI publicly release GPT-5 (or its designated direct successor) on or before December 31, 2026?"
+      },
+      "recommended_market_id": null,
+      "tempting_market_ids": ["mkt_gpt5_release_1"]
+    },
+    {
+      "case_id": "eval_003",
+      "structure": {
+        "schema_version": 1,
+        "claim_summary": "OpenAI experiences a decline in enterprise traction by end-2026.",
+        "entities": [
+          {
+            "name": "OpenAI",
+            "role": "subject"
+          }
+        ],
+        "event_stage": "measured",
+        "metric": {
+          "what": "enterprise traction decline",
+          "measured_by": "unspecified",
+          "objective": false
+        },
+        "horizon": {
+          "window_start": null,
+          "window_end": "2026-12-31",
+          "timezone": "UTC",
+          "precision": "day"
+        },
+        "mechanism": {
+          "asserted_causal_chain": null,
+          "is_composite": false
+        },
+        "stance": "decrease",
+        "resolution_source_class": "none",
+        "ambiguities": [],
+        "contractible_version": "Will OpenAI's enterprise revenue or market share decline by Dec 31, 2026?"
+      },
+      "recommended_market_id": null,
+      "tempting_market_ids": [
+        "mkt_msft_stock_high",
+        "mkt_chatgpt_mau_decline"
+      ]
+    },
+    {
+      "case_id": "eval_004",
+      "structure": {
+        "schema_version": 1,
+        "claim_summary": "Waymo operates commercial driverless passenger rides in 5 or more US cities by end-2026.",
+        "entities": [
+          {
+            "name": "Waymo",
+            "role": "subject"
+          }
+        ],
+        "event_stage": "adopted",
+        "metric": {
+          "what": "commercial driverless rides in 5+ US cities",
+          "measured_by": "Waymo service availability",
+          "objective": true
+        },
+        "horizon": {
+          "window_start": null,
+          "window_end": "2026-12-31",
+          "timezone": "UTC",
+          "precision": "day"
+        },
+        "mechanism": {
+          "asserted_causal_chain": null,
+          "is_composite": false
+        },
+        "stance": "yes",
+        "resolution_source_class": "press",
+        "ambiguities": [],
+        "contractible_version": "Will Waymo operate commercial driverless rides in 5 or more US cities by December 31, 2026?"
+      },
+      "recommended_market_id": "mkt_waymo_robotaxi_cities",
+      "tempting_market_ids": []
+    },
+    {
+      "case_id": "eval_005",
+      "structure": {
+        "schema_version": 1,
+        "claim_summary": "Apple releases local Siri with an on-device LLM by the end of 2026.",
+        "entities": [
+          {
+            "name": "Apple",
+            "role": "subject"
+          },
+          {
+            "name": "Siri",
+            "role": "object"
+          }
+        ],
+        "event_stage": "shipped",
+        "metric": {
+          "what": "on-device LLM Siri release",
+          "measured_by": "Apple release",
+          "objective": true
+        },
+        "horizon": {
+          "window_start": null,
+          "window_end": "2026-12-31",
+          "timezone": "UTC",
+          "precision": "day"
+        },
+        "mechanism": {
+          "asserted_causal_chain": null,
+          "is_composite": false
+        },
+        "stance": "yes",
+        "resolution_source_class": "press",
+        "ambiguities": [],
+        "contractible_version": "Will Apple release a fully on-device local LLM version of Siri on or before December 31, 2026?"
+      },
+      "recommended_market_id": "mkt_apple_siri_llm",
+      "tempting_market_ids": []
+    },
+    {
+      "case_id": "eval_006",
+      "structure": {
+        "schema_version": 1,
+        "claim_summary": "Stripe's transaction volume from autonomous AI agents exceeds volume from humans by the end of 2026.",
+        "entities": [
+          {
+            "name": "Stripe",
+            "role": "subject"
+          }
+        ],
+        "event_stage": "measured",
+        "metric": {
+          "what": "AI-agent share of Stripe payment volume exceeds human share",
+          "measured_by": "Stripe disclosures",
+          "objective": false
+        },
+        "horizon": {
+          "window_start": null,
+          "window_end": "2026-12-31",
+          "timezone": "UTC",
+          "precision": "day"
+        },
+        "mechanism": {
+          "asserted_causal_chain": null,
+          "is_composite": false
+        },
+        "stance": "yes",
+        "resolution_source_class": "none",
+        "ambiguities": [],
+        "contractible_version": "Will Stripe's transaction volume initiated by autonomous AI agents exceed volume initiated by humans by December 31, 2026?"
+      },
+      "recommended_market_id": null,
+      "tempting_market_ids": [
+        "mkt_agentic_payments_volume"
+      ]
+    },
+    {
+      "case_id": "eval_007",
+      "structure": {
+        "schema_version": 1,
+        "claim_summary": "Federal AI regulation in the US slows or restricts startup deployment in 2026.",
+        "entities": [
+          {
+            "name": "US Congress",
+            "role": "subject"
+          },
+          {
+            "name": "AI regulation",
+            "role": "object"
+          }
+        ],
+        "event_stage": "measured",
+        "metric": {
+          "what": "startup AI deployment restricted by federal regulation",
+          "measured_by": "unspecified",
+          "objective": false
+        },
+        "horizon": {
+          "window_start": null,
+          "window_end": "2026-12-31",
+          "timezone": "UTC",
+          "precision": "day"
+        },
+        "mechanism": {
+          "asserted_causal_chain": "federal AI regulation restricts startup deployment",
+          "is_composite": false
+        },
+        "stance": "yes",
+        "resolution_source_class": "none",
+        "ambiguities": [],
+        "contractible_version": "Will the United States pass federal regulation that restricts AI startup deployments in 2026?"
+      },
+      "recommended_market_id": null,
+      "tempting_market_ids": [
+        "mkt_us_ai_act_law"
+      ]
+    },
+    {
+      "case_id": "eval_008",
+      "structure": {
+        "schema_version": 1,
+        "claim_summary": "Anthropic raises funding at a valuation of $100 Billion or more by December 2026.",
+        "entities": [
+          {
+            "name": "Anthropic",
+            "role": "subject"
+          }
+        ],
+        "event_stage": "announced",
+        "metric": {
+          "what": "funding round at $100B+ valuation",
+          "measured_by": "press reports",
+          "objective": true
+        },
+        "horizon": {
+          "window_start": null,
+          "window_end": "2026-12-31",
+          "timezone": "UTC",
+          "precision": "day"
+        },
+        "mechanism": {
+          "asserted_causal_chain": null,
+          "is_composite": false
+        },
+        "stance": "yes",
+        "resolution_source_class": "press",
+        "ambiguities": [],
+        "contractible_version": "Will Anthropic raise a funding round valuing the company at $100 Billion or more by December 31, 2026?"
+      },
+      "recommended_market_id": null,
+      "tempting_market_ids": [
+        "mkt_anthropic_ipo"
+      ]
+    },
+    {
+      "case_id": "eval_009",
+      "structure": {
+        "schema_version": 1,
+        "claim_summary": "Nvidia's financial performance or revenue drops due to GPU oversupply in 2026.",
+        "entities": [
+          {
+            "name": "Nvidia",
+            "role": "subject"
+          }
+        ],
+        "event_stage": "measured",
+        "metric": {
+          "what": "quarterly revenue decline",
+          "measured_by": "Nvidia earnings reports",
+          "objective": true
+        },
+        "horizon": {
+          "window_start": null,
+          "window_end": "2026-12-31",
+          "timezone": "UTC",
+          "precision": "day"
+        },
+        "mechanism": {
+          "asserted_causal_chain": "GPU oversupply causes revenue decline",
+          "is_composite": false
+        },
+        "stance": "decrease",
+        "resolution_source_class": "official",
+        "ambiguities": [],
+        "contractible_version": "Will Nvidia report a quarterly revenue decline year-over-year in 2026 due to oversupply?"
+      },
+      "recommended_market_id": "mkt_nvidia_revenue_drop",
+      "tempting_market_ids": []
+    },
+    {
+      "case_id": "eval_010",
+      "structure": {
+        "schema_version": 1,
+        "claim_summary": "Microsoft releases an autonomous financial agent product line by early 2026.",
+        "entities": [
+          {
+            "name": "Microsoft",
+            "role": "subject"
+          }
+        ],
+        "event_stage": "launched",
+        "metric": {
+          "what": "autonomous financial agent product line release",
+          "measured_by": "Microsoft announcement",
+          "objective": true
+        },
+        "horizon": {
+          "window_start": null,
+          "window_end": "2026-04-30",
+          "timezone": "UTC",
+          "precision": "month"
+        },
+        "mechanism": {
+          "asserted_causal_chain": null,
+          "is_composite": false
+        },
+        "stance": "yes",
+        "resolution_source_class": "press",
+        "ambiguities": [],
+        "contractible_version": "Will Microsoft launch an autonomous AI financial agent product line on or before April 30, 2026?"
+      },
+      "recommended_market_id": null,
+      "tempting_market_ids": [
+        "mkt_msft_stock_high",
+        "mkt_agentic_payments_volume"
+      ]
+    }
+  ]
+}

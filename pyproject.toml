@@ -1,0 +1,36 @@
+[project]
+name = "fitcheck"
+version = "0.1.0"
+description = "FitCheck by Epistemic Ledger — expression-risk layer for prediction markets"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = [
+    "pydantic>=2.7",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "fastapi>=0.111",
+    "uvicorn>=0.30,<1",
+    "google-genai>=1.16",
+    "mcp>=1.2,<2",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.1"]
+dev = ["pytest>=8.0", "httpx>=0.27", "polars>=0.19.0"]
+demo = ["google-adk>=2.2", "google-auth[requests]>=2.14"]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["el*", "demo*"]
+
+[tool.setuptools.package-data]
+"el.product" = ["static/*.html"]
+"el.review" = ["static/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

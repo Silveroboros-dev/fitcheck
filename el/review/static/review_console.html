@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FitCheck Review Console</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f6f7f9;
+      color: #15181d;
+    }
+    body {
+      margin: 0;
+    }
+    main {
+      display: grid;
+      grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+      min-height: 100vh;
+    }
+    aside {
+      border-right: 1px solid #d8dde6;
+      background: #ffffff;
+      padding: 16px;
+      overflow: auto;
+    }
+    section {
+      padding: 20px;
+      overflow: auto;
+    }
+    h1, h2, h3 {
+      margin: 0 0 12px;
+      letter-spacing: 0;
+    }
+    button, select, textarea, input {
+      font: inherit;
+    }
+    button {
+      border: 1px solid #c6ccd6;
+      background: #ffffff;
+      border-radius: 6px;
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #eef2f7;
+    }
+    .packet-button {
+      width: 100%;
+      text-align: left;
+      margin: 0 0 8px;
+    }
+    .queue-controls {
+      border-top: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e7eb;
+      margin: 10px 0 12px;
+      padding: 8px 0;
+    }
+    .queue-controls label {
+      align-items: center;
+      display: flex;
+      gap: 8px;
+      margin: 0;
+    }
+    .meta {
+      color: #5a6472;
+      font-size: 13px;
+    }
+    .empty {
+      color: #6b7280;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .panel {
+      background: #ffffff;
+      border: 1px solid #d8dde6;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: #394150;
+      margin: 8px 0 4px;
+    }
+    select, textarea, input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #c6ccd6;
+      border-radius: 6px;
+      padding: 8px;
+      background: #ffffff;
+    }
+    textarea {
+      min-height: 84px;
+      resize: vertical;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #f1f3f6;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .advisory {
+      border-left: 4px solid #8a6f19;
+    }
+    .error {
+      color: #9b1c1c;
+    }
+    .field-blocker {
+      border-color: #c81e1e !important;
+      outline: 2px solid #c81e1e;
+      outline-offset: 1px;
+      box-shadow: 0 0 0 2px rgba(200, 30, 30, 0.12);
+    }
+    [hidden] {
+      display: none !important;
+    }
+    .warning {
+      color: #8a4f00;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 6px;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .snapshot-edit {
+      border: 1px solid #d8dde6;
+      border-radius: 6px;
+      margin: 8px 0 14px;
+      padding: 10px;
+      background: #fbfcfe;
+    }
+    .snapshot-edit summary {
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .focus-panel {
+      border-left: 4px solid #315f8f;
+    }
+    .snapshot-edit-actions {
+      align-items: center;
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 800px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      aside {
+        border-right: 0;
+        border-bottom: 1px solid #d8dde6;
+      }
+    }
+  </style>
+</head>
+<body data-contract="review-console-v0">
+  <main>
+    <aside>
+      <h1>Review Queue</h1>
+      <div class="queue-controls">
+        <label for="queue_mode">Queue mode</label>
+        <select id="queue_mode">
+          <option value="pending">Pending review</option>
+          <option value="decision_quality_recheck">Decision-quality corrections</option>
+        </select>
+        <div id="queue-mode-note" class="meta">Pending mode appends new review decisions. Decision-quality corrections edit existing latest decisions and create no new review record.</div>
+        <label for="include_duplicates">
+          <input id="include_duplicates" type="checkbox">
+          Show duplicate payloads
+        </label>
+        <div class="meta">Default queue hides exact duplicate source/thesis/market evidence.</div>
+      </div>
+      <div id="packet-list" aria-live="polite"></div>
+    </aside>
+    <section>
+      <div class="panel">
+        <h2 id="packet-title">Select a packet</h2>
+        <div class="meta">Active packet: <span id="active-packet-id">none</span></div>
+        <div id="status" class="meta"></div>
+      </div>
+
+      <div class="panel focus-panel">
+        <h3>Review Focus</h3>
+        <div id="review-focus"></div>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <h3>Source</h3>
+          <pre id="source-text"></pre>
+          <pre id="source-provenance"></pre>
+        </div>
+        <div class="panel">
+          <h3>Proposed Thesis</h3>
+          <div id="proposed-thesis"></div>
+        </div>
+        <div class="panel">
+          <h3>Reference Candidate</h3>
+          <div id="reference-candidate"></div>
+        </div>
+        <div class="panel">
+          <h3>Market Snapshots</h3>
+          <div id="market-snapshots"></div>
+        </div>
+      </div>
+
+      <div class="panel advisory">
+        <h3>Advisory Candidate Judgments</h3>
+        <div class="meta">Model and policy outputs are advisory only. They cannot write reference labels.</div>
+        <div id="candidate-judgments"></div>
+      </div>
+
+      <form id="review-form" class="panel">
+        <h3>Review Decision</h3>
+        <div id="correction-mode-banner" class="warning" hidden>Correction mode: editing existing decision row; no new review record is created.</div>
+        <input type="hidden" id="packet_id" name="packet_id">
+        <label for="reviewer_id">Reviewer</label>
+        <input id="reviewer_id" name="reviewer_id" type="text" value="ruslan" required>
+
+        <label for="label_decision">Label decision</label>
+        <select id="label_decision" name="label_decision" required>
+          <option value="keep">keep</option>
+          <option value="change">change</option>
+          <option value="disputed">disputed</option>
+          <option value="reject_case">reject_case</option>
+        </select>
+
+        <label for="fit_class">Fit class</label>
+        <select id="fit_class" name="fit_class" required>
+          <option value="direct">direct</option>
+          <option value="indirect">indirect</option>
+          <option value="weak_proxy">weak_proxy</option>
+          <option value="no_clean_expression">no_clean_expression</option>
+        </select>
+
+        <label for="confidence">Confidence</label>
+        <select id="confidence" name="confidence" required>
+          <option value="high">high</option>
+          <option value="medium">medium</option>
+          <option value="low">low</option>
+        </select>
+
+        <label for="case_quality">Case quality</label>
+        <select id="case_quality" name="case_quality" required>
+          <option value="usable">usable</option>
+          <option value="insufficient_context">insufficient_context</option>
+          <option value="stale">stale</option>
+          <option value="duplicate">duplicate</option>
+          <option value="bad_market_snapshot">bad_market_snapshot</option>
+          <option value="reject">reject</option>
+        </select>
+
+        <label for="failure_taxonomy">Failure taxonomy, comma-separated</label>
+        <input id="failure_taxonomy" name="failure_taxonomy" type="text" list="failure-taxonomy-options" placeholder="no_failure" required>
+        <datalist id="failure-taxonomy-options">
+          <option value="no failure"></option>
+          <option value="no_failure"></option>
+          <option value="event_stage_mismatch"></option>
+          <option value="metric_mismatch"></option>
+          <option value="temporal_metric_mismatch"></option>
+          <option value="horizon_mismatch"></option>
+          <option value="entity_mismatch"></option>
+          <option value="causal_mechanism_mismatch"></option>
+          <option value="inverse_or_polarity_mismatch"></option>
+          <option value="composite_condition_mismatch"></option>
+          <option value="weak_proxy_confound"></option>
+          <option value="no_clean_expression"></option>
+          <option value="over_strong_false_positive"></option>
+          <option value="conservative_undercall"></option>
+          <option value="retrieval_wrong_market"></option>
+          <option value="market_rules_ambiguous"></option>
+          <option value="source_context_insufficient"></option>
+          <option value="duplicate_or_stale_case"></option>
+        </datalist>
+
+        <label for="false_strong_risk">False-strong risk</label>
+        <select id="false_strong_risk" name="false_strong_risk">
+          <option value="false">false</option>
+          <option value="true">true</option>
+        </select>
+
+        <label for="selected_market_snapshot_id">Chosen market snapshot</label>
+        <div class="meta">Choose one proposed snapshot, or choose none when no proposed market is relevant. Reviewed exports keep this one choice, not the whole candidate list.</div>
+        <select id="selected_market_snapshot_id" name="selected_market_snapshot_id" required>
+          <option value="">choose one</option>
+        </select>
+
+        <div id="advisory-preference-fields" hidden>
+          <label for="preferred_judgment_id">Preferred advisory judgment (from candidate_judgments_v0.jsonl)</label>
+          <div class="meta">Optional. Use this only when a raw/model/policy output shown above is the better answer; it creates preference-pair data, not reference truth.</div>
+          <select id="preferred_judgment_id" name="preferred_judgment_id">
+            <option value="">none</option>
+          </select>
+
+          <label for="preference_strength">Preference strength</label>
+          <select id="preference_strength" name="preference_strength">
+            <option value="none">none</option>
+            <option value="strong">strong</option>
+            <option value="weak">weak</option>
+            <option value="tie">tie</option>
+            <option value="unclear">unclear</option>
+          </select>
+        </div>
+
+        <label for="recommendation">Recommendation</label>
+        <select id="recommendation" name="recommendation" required>
+          <option value="include_reference">include_reference</option>
+          <option value="include_stress">include_stress</option>
+          <option value="candidate_only">candidate_only</option>
+          <option value="needs_second_review">needs_second_review</option>
+          <option value="reject">reject</option>
+        </select>
+
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" required></textarea>
+        <p><button type="submit">Submit review</button></p>
+        <div id="review-fields-warning" class="warning" hidden></div>
+        <div id="submit-result" aria-live="polite"></div>
+      </form>
+    </section>
+  </main>
+  <script>
+    let currentPacketId = null;
+    let currentPacketHasSnapshots = false;
+    let currentDecisionEditId = null;
+    let currentQueueMode = 'pending';
+
+    function pretty(value) {
+      if (Array.isArray(value)) {
+        return value.length ? value.join(', ') : 'none';
+      }
+      if (value === null || value === undefined || value === '') {
+        return 'none';
+      }
+      return String(value);
+    }
+
+    function emptyMessage(text) {
+      const item = document.createElement('div');
+      item.className = 'empty';
+      item.textContent = text;
+      return item;
+    }
+
+    function addSnapshotEditField(form, name, labelText, value, options = {}) {
+      const label = document.createElement('label');
+      label.textContent = labelText;
+      const field = options.textarea
+        ? document.createElement('textarea')
+        : document.createElement('input');
+      field.name = name;
+      field.value = Array.isArray(value) ? value.join(', ') : (value || '');
+      if (!options.textarea) {
+        field.type = 'text';
+      }
+      if (options.required) {
+        field.required = true;
+      }
+      form.appendChild(label);
+      form.appendChild(field);
+    }
+
+    function captureReviewDraft() {
+      const form = document.getElementById('review-form');
+      return {
+        packetId: currentPacketId,
+        values: Object.fromEntries(new FormData(form).entries())
+      };
+    }
+
+    function restoreReviewDraft(draft) {
+      if (!draft || draft.packetId !== currentPacketId) {
+        return;
+      }
+      const form = document.getElementById('review-form');
+      Object.entries(draft.values).forEach(([key, value]) => {
+        const field = form.elements[key];
+        if (!field || field.disabled) {
+          return;
+        }
+        field.value = value;
+      });
+      showReviewWarning(reviewValidationIssues());
+    }
+
+    function snapshotEditValue(form, name) {
+      return form.elements[name].value;
+    }
+
+    async function loadPackets() {
+      currentQueueMode = document.getElementById('queue_mode').value;
+      const includeDuplicates = document.getElementById('include_duplicates').checked;
+      const url = currentQueueMode === 'decision_quality_recheck'
+        ? '/review/corrections'
+        : (includeDuplicates ? '/review/packets?include_duplicates=true' : '/review/packets');
+      const response = await fetch(url);
+      const data = await response.json();
+      const list = document.getElementById('packet-list');
+      list.innerHTML = '';
+      if (!data.packets.length) {
+        const emptyText = currentQueueMode === 'decision_quality_recheck'
+          ? 'No decision-quality correction packets. Current reviewed decisions satisfy correction rules.'
+          : 'No pending review packets. Reviewed packets are hidden from this queue.';
+        list.appendChild(emptyMessage(emptyText));
+      }
+      data.packets.forEach(packet => {
+        const button = document.createElement('button');
+        button.className = 'packet-button';
+        button.dataset.packetId = packet.packet_id;
+        button.dataset.reviewDecisionId = packet.latest_decision_id || '';
+        const duplicateLabel = packet.duplicate_count > 1
+          ? ` · duplicates: ${packet.duplicate_count}`
+          : '';
+        const auditLabel = packet.audit_flags && packet.audit_flags.length
+          ? ` · flags: ${packet.audit_flags.join(', ')}`
+          : '';
+        const sourceFit = packet.source_fit_class ? ` · source: ${packet.source_fit_class}` : '';
+        button.textContent = `${packet.source_case_id} · ${packet.source_scope} · ${packet.review_state}${sourceFit}${duplicateLabel}${auditLabel}`;
+        button.addEventListener('click', () => selectPacket(packet.packet_id, packet.latest_decision_id || null));
+        list.appendChild(button);
+      });
+      return data.packets;
+    }
+
+    function clearReviewForm(packetId) {
+      const form = document.getElementById('review-form');
+      form.reset();
+      document.getElementById('packet_id').value = packetId;
+      document.getElementById('reviewer_id').value = 'ruslan';
+      const selectedSnapshot = document.getElementById('selected_market_snapshot_id');
+      selectedSnapshot.innerHTML = '<option value="">choose one</option>';
+      selectedSnapshot.disabled = true;
+      document.getElementById('advisory-preference-fields').hidden = true;
+      document.getElementById('correction-mode-banner').hidden = true;
+      const preferred = document.getElementById('preferred_judgment_id');
+      preferred.innerHTML = '<option value="">none</option>';
+      preferred.disabled = true;
+      const preferenceStrength = document.getElementById('preference_strength');
+      preferenceStrength.value = 'none';
+      preferenceStrength.disabled = true;
+      document.getElementById('review-fields-warning').hidden = true;
+      document.getElementById('review-fields-warning').textContent = '';
+      document.getElementById('submit-result').textContent = '';
+      markBlockingFields([]);
+    }
+
+    function markBlockingFields(issues) {
+      document.querySelectorAll('.field-blocker').forEach(field => {
+        field.classList.remove('field-blocker');
+        field.removeAttribute('aria-invalid');
+      });
+      issues.forEach(issue => {
+        const field = document.getElementById(issue.field);
+        if (!field || field.disabled) {
+          return;
+        }
+        field.classList.add('field-blocker');
+        field.setAttribute('aria-invalid', 'true');
+      });
+    }
+
+    function reviewValidationIssues() {
+      const form = document.getElementById('review-form');
+      const issues = [];
+      const required = [
+        ['packet_id', 'active packet'],
+        ['reviewer_id', 'reviewer'],
+        ['label_decision', 'label decision'],
+        ['fit_class', 'fit class'],
+        ['confidence', 'confidence'],
+        ['case_quality', 'case quality'],
+        ['failure_taxonomy', 'failure taxonomy'],
+        ['false_strong_risk', 'false-strong risk'],
+        ['recommendation', 'recommendation'],
+        ['notes', 'notes']
+      ];
+      required.forEach(([field, label]) => {
+        if (!String(form[field].value || '').trim()) {
+          issues.push({field, label});
+        }
+      });
+      if (currentPacketId && !currentPacketHasSnapshots) {
+        issues.push({field: 'selected_market_snapshot_id', label: 'frozen market snapshot'});
+      }
+      const fitClass = form.fit_class.value;
+      const selectedMarketValue = String(form.selected_market_snapshot_id.value || '').trim();
+      if (currentPacketHasSnapshots && !selectedMarketValue) {
+        issues.push({field: 'selected_market_snapshot_id', label: 'market snapshot choice'});
+      }
+      if (['direct', 'indirect', 'weak_proxy'].includes(fitClass) && selectedMarketValue === '__none__') {
+        issues.push({field: 'selected_market_snapshot_id', label: 'direct/indirect/weak proxy require a selected market snapshot'});
+      }
+      if (fitClass === 'no_clean_expression' && selectedMarketValue && selectedMarketValue !== '__none__') {
+        issues.push({field: 'selected_market_snapshot_id', label: 'no clean expression must use none for market snapshot choice'});
+      }
+      const preferred = form.preferred_judgment_id.value;
+      const strength = form.preference_strength.value;
+      if (preferred && !['strong', 'weak'].includes(strength)) {
+        issues.push({field: 'preference_strength', label: 'preference strength must be strong or weak when an advisory judgment is selected'});
+      }
+      if (!preferred && ['strong', 'weak'].includes(strength)) {
+        issues.push({field: 'preferred_judgment_id', label: 'preferred advisory judgment is required when preference strength is strong or weak'});
+      }
+      return issues;
+    }
+
+    function showReviewWarning(issues) {
+      const warning = document.getElementById('review-fields-warning');
+      const labels = issues.map(issue => issue.label);
+      warning.hidden = issues.length === 0;
+      warning.textContent = issues.length
+        ? `Complete these required review fields before submitting: ${labels.join(', ')}.`
+        : '';
+      markBlockingFields(issues);
+    }
+
+    function clearActivePacket(message) {
+      currentPacketId = null;
+      currentPacketHasSnapshots = false;
+      currentDecisionEditId = null;
+      document.getElementById('active-packet-id').textContent = 'none';
+      document.getElementById('packet-title').textContent = 'Select a packet';
+      document.getElementById('status').textContent = message || '';
+      document.getElementById('review-focus').innerHTML = '';
+      document.getElementById('source-text').textContent = '';
+      document.getElementById('source-provenance').textContent = '';
+      document.getElementById('proposed-thesis').innerHTML = '';
+      document.getElementById('reference-candidate').innerHTML = '';
+      document.getElementById('market-snapshots').innerHTML = '';
+      document.getElementById('candidate-judgments').innerHTML = '';
+      clearReviewForm('');
+    }
+
+    async function selectPacket(packetId, decisionEditId = null) {
+      currentPacketId = packetId;
+      currentDecisionEditId = decisionEditId;
+      clearReviewForm(packetId);
+      document.getElementById('active-packet-id').textContent = packetId;
+      const response = await fetch(`/review/packets/${encodeURIComponent(packetId)}`);
+      const detail = await response.json();
+      const packet = detail.packet;
+      document.getElementById('packet-title').textContent = packet.source_case_id;
+      document.getElementById('source-text').textContent = packet.source_text;
+      document.getElementById('source-provenance').textContent = JSON.stringify(packet.source_provenance, null, 2);
+      const warningText = detail.readiness_warnings && detail.readiness_warnings.length
+        ? ` · Review blocked until fixed: ${detail.readiness_warnings.join(', ')}`
+        : '';
+      document.getElementById('status').textContent = detail.status === 'ok' ? `Snapshot status: ok${warningText}` : `Snapshot status: unavailable (${detail.missing_snapshot_ids.join(', ')})${warningText}`;
+      if (detail.duplicate_packet_ids && detail.duplicate_packet_ids.length > 1) {
+        document.getElementById('status').textContent += ` · duplicate payload group: ${detail.duplicate_packet_ids.length}`;
+      }
+
+      const focusBox = document.getElementById('review-focus');
+      focusBox.innerHTML = '';
+      const focus = detail.review_focus || {};
+      if (Object.keys(focus).length) {
+        const focusLines = [
+          `Case ID: ${pretty(focus.source_case_id)}`,
+          `Source dataset: ${pretty(focus.source_dataset)}`,
+          `Source scope: ${pretty(focus.source_scope)}`,
+          `Current source fit class: ${pretty(focus.current_source_fit_class)}`,
+          `Best market ID: ${pretty(focus.best_market_id)}`,
+          `Comparison market snapshot ID: ${pretty(focus.comparison_market_snapshot_id)}`,
+          `Comparison market ID: ${pretty(focus.comparison_market_id)}`,
+          `Comparison market title: ${pretty(focus.comparison_market_title)}`,
+          `Source notes: ${pretty(focus.source_notes)}`
+        ];
+        if (focus.same_thesis_count > 1) {
+          focusLines.push(`Same normalized thesis group: ${focus.same_thesis_count} packets`);
+        }
+        if (focus.duplicate_count > 1) {
+          focusLines.push(`Exact duplicate payload group: ${focus.duplicate_count} packets`);
+        }
+        const focusItem = document.createElement('pre');
+        focusItem.textContent = focusLines.join('\n');
+        focusBox.appendChild(focusItem);
+      } else {
+        focusBox.appendChild(emptyMessage('No review-focus summary is available for this packet.'));
+      }
+
+      const thesisBox = document.getElementById('proposed-thesis');
+      thesisBox.innerHTML = '';
+      const normalized = packet.normalized_claim || {};
+      const thesis = normalized.claim_text || normalized.summary || normalized.thesis || '';
+      if (thesis) {
+        const thesisItem = document.createElement('pre');
+        thesisItem.textContent = [
+          `Thesis: ${thesis}`,
+          `Entities: ${pretty(normalized.entities)}`,
+          `Horizon: ${pretty(normalized.horizon)}`,
+          `Stance: ${pretty(normalized.stance)}`
+        ].join('\n');
+        thesisBox.appendChild(thesisItem);
+      } else {
+        thesisBox.appendChild(emptyMessage('No proposed or normalized thesis is attached to this packet. This packet is not decision-ready.'));
+      }
+
+      const referenceBox = document.getElementById('reference-candidate');
+      referenceBox.innerHTML = '';
+      const reference = packet.reference_candidate || {};
+      const referenceText = [
+        `Source dataset: ${packet.source_dataset}`,
+        `Source case ID: ${packet.source_case_id}`,
+        `Source scope: ${packet.source_scope}`,
+        `Current source fit class: ${pretty(reference.fit_class)}`,
+        `Best market ID: ${pretty(reference.best_market_id)}`,
+        `Acceptable market IDs: ${pretty(reference.acceptable_market_ids)}`,
+        `Rejected market IDs: ${pretty(reference.rejected_market_ids)}`,
+        `Truth scope from source: ${pretty(reference.truth_scope_from_source)}`,
+        `Market snapshot IDs: ${pretty(packet.market_snapshot_ids)}`
+      ].join('\n');
+      const referenceItem = document.createElement('pre');
+      referenceItem.textContent = referenceText;
+      referenceBox.appendChild(referenceItem);
+
+      const snapshotBox = document.getElementById('market-snapshots');
+      const selectedSnapshot = document.getElementById('selected_market_snapshot_id');
+      snapshotBox.innerHTML = '';
+      selectedSnapshot.innerHTML = '<option value="">choose one</option>';
+      currentPacketHasSnapshots = detail.market_snapshots.length > 0;
+      selectedSnapshot.disabled = !currentPacketHasSnapshots;
+      if (!detail.market_snapshots.length) {
+        selectedSnapshot.innerHTML = '<option value="">no frozen snapshots attached</option>';
+        snapshotBox.appendChild(emptyMessage('No frozen market snapshots are attached to this packet yet. This packet is hidden from the default review queue until PolyData or fixture rules snapshots are attached.'));
+      } else {
+        const noneOption = document.createElement('option');
+        noneOption.value = '__none__';
+        noneOption.textContent = 'none - no proposed market is relevant';
+        selectedSnapshot.appendChild(noneOption);
+      }
+      detail.market_snapshots.forEach(snapshot => {
+        const item = document.createElement('pre');
+        item.textContent = [
+          `Market ID: ${snapshot.market_id}`,
+          `Market snapshot ID: ${snapshot.market_snapshot_id}`,
+          `Venue: ${snapshot.venue}`,
+          `Role: ${snapshot.market_role}`,
+          `Kind: ${snapshot.snapshot_kind}`,
+          `Provider: ${snapshot.retrieval_provider}`,
+          `Status: ${snapshot.status}`,
+          `Close date: ${pretty(snapshot.close_date)}`,
+          `URL: ${pretty(snapshot.url)}`,
+          `Title: ${snapshot.title}`,
+          `Resolution rules: ${snapshot.resolution_rules}`
+        ].join('\n');
+        snapshotBox.appendChild(item);
+        snapshotBox.appendChild(renderSnapshotEditForm(snapshot));
+        const option = document.createElement('option');
+        option.value = snapshot.market_snapshot_id;
+        option.textContent = `${snapshot.market_role} · ${snapshot.retrieval_provider} · ${snapshot.market_id} · ${snapshot.title}`;
+        selectedSnapshot.appendChild(option);
+      });
+
+      const judgmentBox = document.getElementById('candidate-judgments');
+      const preferred = document.getElementById('preferred_judgment_id');
+      const preferenceStrength = document.getElementById('preference_strength');
+      const advisoryPreferenceFields = document.getElementById('advisory-preference-fields');
+      judgmentBox.innerHTML = '';
+      preferred.innerHTML = '<option value="">none</option>';
+      const hasCandidateJudgments = detail.candidate_judgments.length > 0;
+      preferred.disabled = !hasCandidateJudgments;
+      preferenceStrength.value = 'none';
+      preferenceStrength.disabled = !hasCandidateJudgments;
+      advisoryPreferenceFields.hidden = !hasCandidateJudgments;
+      if (!hasCandidateJudgments) {
+        judgmentBox.appendChild(emptyMessage('No advisory candidate judgments are attached to this packet yet. Preference-pair controls are hidden for this packet.'));
+      }
+      detail.candidate_judgments.forEach(judgment => {
+        const item = document.createElement('pre');
+        item.textContent = [
+          'ADVISORY ONLY',
+          `Judgment ID: ${judgment.candidate_judgment_id}`,
+          `Arm: ${judgment.arm_id}`,
+          `Fit class: ${judgment.fit_class}`,
+          `Recommended market ID: ${pretty(judgment.recommended_market_id)}`,
+          `Rationale: ${judgment.rationale}`
+        ].join('\n');
+        judgmentBox.appendChild(item);
+        const option = document.createElement('option');
+        option.value = judgment.candidate_judgment_id;
+        option.textContent = `${judgment.arm_id} · ${judgment.fit_class} · market ${pretty(judgment.recommended_market_id)}`;
+        preferred.appendChild(option);
+      });
+      if (currentDecisionEditId && detail.latest_decision) {
+        populateReviewFormFromDecision(detail.latest_decision);
+      }
+      showReviewWarning(reviewValidationIssues());
+    }
+
+    function populateReviewFormFromDecision(decision) {
+      const form = document.getElementById('review-form');
+      form.reviewer_id.value = decision.reviewer_id || 'ruslan';
+      form.label_decision.value = decision.label_decision || 'keep';
+      form.fit_class.value = decision.fit_class || 'weak_proxy';
+      form.confidence.value = decision.confidence || 'high';
+      form.case_quality.value = decision.case_quality || 'usable';
+      form.failure_taxonomy.value = (decision.failure_taxonomy || []).join(', ');
+      form.false_strong_risk.value = String(Boolean(decision.false_strong_risk));
+      form.selected_market_snapshot_id.value = decision.market_snapshot_selection === 'none'
+        ? '__none__'
+        : (decision.selected_market_snapshot_id || '');
+      if (!form.selected_market_snapshot_id.value && decision.selected_market_snapshot_id) {
+        form.selected_market_snapshot_id.value = decision.selected_market_snapshot_id;
+      }
+      form.preferred_judgment_id.value = decision.preferred_judgment_id || '';
+      form.preference_strength.value = decision.preference_strength || 'none';
+      form.recommendation.value = decision.recommendation || 'include_reference';
+      form.notes.value = decision.notes || '';
+      document.getElementById('correction-mode-banner').hidden = false;
+      document.getElementById('correction-mode-banner').textContent = `Correction mode: editing existing decision row ${decision.review_decision_id}; no new review record is created.`;
+    }
+
+    function renderSnapshotEditForm(snapshot) {
+      const wrapper = document.createElement('details');
+      wrapper.className = 'snapshot-edit';
+      const summary = document.createElement('summary');
+      summary.textContent = 'Edit market snapshot';
+      wrapper.appendChild(summary);
+
+      const note = document.createElement('div');
+      note.className = 'meta';
+      note.textContent = 'Creates reviewer-authored frozen evidence for this packet. This does not mark the market relevant; the review decision still controls that.';
+      wrapper.appendChild(note);
+
+      const form = document.createElement('form');
+      form.dataset.sourceSnapshotId = snapshot.market_snapshot_id;
+      addSnapshotEditField(form, 'market_id', 'Market ID', snapshot.market_id, {required: true});
+      addSnapshotEditField(form, 'venue', 'Venue', snapshot.venue || 'Polymarket', {required: true});
+      addSnapshotEditField(form, 'url', 'URL', snapshot.url || '', {required: true});
+      addSnapshotEditField(form, 'title', 'Title', snapshot.title, {required: true});
+      addSnapshotEditField(form, 'description', 'Description', snapshot.description, {textarea: true});
+      addSnapshotEditField(form, 'resolution_rules', 'Resolution rules', snapshot.resolution_rules, {textarea: true, required: true});
+      addSnapshotEditField(form, 'outcomes', 'Outcomes, comma-separated', snapshot.outcomes || ['Yes', 'No']);
+      addSnapshotEditField(form, 'close_date', 'Close date', snapshot.close_date || '');
+      addSnapshotEditField(form, 'status', 'Status', snapshot.status || 'open');
+      addSnapshotEditField(form, 'market_role', 'Market role', snapshot.market_role || 'candidate');
+
+      const actions = document.createElement('div');
+      actions.className = 'snapshot-edit-actions';
+      const button = document.createElement('button');
+      button.type = 'submit';
+      button.textContent = 'Save edited snapshot';
+      const result = document.createElement('span');
+      result.className = 'meta';
+      result.setAttribute('aria-live', 'polite');
+      actions.appendChild(button);
+      actions.appendChild(result);
+      form.appendChild(actions);
+      form.addEventListener('submit', saveSnapshotEdit);
+      wrapper.appendChild(form);
+      return wrapper;
+    }
+
+    async function saveSnapshotEdit(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const resultTarget = form.querySelector('[aria-live="polite"]');
+      const button = form.querySelector('button[type="submit"]');
+      const sourceSnapshotId = form.dataset.sourceSnapshotId;
+      const draft = captureReviewDraft();
+      const payload = {
+        source_market_snapshot_id: sourceSnapshotId,
+        market_id: snapshotEditValue(form, 'market_id').trim(),
+        venue: snapshotEditValue(form, 'venue').trim(),
+        url: snapshotEditValue(form, 'url').trim(),
+        title: snapshotEditValue(form, 'title').trim(),
+        description: snapshotEditValue(form, 'description').trim(),
+        resolution_rules: snapshotEditValue(form, 'resolution_rules').trim(),
+        outcomes: snapshotEditValue(form, 'outcomes').split(',').map(value => value.trim()).filter(Boolean),
+        close_date: snapshotEditValue(form, 'close_date').trim() || null,
+        status: snapshotEditValue(form, 'status').trim() || 'open',
+        market_role: snapshotEditValue(form, 'market_role').trim() || 'candidate'
+      };
+      button.disabled = true;
+      resultTarget.className = 'meta';
+      resultTarget.textContent = 'saving...';
+      const response = await fetch(`/review/packets/${encodeURIComponent(currentPacketId)}/market-snapshots`, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        button.disabled = false;
+        resultTarget.className = 'error';
+        resultTarget.textContent = result.detail || 'snapshot save failed';
+        return;
+      }
+      if (draft.values.selected_market_snapshot_id === sourceSnapshotId) {
+        draft.values.selected_market_snapshot_id = result.market_snapshot.market_snapshot_id;
+      }
+      await selectPacket(currentPacketId, currentDecisionEditId);
+      restoreReviewDraft(draft);
+      document.getElementById('submit-result').textContent = `saved edited snapshot ${result.market_snapshot.market_snapshot_id}`;
+    }
+
+    document.getElementById('review-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const issues = reviewValidationIssues();
+      if (issues.length) {
+        showReviewWarning(issues);
+        return;
+      }
+      const taxonomy = form.failure_taxonomy.value.split(',').map(s => s.trim()).filter(Boolean);
+      const selectedMarketValue = form.selected_market_snapshot_id.value;
+      const noProposedMarket = selectedMarketValue === '__none__';
+      const payload = {
+        packet_id: form.packet_id.value,
+        reviewer_id: form.reviewer_id.value,
+        label_decision: form.label_decision.value,
+        fit_class: form.fit_class.value,
+        confidence: form.confidence.value,
+        case_quality: form.case_quality.value,
+        failure_taxonomy: taxonomy,
+        false_strong_risk: form.false_strong_risk.value === 'true',
+        market_snapshot_selection: noProposedMarket ? 'none' : 'selected',
+        selected_market_snapshot_id: noProposedMarket ? null : selectedMarketValue || null,
+        preferred_judgment_id: form.preferred_judgment_id.value || null,
+        preference_strength: form.preference_strength.value,
+        recommendation: form.recommendation.value,
+        notes: form.notes.value
+      };
+      const wasCorrection = Boolean(currentDecisionEditId);
+      const endpoint = currentDecisionEditId
+        ? `/review/decisions/${encodeURIComponent(currentDecisionEditId)}`
+        : '/review/decisions';
+      const method = wasCorrection ? 'PUT' : 'POST';
+      const response = await fetch(endpoint, {
+        method,
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      const target = document.getElementById('submit-result');
+      if (!response.ok) {
+        target.className = 'error';
+        target.textContent = result.detail || 'review failed';
+        return;
+      }
+      showReviewWarning([]);
+      target.className = '';
+      const savedText = wasCorrection
+        ? `updated existing ${result.decision.review_decision_id}; no new review record created`
+        : `saved ${result.decision.review_decision_id}`;
+      target.textContent = savedText;
+      const packets = await loadPackets();
+      if (packets.length) {
+        const nextPacket = packets.find(packet => packet.packet_id === payload.packet_id) || packets[0];
+        await selectPacket(nextPacket.packet_id, nextPacket.latest_decision_id || null);
+        document.getElementById('submit-result').textContent = wasCorrection
+          ? `${savedText}; cleared from correction queue`
+          : `${savedText}; reviewed packet removed from the queue`;
+      } else {
+        clearActivePacket(wasCorrection
+          ? `${savedText}; correction queue cleared`
+          : `${savedText}; reviewed packet removed from the queue`);
+      }
+    });
+
+    document.getElementById('review-form').addEventListener('input', () => {
+      if (currentPacketId) {
+        showReviewWarning(reviewValidationIssues());
+      }
+    });
+
+    document.getElementById('review-form').addEventListener('change', () => {
+      if (currentPacketId) {
+        showReviewWarning(reviewValidationIssues());
+      }
+    });
+
+    document.getElementById('include_duplicates').addEventListener('change', async () => {
+      const packets = await loadPackets();
+      if (!packets.some(packet => packet.packet_id === currentPacketId)) {
+        clearActivePacket('Queue filter changed. Select a packet.');
+      }
+    });
+
+    document.getElementById('queue_mode').addEventListener('change', async () => {
+      const packets = await loadPackets();
+      if (!packets.some(packet => packet.packet_id === currentPacketId)) {
+        clearActivePacket('Queue mode changed. Select a packet.');
+      }
+    });
+
+    loadPackets();
+  </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "_origin": "Wholly authored synthetic public vocabulary fixture.",
+  "input_text": "Acme will buy a competitor in 2026.",
+  "proposal": {
+    "structure": {
+      "schema_version": 1,
+      "claim_summary": "Acme acquires a competing company by end of 2026",
+      "entities": [
+        {"name": "Acme", "role": "subject"},
+        {"name": "competitor", "role": "object"}
+      ],
+      "event_stage": "announced",
+      "metric": {
+        "what": "acquisition of a competing company",
+        "measured_by": "company filings and press releases",
+        "objective": true
+      },
+      "horizon": {
+        "window_start": null,
+        "window_end": "2026-12-31",
+        "timezone": "UTC",
+        "precision": "year"
+      },
+      "mechanism": {"asserted_causal_chain": null, "is_composite": false},
+      "stance": "yes",
+      "resolution_source_class": "filing",
+      "ambiguities": [],
+      "contractible_version": "Acme completes the acquisition of a competing company on or before 2026-12-31 (UTC)."
+    },
+    "clarifying_question": null
+  }
+}
