@@ -9,6 +9,28 @@ def _html() -> str:
     return HTML.read_text(encoding="utf-8")
 
 
+def test_review_health_redacts_validation_error_details():
+    from fastapi.testclient import TestClient
+
+    from el.review.reference_app import build_app
+    from el.review.reference_dataset import ReviewDataError
+
+    sensitive_detail = "INTERNAL_VALIDATION_DETAIL_DO_NOT_EXPOSE"
+
+    class InvalidRepository:
+        def validate(self) -> None:
+            raise ReviewDataError(sensitive_detail)
+
+    response = TestClient(build_app(InvalidRepository())).get("/review/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": False,
+        "error": "review data validation failed",
+    }
+    assert sensitive_detail not in response.text
+
+
 def test_review_page_contains_required_controls():
     html = _html()
     for control in (

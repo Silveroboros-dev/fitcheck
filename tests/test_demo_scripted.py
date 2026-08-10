@@ -42,3 +42,18 @@ def test_demo_server_describes_generated_key_without_logging_it(monkeypatch):
     assert key.startswith("demo-")
     assert log_value == "generated"
     assert key not in log_value
+
+
+def test_demo_server_startup_metadata_excludes_database_credentials():
+    from demo.server import _runtime_log_line
+
+    sensitive_url = "postgresql://fitcheck:secret-password@example.test/fitcheck"
+    line = _runtime_log_line(
+        transport="streamable-http",
+        proposer="fixture",
+        database_backend="postgresql",
+    )
+
+    assert "db_backend=postgresql" in line
+    assert sensitive_url not in line
+    assert "secret-password" not in line

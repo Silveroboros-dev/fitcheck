@@ -42,7 +42,7 @@
     },
     {
       "path": "SECURITY.md",
-      "sha256": "f2c35340d1c0f5a9383b5a8ba2d8b373ca1652f0c261039c99f0674acde09a3d"
+      "sha256": "bbefab63fc9537333b2e5d32857cdead67a2e4be6b0a2b84e484d657c2cdbcb5"
     },
     {
       "path": "alembic.ini",
@@ -74,7 +74,7 @@
     },
     {
       "path": "demo/server.py",
-      "sha256": "24aa6c8a737a4af4c94357d9f443de585413e6a055e9f747c632b4d808e83f8c"
+      "sha256": "9d1f1440bdffaeffca71df5c53cd5fa113b67d8b297695471b9ed9931eca1981"
     },
     {
       "path": "docs/agent-guided-ui-contract-v0.md",
@@ -270,7 +270,7 @@
     },
     {
       "path": "el/mcp/auth.py",
-      "sha256": "6cb26142bebba2f03215041ccb6466b890cab8b0e15fe557d5ba89e35f2b3afc"
+      "sha256": "729f5759fdf202bed5b1354e44a771061f0bbca0574d2b98af9aa65ba4bb74cc"
     },
     {
       "path": "el/mcp/contracts.py",
@@ -402,7 +402,7 @@
     },
     {
       "path": "el/review/reference_app.py",
-      "sha256": "9c8954fd6a7f45043ff488a7a2a177d7be56a9a0f3a083bd359a373ffb03e677"
+      "sha256": "2b564e6344e810d137df0a79e4e3f8645193f849f4faa7a429da5b448800b02a"
     },
     {
       "path": "el/review/reference_dataset.py",
@@ -554,7 +554,7 @@
     },
     {
       "path": "tests/test_demo_scripted.py",
-      "sha256": "74d46913bc98bf364e32a9f114c47db83347ffbf663a32217cd830122677d9c9"
+      "sha256": "3df814d29b1fe690b2d2db86fa6ff29b0c1ab2d102cc172ce3405153642a690c"
     },
     {
       "path": "tests/test_draft_service.py",
@@ -654,7 +654,7 @@
     },
     {
       "path": "tests/test_review_console_ui.py",
-      "sha256": "4fc2619594c6b7bc204f034b2fc69a38b883360afb0916fe88b4c586285506d6"
+      "sha256": "52ce91a138375e2f0dccd667a4b8a7aaa248d5f2938b756bdfb6d0799e7fe897"
     },
     {
       "path": "tests/test_review_dataset_contract.py",
