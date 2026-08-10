@@ -34,14 +34,14 @@ def _api_key_config() -> tuple[str, str]:
 
 
 def _runtime_log_line(
-    *, transport: str, proposer: str, database_backend: str, api_key_source: str
+    *, transport: str, proposer: str, database_backend: str
 ) -> str:
     """Build startup metadata from fields that cannot contain credentials."""
 
     return (
         "fitcheck-demo "
         f"transport={transport} proposer={proposer} "
-        f"db_backend={database_backend} api_key_source={api_key_source}"
+        f"db_backend={database_backend}"
     )
 
 
@@ -51,7 +51,7 @@ def main() -> None:
     db_url = database_url()
     proposer = _env("FITCHECK_PROPOSER", "fixture")
     transport = _env("FITCHECK_MCP_TRANSPORT", "stdio")
-    api_key, api_key_source = _api_key_config()
+    api_key, _ = _api_key_config()
     header = _env("FITCHECK_API_KEY_HEADER", "x-api-key")
 
     if proposer not in VALID_PROPOSERS:
@@ -79,7 +79,6 @@ def main() -> None:
             transport=transport,
             proposer=proposer,
             database_backend=engine.dialect.name,
-            api_key_source=api_key_source,
         ),
         file=sys.stderr,
         flush=True,

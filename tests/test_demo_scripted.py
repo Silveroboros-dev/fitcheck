@@ -52,7 +52,6 @@ def test_demo_server_startup_metadata_excludes_database_credentials():
         transport="streamable-http",
         proposer="fixture",
         database_backend="postgresql",
-        api_key_source="configured",
     )
 
     assert "db_backend=postgresql" in line

@@ -74,7 +74,7 @@
     },
     {
       "path": "demo/server.py",
-      "sha256": "efd9bc191cbd03332a4ef41cedac1b82ca580ae5a5311f750945237a2fdbc271"
+      "sha256": "9d1f1440bdffaeffca71df5c53cd5fa113b67d8b297695471b9ed9931eca1981"
     },
     {
       "path": "docs/agent-guided-ui-contract-v0.md",
@@ -554,7 +554,7 @@
     },
     {
       "path": "tests/test_demo_scripted.py",
-      "sha256": "3e3155d4ae02b914aef42588939944b98ab4139ee53e525510dcd131d855c996"
+      "sha256": "3df814d29b1fe690b2d2db86fa6ff29b0c1ab2d102cc172ce3405153642a690c"
     },
     {
       "path": "tests/test_draft_service.py",
