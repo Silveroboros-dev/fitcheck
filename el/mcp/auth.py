@@ -19,6 +19,9 @@ from el.domain.tables import ApiClient
 _MCP_CLIENT_TYPES = frozenset({ClientType.AGENT_MCP, ClientType.API})
 
 
+# CodeQL treats every API-key value as a password. Here the input space is a
+# high-entropy opaque token, for which SHA-256 is the intended primitive.
+# codeql[py/weak-sensitive-data-hashing]
 def hash_api_key(raw_key: str) -> str:
     """Return the indexed fingerprint of an opaque bearer token.
 
@@ -28,9 +31,6 @@ def hash_api_key(raw_key: str) -> str:
     bearer token. Never pass a human-chosen password to this function.
     """
 
-    # CodeQL treats every API-key value as a password. Here the input space is
-    # a high-entropy opaque token, for which SHA-256 is the intended primitive.
-    # codeql[py/weak-sensitive-data-hashing]
     return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
 

@@ -270,7 +270,7 @@
     },
     {
       "path": "el/mcp/auth.py",
-      "sha256": "67e789d9bd72ade838929d4fc320c656dac98bb8a17350130fef87a5df85264f"
+      "sha256": "729f5759fdf202bed5b1354e44a771061f0bbca0574d2b98af9aa65ba4bb74cc"
     },
     {
       "path": "el/mcp/contracts.py",
