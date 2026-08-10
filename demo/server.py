@@ -33,6 +33,18 @@ def _api_key_config() -> tuple[str, str]:
     return f"demo-{uuid.uuid4()}", "generated"
 
 
+def _runtime_log_line(
+    *, transport: str, proposer: str, database_backend: str, api_key_source: str
+) -> str:
+    """Build startup metadata from fields that cannot contain credentials."""
+
+    return (
+        "fitcheck-demo "
+        f"transport={transport} proposer={proposer} "
+        f"db_backend={database_backend} api_key_source={api_key_source}"
+    )
+
+
 def main() -> None:
     # database_url() is the shared fail-closed resolver (FITCHECK_DB_URL /
     # DATABASE_URL must agree); the demo create_all's its own schema below.
@@ -63,9 +75,12 @@ def main() -> None:
         resolve = header_principal_resolver(sessions, header=header)
 
     print(
-        "fitcheck-demo "
-        f"transport={transport} proposer={proposer} db={db_url} "
-        f"api_key_source={api_key_source}",
+        _runtime_log_line(
+            transport=transport,
+            proposer=proposer,
+            database_backend=engine.dialect.name,
+            api_key_source=api_key_source,
+        ),
         file=sys.stderr,
         flush=True,
     )

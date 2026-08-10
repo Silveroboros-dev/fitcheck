@@ -637,8 +637,8 @@ def build_app(repository: ReviewRepository | None = None) -> FastAPI:
     def health():
         try:
             repo.validate()
-        except (ReviewDataError, json.JSONDecodeError) as exc:
-            return {"ok": False, "error": str(exc)}
+        except (ReviewDataError, json.JSONDecodeError):
+            return {"ok": False, "error": "review data validation failed"}
         return {"ok": True}
 
     return app
