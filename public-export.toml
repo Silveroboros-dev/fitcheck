@@ -417,6 +417,10 @@ source = "public/docs/engineering-walkthrough.md"
 destination = "docs/engineering-walkthrough.md"
 
 [[overlay]]
+source = "public/docs/experiments/README.md"
+destination = "docs/experiments/README.md"
+
+[[overlay]]
 source = "public/LICENSE"
 destination = "LICENSE"
 

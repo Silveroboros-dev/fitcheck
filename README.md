@@ -79,7 +79,9 @@ production evaluation corpus.
 The authoritative governed review corpus remains private. It contains review
 provenance and source material whose redistribution rights and privacy
 boundaries differ from those of the source code. Public experiment reports may
-summarize governed measurements without publishing the underlying rows.
+summarize governed measurements without publishing the underlying rows. See
+the [`July 2026 reviewed-data measurement summary`](docs/experiments/README.md)
+for the observed limitations and negative results.
 
 The retrieval layer exposes a provider protocol, but this distribution ships
 only `FixtureMarketProvider`. Live provider implementations, credentials,
