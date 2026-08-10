@@ -38,7 +38,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "836b3c6b27f3a9d36df7a03bd8b67426ac63c7536a6033272d18c2f0fe86bd4d"
+      "sha256": "7470c03734359728446c5655be6c9932bc967adc1e8077c6ce12dcda28eb4ab1"
     },
     {
       "path": "SECURITY.md",
@@ -91,6 +91,10 @@
     {
       "path": "docs/engineering-walkthrough.md",
       "sha256": "2232bb32ed2ceac160a86712840ff7cdd0aa710afe3eacf3c0142d19cafb6858"
+    },
+    {
+      "path": "docs/experiments/README.md",
+      "sha256": "7d64f6d3c72de0a3c99463f9e7858d146ccfaf6946ff80cddd95bd66a0f65f19"
     },
     {
       "path": "docs/reviewed-reference-dataset-spec-v0.md",
@@ -470,7 +474,7 @@
     },
     {
       "path": "public-export.toml",
-      "sha256": "db2c43edc9110132458031d87816da0c049e8e1157e10939e414f21505388034"
+      "sha256": "34ad31bd0fae112c0a3d59471b143641ac3ae1b36cec0dc6c05a21071d38dea3"
     },
     {
       "path": "pyproject.toml",
