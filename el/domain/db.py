@@ -31,10 +31,10 @@ def database_url() -> str:
     database = (os.environ.get("DATABASE_URL") or "").strip()
     if fitcheck and database and fitcheck != database:
         raise SystemExit(
-            "FITCHECK_DB_URL and DATABASE_URL are both set but differ "
-            f"({fitcheck!r} vs {database!r}). They must name the SAME database "
-            "(the server and Alembic migrations share it). Unset one, or set "
-            "them equal."
+            "FITCHECK_DB_URL and DATABASE_URL are both set but differ. "
+            "Their values are redacted because database URLs may contain "
+            "credentials. They must name the SAME database (the server and "
+            "Alembic migrations share it). Unset one, or set them equal."
         )
     return fitcheck or database or DEFAULT_URL
 

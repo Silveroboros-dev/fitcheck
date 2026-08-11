@@ -14,6 +14,7 @@ from sqlalchemy.orm import sessionmaker
 from demo.build import build_fixture_tools, build_gemini_tools, seed_principal
 from el.domain.db import database_url, make_engine
 from el.domain.tables import Base
+from el.mcp.rate_limit import SqlUsageLimiter
 from el.mcp.server import build_server, header_principal_resolver
 
 VALID_PROPOSERS = {"fixture", "gemini"}
@@ -67,6 +68,7 @@ def main() -> None:
     Base.metadata.create_all(engine)
     sessions = sessionmaker(bind=engine, expire_on_commit=False)
     tools = build_gemini_tools(sessions) if proposer == "gemini" else build_fixture_tools(sessions)
+    limiter = SqlUsageLimiter(sessions)
     principal = seed_principal(sessions, api_key)
 
     if transport == "stdio":
@@ -96,7 +98,7 @@ def main() -> None:
             flush=True,
         )
 
-    mcp = build_server(tools, resolve, name="fitcheck-demo")
+    mcp = build_server(tools, resolve, limiter.consume, name="fitcheck-demo")
     mcp.run(transport=transport)
 
 

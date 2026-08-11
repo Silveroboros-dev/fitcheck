@@ -95,9 +95,12 @@ def test_blind_prior_valid_before_save():
     assert ev.ledger_entry_id is None  # exists before any ledger entry
 
 
-def test_blind_prior_rejects_market_context():
-    with pytest.raises(ValidationError, match="market_context_seen"):
-        _conviction(market_context_seen=True)
+def test_blind_prior_can_record_odds_free_fit_context():
+    event = _conviction(market_context_seen=True)
+
+    assert event.prior_type is PriorType.BLIND
+    assert event.market_context_seen is True
+    assert event.odds_revealed_at is None
 
 
 def test_blind_prior_rejects_revealed_odds():

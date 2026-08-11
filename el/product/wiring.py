@@ -63,6 +63,7 @@ MARKET_GOLDENS = FIXTURES_DIR / "markets" / "golden_market_structures.json"
 
 LOCAL_USER_EMAIL = "local-product-ui@fitcheck.local"
 CLIENT_REF = "product_ui"
+LOCAL_UI_DEFAULT_URL = "sqlite:///fitcheck_product.db"
 
 
 @dataclass(frozen=True)
@@ -87,11 +88,17 @@ class ProductServices:
 
 
 def database_url() -> str:
-    return (
-        os.environ.get("FITCHECK_UI_DB_URL")
-        or os.environ.get("DATABASE_URL")
-        or "sqlite:///fitcheck_product.db"
-    )
+    """Resolve only the product UI's explicit local-database setting.
+
+    The single-user fixture surface must not inherit the process-wide
+    ``DATABASE_URL`` used by the MCP service or Alembic. A developer may have
+    that variable pointed at a shared database while launching the documented
+    local fixture command; inheriting it here would run ``create_all`` and
+    write the synthetic local actor into that database.
+    """
+
+    configured = (os.environ.get("FITCHECK_UI_DB_URL") or "").strip()
+    return configured or LOCAL_UI_DEFAULT_URL
 
 
 def make_session_factory(url: str | None = None) -> sessionmaker[Session]:

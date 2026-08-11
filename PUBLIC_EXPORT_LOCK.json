@@ -38,11 +38,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "7470c03734359728446c5655be6c9932bc967adc1e8077c6ce12dcda28eb4ab1"
+      "sha256": "61e0c9de65712cb815f87afd0b2fa82656520fc57b685153997de717bbe92a8f"
     },
     {
       "path": "SECURITY.md",
-      "sha256": "bbefab63fc9537333b2e5d32857cdead67a2e4be6b0a2b84e484d657c2cdbcb5"
+      "sha256": "19162d44d31fb4a89cd19184f5fa61a269002f40715eb9f0b5a26137c66234e4"
     },
     {
       "path": "alembic.ini",
@@ -74,7 +74,7 @@
     },
     {
       "path": "demo/server.py",
-      "sha256": "9d1f1440bdffaeffca71df5c53cd5fa113b67d8b297695471b9ed9931eca1981"
+      "sha256": "cf9d9f04a72a1a30fcfb63730d10bc1d5c979e67ac7843e9130e0f9640f4eb91"
     },
     {
       "path": "docs/agent-guided-ui-contract-v0.md",
@@ -90,7 +90,7 @@
     },
     {
       "path": "docs/engineering-walkthrough.md",
-      "sha256": "2232bb32ed2ceac160a86712840ff7cdd0aa710afe3eacf3c0142d19cafb6858"
+      "sha256": "83b8beffb9a1a35ee36ec3afdf2b9c9b0139bddfce47a09807f1ac125c734104"
     },
     {
       "path": "docs/experiments/README.md",
@@ -134,11 +134,11 @@
     },
     {
       "path": "el/domain/contracts.py",
-      "sha256": "d58b9eca8ff5c0c2e1e18d98d647c81940f9699d9db169c4d49a412f74dbba69"
+      "sha256": "146babdfd783555911a7c9d055a20904eeaf8942e197dcc01d49394d1d994f43"
     },
     {
       "path": "el/domain/db.py",
-      "sha256": "394997d247c22e13dd0071ead638edb6e464484ef4ffd743d7b35d4ee60e1b5c"
+      "sha256": "0bfbfd5dc56c50fb71548479471244e8a8c13ebcced8ae0645956ca70624f659"
     },
     {
       "path": "el/domain/enums.py",
@@ -150,7 +150,7 @@
     },
     {
       "path": "el/domain/tables.py",
-      "sha256": "e01322efd36bdc783250ea4c4d5259f1b025ba184c541647b0f1df9ec2e60a83"
+      "sha256": "87bfdd0d57c94bae2872d7730a20e5aabd6e72cf1d740242a754e5a17a5b5d4a"
     },
     {
       "path": "el/domain/vocabulary.py",
@@ -250,7 +250,7 @@
     },
     {
       "path": "el/ledger/service.py",
-      "sha256": "9cf4fd0b0c617223882569642f55dd50805ab37aa588aef968cff9505455ff67"
+      "sha256": "d51d526be61ae52cc3026747e8d43ee8f289928762f7909d84362f81e169a320"
     },
     {
       "path": "el/marketstructure/__init__.py",
@@ -270,23 +270,27 @@
     },
     {
       "path": "el/mcp/__main__.py",
-      "sha256": "a44a15456c772681f11d075559247af77eec7ada09d3eda72caed267922064e7"
+      "sha256": "02405a17a3a4f5b928f4719fb77b3bd21b67ad659bfe9a5eac2a5ae8112bf77d"
     },
     {
       "path": "el/mcp/auth.py",
-      "sha256": "729f5759fdf202bed5b1354e44a771061f0bbca0574d2b98af9aa65ba4bb74cc"
+      "sha256": "4ad3091a7d8c8d865cdf216b3784a7268d9eb4e3aca652d72ef08c0e96d41795"
     },
     {
       "path": "el/mcp/contracts.py",
       "sha256": "71eeb8c99b1f54ac5681853b07945f53a679e632826ae5acc4156292d94942f7"
     },
     {
+      "path": "el/mcp/rate_limit.py",
+      "sha256": "1b58165905350439129ce6ebf46a49832ee1939691d9d7008867a881d1ceb30f"
+    },
+    {
       "path": "el/mcp/server.py",
-      "sha256": "d672d9fad67a380c1318af2a8d0ddb15f0664cb01596ca52c917e8bddbc0bbdc"
+      "sha256": "9c804236eb8045c5ead6a89cf8881f12a13b9514214e93d954b5723c50d98252"
     },
     {
       "path": "el/mcp/tools.py",
-      "sha256": "593260a4cd654693e176b56d4a5b2a011677cd813315106aadfd1d25bcd9db59"
+      "sha256": "6c1da3ec0428e5b4f7fee299c600d6ac37ddeecfafe2f77371a0beb85bb13ace"
     },
     {
       "path": "el/mcp/vocab_guard.py",
@@ -330,11 +334,11 @@
     },
     {
       "path": "el/product/static/product_console.html",
-      "sha256": "fceb2a54d930a3a413ddf80df24af8236658bec091643891eeb84201db68b4f6"
+      "sha256": "7ef21584856579a7e3dee1439e2465d4ef5f029574fd1f3fb9d8bf6c0c1d936b"
     },
     {
       "path": "el/product/wiring.py",
-      "sha256": "589cc271969a3c839a6f516675a8f3d7e24d355b241d5c854f6401ee50d7e943"
+      "sha256": "d0514437f1dd85502406e5e3ee4f54826f66d4baae76e595285a293d52692b96"
     },
     {
       "path": "el/retrieval/__init__.py",
@@ -465,6 +469,10 @@
       "sha256": "2edfdd6d348159f8a474cb597786ce4ca48ef537f2ae56ae4ead46e911624956"
     },
     {
+      "path": "migrations/versions/e6c7a8b9d0f1_mcp_usage_buckets.py",
+      "sha256": "286763f4fd6ee32888b2c61b01d96f740e4ac005ae079c2d0c8ab788bc4e3516"
+    },
+    {
       "path": "migrations/versions/ee90f333bae6_draft_contract_provenance.py",
       "sha256": "fc87ca25e89250b82f16ca5337df8879b1a13e6ffd2e532042cc3b976c217102"
     },
@@ -474,7 +482,7 @@
     },
     {
       "path": "public-export.toml",
-      "sha256": "34ad31bd0fae112c0a3d59471b143641ac3ae1b36cec0dc6c05a21071d38dea3"
+      "sha256": "21ed2d87556cc8697c96cc2371d4bdbaf1ff503b8d7a769ca6aacb8277d932a3"
     },
     {
       "path": "pyproject.toml",
@@ -542,7 +550,7 @@
     },
     {
       "path": "tests/test_contracts.py",
-      "sha256": "2a3d6efe8f1ca7615c5648397ce2f02136959c4a47632c149b9d8d711f9809e3"
+      "sha256": "c67825b2a563bd731031536258eb77cf7f1c9088021b92bd8d0eb34a3dc7ca54"
     },
     {
       "path": "tests/test_correction_loop.py",
@@ -550,7 +558,7 @@
     },
     {
       "path": "tests/test_db_url.py",
-      "sha256": "260e5e3cb326681bcfa78579a568107be1255d742c07a4773ba2525df576e0ab"
+      "sha256": "ddd1a47633ce81caa45d6dc3b715b169a4a4015d1a0910585a097d6dd65e82f5"
     },
     {
       "path": "tests/test_demo_cloud_run_auth.py",
@@ -586,7 +594,7 @@
     },
     {
       "path": "tests/test_job_store_postgres.py",
-      "sha256": "d0e71ce68c40d0b92d063c4f8d646bb0030a07b0ba7e1e8874ec4a4b39f8f08a"
+      "sha256": "b6b5aceb294a54d5e88dd6ccd2cb0bfb78b6dfeaa2daea458641d80948d1c080"
     },
     {
       "path": "tests/test_ledger_service.py",
@@ -602,19 +610,23 @@
     },
     {
       "path": "tests/test_mcp_auth.py",
-      "sha256": "b0cf525ba4fba1105012f8be72368d48a0773f0a87ff273b94323334451ad80f"
+      "sha256": "1f8cde2fb5172aea05e388443b8164824b96f862a4433f19d804e020a1f7e1f8"
+    },
+    {
+      "path": "tests/test_mcp_rate_limit.py",
+      "sha256": "37e5c34c63122231c7f9fabc9f409040d81eef274576e51238126a546d5917fd"
     },
     {
       "path": "tests/test_mcp_server.py",
-      "sha256": "e976264ef2b8b3551be095672d941d84227c8ab5e4f3378d5e16cd3ce615bb23"
+      "sha256": "32bd622ded7567a2dd46a862de5638b6e89fed9eeb5afc0815b2f6a631446dbc"
     },
     {
       "path": "tests/test_mcp_server_build.py",
-      "sha256": "4cae3a9689728c429e80d562afe14e0bc698da2cf57d76d43a06a7fd1b918f74"
+      "sha256": "9a99abdb672f0320e1180b2cd435e1a4644d1700cf54c6c6a3f94737efddcedf"
     },
     {
       "path": "tests/test_mcp_tools.py",
-      "sha256": "3f38b5da6c25fc94f1d4866cbaf0278be6b5be00a1c11c64a6641828ce32b2f4"
+      "sha256": "85698e7965061e70e2d57a4a1bd0ca39b23f4fd10830d69ff7555088b87e37cf"
     },
     {
       "path": "tests/test_perturbation.py",
@@ -626,7 +638,7 @@
     },
     {
       "path": "tests/test_product_api.py",
-      "sha256": "32fb25a55e798e27b41b141af7d6e001ced06425952d48f249198dae9774316b"
+      "sha256": "327447c34314971efceff797950015ff8ab6119fb581e7505c4afe9a28d32d38"
     },
     {
       "path": "tests/test_product_contract_doc.py",
@@ -634,7 +646,7 @@
     },
     {
       "path": "tests/test_product_ui_page.py",
-      "sha256": "b6ebfdc9bc2ec017319e716319e35fd4f828048f686d1cc2b94491b7e6eee555"
+      "sha256": "33d4cc12ed2296864334577d625569a37db47f5ced8e1fdbe5b2606353eca3c7"
     },
     {
       "path": "tests/test_public_boundary.py",
@@ -674,7 +686,7 @@
     },
     {
       "path": "tests/test_schema.py",
-      "sha256": "717d2b5f25b5c4876fc0e10d04eacceaa036f9a494845001545aa29ff4a26841"
+      "sha256": "a6a2d04b55ec79274207349a3ccf7aa03d3791af97aabeab7b5536f29bde1a88"
     },
     {
       "path": "tests/test_schema_version_invariant.py",

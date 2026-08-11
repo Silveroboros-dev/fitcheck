@@ -37,6 +37,7 @@ def hash_api_key(raw_key: str) -> str:
 @dataclass(frozen=True)
 class Principal:
     user_id: uuid.UUID
+    api_client_id: uuid.UUID
     client_type: ClientType
     # The authenticated identity the odds lock is scoped to. = str(ApiClient.id)
     # for both agent_mcp and api (the api-key row IS the principal).
@@ -68,6 +69,7 @@ def resolve_principal(session: Session, raw_api_key: str | None) -> Principal:
     actor_id = str(row.id)
     return Principal(
         user_id=row.user_id,
+        api_client_id=row.id,
         client_type=client_type,
         actor_id=actor_id,
         agent_client_id=actor_id,

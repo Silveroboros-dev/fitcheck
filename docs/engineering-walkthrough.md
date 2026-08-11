@@ -96,9 +96,11 @@ explicit.
 
 The public state machine and worker contracts do not depend on Cloud Tasks,
 HTTP, MCP, or a particular provider SDK. That makes failure semantics
-offline-testable and preserves deployment choice. It also means queue wiring,
-provider authorization, rate limits, and retention policy remain separate
-operational work, not capabilities implied by this repository.
+offline-testable and preserves deployment choice. The MCP boundary separately
+uses SQL-backed per-key weighted admission across instances. Queue wiring,
+provider authorization and provider-specific throttling, retention policy, and
+currency-denominated cost enforcement remain operational work, not
+capabilities implied by this repository.
 
 ### Review candidates over direct learning
 

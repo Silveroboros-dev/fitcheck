@@ -127,6 +127,27 @@ class McpTools:
             )
         )
 
+    def _fit_context_seen(self, thesis_analysis_id: uuid.UUID) -> bool:
+        """Whether an odds-free fit preview already exists for this thesis.
+
+        ``classify_market_fit`` cannot create a card before the actor has a
+        prior, so a pre-prior card is conservative evidence that preview
+        exposed market-fit context for delivery. A persisted card is not proof
+        that the transport delivered the response; when delivery is ambiguous,
+        the audit record conservatively avoids asserting context-blindness.
+        Ownership is checked by the caller before this helper runs.
+        """
+
+        with self._sessions() as session:
+            return (
+                session.scalar(
+                    select(FitCard.id)
+                    .where(FitCard.thesis_analysis_id == thesis_analysis_id)
+                    .limit(1)
+                )
+                is not None
+            )
+
     # 3 — draft_contract_preview --------------------------------------------
     def draft_contract_preview(
         self, principal: Principal, *, fit_card_id: uuid.UUID
@@ -175,6 +196,7 @@ class McpTools:
                 PriorConfidence(prior_confidence) if prior_confidence else None
             ),
             prior_reason=prior_reason,
+            market_context_seen=self._fit_context_seen(thesis_analysis_id),
             agent_client_id=principal.agent_client_id,
         )
         return self._guard(

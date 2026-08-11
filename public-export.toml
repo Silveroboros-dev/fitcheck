@@ -87,6 +87,10 @@ source = "el/mcp/contracts.py"
 destination = "el/mcp/contracts.py"
 
 [[include]]
+source = "el/mcp/rate_limit.py"
+destination = "el/mcp/rate_limit.py"
+
+[[include]]
 source = "el/mcp/server.py"
 destination = "el/mcp/server.py"
 
@@ -295,6 +299,10 @@ destination = "tests/test_mcp_a7_guard.py"
 [[include]]
 source = "tests/test_mcp_auth.py"
 destination = "tests/test_mcp_auth.py"
+
+[[include]]
+source = "tests/test_mcp_rate_limit.py"
+destination = "tests/test_mcp_rate_limit.py"
 
 [[include]]
 source = "tests/test_mcp_server.py"

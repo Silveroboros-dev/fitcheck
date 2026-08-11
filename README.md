@@ -47,6 +47,7 @@ the public fixture UI does not pretend to exercise an excluded live provider.
 | Classification binds a job to snapshot, index, policy, prompt, and model identities before executing a deterministic final fit decision. | [`el/classification/worker.py`](el/classification/worker.py) and [`planner.py`](el/classification/planner.py) | [`tests/test_classification_worker.py`](tests/test_classification_worker.py) |
 | Expression quality is governed by deterministic policy rather than accepted from a model response. | [`el/fitgate/service.py`](el/fitgate/service.py), [`checks.py`](el/fitgate/checks.py), and [`policy.py`](el/fitgate/policy.py) | [`tests/test_fit_service.py`](tests/test_fit_service.py) and [`tests/test_fitgate_checks.py`](tests/test_fitgate_checks.py) |
 | A user correction creates review work without silently rewriting cards, decisions, or ledger truth. | [`el/product/api.py`](el/product/api.py) and [`el/review/candidates.py`](el/review/candidates.py) | [`tests/test_correction_loop.py`](tests/test_correction_loop.py) and [`tests/test_review_candidates.py`](tests/test_review_candidates.py) |
+| Authenticated MCP tool invocations consume bounded, per-key weighted usage across instances before tool execution. | [`el/mcp/rate_limit.py`](el/mcp/rate_limit.py) and [`el/domain/tables.py`](el/domain/tables.py) | [`tests/test_mcp_rate_limit.py`](tests/test_mcp_rate_limit.py) and the [PostgreSQL contention gate](tests/test_job_store_postgres.py) |
 | The public artifact is generated from an allowlist and fails closed on unexpected files, live identifiers, secrets, and private roots. | [`scripts/build_public_export.py`](scripts/build_public_export.py) and [`scripts/check_public_boundary.py`](scripts/check_public_boundary.py) | [`tests/test_public_export.py`](tests/test_public_export.py), [`tests/test_public_boundary.py`](tests/test_public_boundary.py), and the [public CI gates](.github/workflows/ci.yml) |
 
 For the architectural reasoning, ownership boundaries, tradeoffs, and failure
@@ -59,7 +60,7 @@ handling behind those links, see the
 | --- | --- | --- |
 | Fixture thesis -> fit card -> ledger product loop | **Public, implemented, and offline-tested** | Uses authored synthetic fixtures and a local SQLite database; no live provider or model call is implied. |
 | Durable jobs, classification worker, snapshot validation, and promotion primitives | **Public, implemented, and tested** | SQLite covers state-machine behavior; public CI adds a disposable PostgreSQL contention gate. The fixture UI remains a synchronous local slice. |
-| Deterministic fit policies, correction intake, review queue, and MCP contracts | **Public, implemented, and tested** | Synthetic tests establish declared contracts, not live-data accuracy or production readiness. |
+| Deterministic fit policies, correction intake, review queue, and MCP contracts | **Public, implemented, and tested** | Includes SQL-backed per-key weighted MCP admission. Synthetic tests establish declared contracts, not live-data accuracy or production readiness. |
 | Reference Cloud Run, Vertex AI, and Cloud SQL service | **Private reference deployment** | The deployment is operated separately. Service identifiers, infrastructure configuration, database, and operational evidence are not public artifacts. |
 | Live PolyData retrieval source and provider operations | **Excluded** | Provider implementation, credentials, payloads, retry policy, and authorization are absent; live-provider selection fails closed. |
 | Governed review corpus and reported evaluation rows | **Private** | Public fixtures are regression material, not the governed benchmark or evidence for external validity. |
@@ -120,11 +121,12 @@ cloud account, provider credential, or model credential.
 
 ```bash
 docker build -t fitcheck-fixture .
-docker run --rm -p 8080:8080 fitcheck-fixture
+docker run --rm -p 127.0.0.1:8080:8080 fitcheck-fixture
 ```
 
-Then open `http://127.0.0.1:8080`. Do not treat this fixture container as a
-production authentication or deployment reference.
+Then open `http://127.0.0.1:8080`. Keep the host-side port bound to loopback:
+the fixture API is a single-user, unauthenticated local surface. Do not treat
+this container as a production authentication or deployment reference.
 
 ## Optional PostgreSQL contention test
 
