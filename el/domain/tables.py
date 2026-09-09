@@ -75,6 +75,33 @@ class ApiClient(_PK, _Created, Base):
     )
 
 
+class McpUsageBucket(Base):
+    """Bounded cross-instance usage counter for one API client and window.
+
+    The stable scope names are overwritten when their fixed window rolls, so
+    storage is bounded by ``api_clients * configured scopes`` rather than by
+    request volume.  Production currently uses exactly two scopes.
+    """
+
+    __tablename__ = "mcp_usage_buckets"
+    api_client_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("api_clients.id", ondelete="CASCADE"), primary_key=True
+    )
+    scope: Mapped[str] = mapped_column(String(32), primary_key=True)
+    window_started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    used_units: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    __table_args__ = (
+        CheckConstraint(
+            "used_units >= 0", name="ck_mcp_usage_units_nonnegative"
+        ),
+    )
+
+
 class Job(_PK, _Created, Base):
     """Durable logical operation; queue delivery is never the source of truth.
 

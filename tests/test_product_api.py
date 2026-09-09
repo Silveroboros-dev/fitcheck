@@ -14,7 +14,12 @@ from sqlalchemy.pool import StaticPool
 from el.domain.tables import Base
 from el.product.api import ProductApi
 from el.product.app import build_app
-from el.product.wiring import build_services, local_actor
+from el.product.wiring import (
+    LOCAL_UI_DEFAULT_URL,
+    build_services,
+    database_url,
+    local_actor,
+)
 
 CLEAN = (
     "Gemini is going to be ranked #1 chatbot on LMSYS Chatbot Arena by "
@@ -23,6 +28,26 @@ CLEAN = (
 # Raw fixture input text (user-quoted source; the normalized summary and all
 # system copy stay A7-clean — "acquires", never trading vocabulary).
 NO_CLEAN = "Acme will buy a competitor in 2026."
+
+
+def test_fixture_database_does_not_inherit_service_database(monkeypatch):
+    monkeypatch.delenv("FITCHECK_UI_DB_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://shared.invalid/prod")
+
+    assert database_url() == LOCAL_UI_DEFAULT_URL
+
+
+def test_fixture_database_requires_explicit_ui_override(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://shared.invalid/prod")
+    monkeypatch.setenv("FITCHECK_UI_DB_URL", "sqlite:////tmp/fitcheck-local.db")
+
+    assert database_url() == "sqlite:////tmp/fitcheck-local.db"
+
+
+def test_blank_ui_database_override_uses_local_default(monkeypatch):
+    monkeypatch.setenv("FITCHECK_UI_DB_URL", "  ")
+
+    assert database_url() == LOCAL_UI_DEFAULT_URL
 
 
 @pytest.fixture()

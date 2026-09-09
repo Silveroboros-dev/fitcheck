@@ -21,6 +21,7 @@ from el.domain.structures import (
 from el.domain.tables import (
     ApiClient,
     Base,
+    ConvictionEvent,
     MarketRecommendation,
     ReviewCandidate,
     ThesisAnalysis,
@@ -255,6 +256,72 @@ def test_preview_withholds_all_odds():
     assert preview.provenance["odds_withheld"] is True
     blob = json.dumps(preview.model_dump(mode="json"))
     assert "current_probability" not in blob  # scrubbed nested too
+
+
+def test_preview_before_prior_records_fit_context_without_odds():
+    sessions = _sessions()
+    tools = _tools(sessions)
+    principal = _principal(sessions)
+    thesis_id = tools.normalize_claim(principal, input_text=CLEAN).thesis_analysis_id
+
+    tools.preview_market_fit(principal, thesis_analysis_id=thesis_id)
+    tools.submit_blind_prior(
+        principal, thesis_analysis_id=thesis_id, prior_probability=0.6
+    )
+
+    with sessions() as session:
+        event = session.scalar(
+            select(ConvictionEvent).where(
+                ConvictionEvent.thesis_analysis_id == thesis_id
+            )
+        )
+        assert event.prior_type == "blind"
+        assert event.market_context_seen is True
+        assert event.odds_revealed_at is None
+
+
+def test_prior_without_preview_records_no_fit_context():
+    sessions = _sessions()
+    tools = _tools(sessions)
+    principal = _principal(sessions)
+    thesis_id = tools.normalize_claim(principal, input_text=CLEAN).thesis_analysis_id
+
+    tools.submit_blind_prior(
+        principal, thesis_analysis_id=thesis_id, prior_probability=0.6
+    )
+
+    with sessions() as session:
+        event = session.scalar(
+            select(ConvictionEvent).where(
+                ConvictionEvent.thesis_analysis_id == thesis_id
+            )
+        )
+        assert event.market_context_seen is False
+
+
+def test_prior_context_exposure_is_monotonic_before_reveal():
+    sessions = _sessions()
+    tools = _tools(sessions)
+    principal = _principal(sessions)
+    thesis_id = tools.normalize_claim(principal, input_text=CLEAN).thesis_analysis_id
+
+    created = tools.submit_blind_prior(
+        principal, thesis_analysis_id=thesis_id, prior_probability=0.6
+    )
+    assert created.status == "created"
+    tools.preview_market_fit(principal, thesis_analysis_id=thesis_id)
+    updated = tools.submit_blind_prior(
+        principal, thesis_analysis_id=thesis_id, prior_probability=0.65
+    )
+    assert updated.status == "updated"
+
+    with sessions() as session:
+        event = session.scalar(
+            select(ConvictionEvent).where(
+                ConvictionEvent.thesis_analysis_id == thesis_id
+            )
+        )
+        assert event.market_context_seen is True
 
 
 # --- 4. submit prior -> classify reveals thesis-side odds ----------------

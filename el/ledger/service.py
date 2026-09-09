@@ -114,6 +114,7 @@ class LedgerService:
         prior_probability: float,
         prior_confidence: PriorConfidence | None = None,
         prior_reason: str | None = None,
+        market_context_seen: bool = False,
         agent_client_id: str | None = None,
     ) -> BlindPriorOutcome:
         with self._sessions() as session:
@@ -152,6 +153,7 @@ class LedgerService:
                     prior_probability,
                     prior_confidence,
                     prior_reason,
+                    market_context_seen,
                     agent_client_id,
                 )
                 event.prior_probability = prior_probability
@@ -159,6 +161,12 @@ class LedgerService:
                     prior_confidence.value if prior_confidence else None
                 )
                 event.prior_reason = prior_reason
+                # Context exposure is monotonic audit truth. A later update may
+                # record that an odds-free fit preview occurred, but it may
+                # never erase an exposure already observed.
+                event.market_context_seen = (
+                    event.market_context_seen or market_context_seen
+                )
                 session.commit()
                 return BlindPriorOutcome(
                     thesis_analysis_id=thesis_analysis_id,
@@ -173,6 +181,7 @@ class LedgerService:
                 prior_probability,
                 prior_confidence,
                 prior_reason,
+                market_context_seen,
                 agent_client_id,
             )
             event = ConvictionEvent(
@@ -186,7 +195,7 @@ class LedgerService:
                 ),
                 prior_reason=prior_reason,
                 prior_type=PriorType.BLIND.value,
-                market_context_seen=False,
+                market_context_seen=market_context_seen,
                 odds_revealed_at=None,
                 client_type=client_type.value,
                 agent_client_id=agent_client_id,
@@ -525,14 +534,16 @@ class LedgerService:
         prior_probability: float,
         prior_confidence: PriorConfidence | None,
         prior_reason: str | None,
+        market_context_seen: bool,
         agent_client_id: str | None,
     ) -> None:
         # Reuse the binding temporal rules (contracts.ConvictionEventIn):
-        # blind => market_context_seen False, odds_revealed_at None, prob set.
+        # blind => odds_revealed_at None and probability set. An MCP preview may
+        # have exposed fit context without exposing odds; preserve that fact.
         ConvictionEventIn(
             thesis_analysis_id=thesis_analysis_id,
             prior_type=PriorType.BLIND,
-            market_context_seen=False,
+            market_context_seen=market_context_seen,
             odds_revealed_at=None,
             prior_probability=prior_probability,
             prior_confidence=prior_confidence,

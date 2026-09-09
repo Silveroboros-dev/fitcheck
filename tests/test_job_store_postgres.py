@@ -36,7 +36,7 @@ from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.schema import CreateSchema, DropSchema
 
-from el.domain.tables import Job, JobAttempt, User
+from el.domain.tables import ApiClient, Job, JobAttempt, McpUsageBucket, User
 from el.jobs import (
     AttemptStatus,
     FailureKind,
@@ -44,6 +44,14 @@ from el.jobs import (
     JobClaim,
     JobStatus,
     JobStore,
+)
+from el.mcp.auth import hash_api_key, resolve_principal
+from el.mcp.rate_limit import (
+    DAY_SCOPE,
+    MINUTE_SCOPE,
+    RateLimitExceeded,
+    SqlUsageLimiter,
+    TierPolicy,
 )
 
 TEST_URL_ENV = "FITCHECK_POSTGRES_TEST_URL"
@@ -598,3 +606,54 @@ def test_lease_renewal_and_final_attempt_reaper_never_split_brain(
             assert job.lease_expires_at is None
             assert attempt.status == AttemptStatus.ABANDONED.value
             assert not store.succeed(claim, result={"winner": "stale"})
+
+
+def test_mcp_usage_limit_is_atomic_under_postgres_contention(
+    postgres_harness: PostgresHarness,
+) -> None:
+    sessions = postgres_harness.sessions
+    key = f"quota-{uuid.uuid4()}"
+    with sessions.begin() as session:
+        user = User(email=f"quota-{uuid.uuid4()}@example.test")
+        session.add(user)
+        session.flush()
+        session.add(
+            ApiClient(
+                user_id=user.id,
+                key_hash=hash_api_key(key),
+                client_type="agent_mcp",
+                rate_limit_tier="contention-test",
+            )
+        )
+    with sessions() as session:
+        principal = resolve_principal(session, key)
+
+    limiter = SqlUsageLimiter(
+        sessions,
+        # Exercise PostgreSQL's production clock and make the day scope the
+        # limiting second write. Every denied attempt must roll its already
+        # admitted minute-scope increment back to the same final count.
+        policies={"contention-test": TierPolicy(20, 10)},
+        tool_costs={"probe": 1},
+    )
+
+    def consume(_index: int) -> bool:
+        try:
+            limiter.consume(principal, "probe")
+            return True
+        except RateLimitExceeded:
+            return False
+
+    allowed = _parallel(64, consume)
+    assert sum(allowed) == 10
+
+    with sessions() as session:
+        rows = session.scalars(
+            select(McpUsageBucket).where(
+                McpUsageBucket.api_client_id == principal.api_client_id
+            )
+        ).all()
+    assert {row.scope: row.used_units for row in rows} == {
+        MINUTE_SCOPE: 10,
+        DAY_SCOPE: 10,
+    }

@@ -48,6 +48,7 @@ def test_resolves_agent_mcp_principal():
     assert isinstance(p, Principal)
     assert p.client_type is ClientType.AGENT_MCP
     assert p.user_id == user_id
+    assert p.api_client_id == client_id
     assert p.actor_id == str(client_id)  # api-key row IS the actor identity
     assert p.agent_client_id == str(client_id)
 

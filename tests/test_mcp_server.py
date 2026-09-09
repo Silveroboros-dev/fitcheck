@@ -10,11 +10,15 @@ import json
 import uuid
 from types import SimpleNamespace
 
+import pytest
+from sqlalchemy import func, select
+
 from test_mcp_tools import CLEAN, _principal, _sessions, _tools
 
-from el.domain.tables import ApiClient, User
+from el.domain.tables import ApiClient, ThesisAnalysis, User
 from el.mcp.auth import hash_api_key
 from el.mcp.contracts import NotFound
+from el.mcp.rate_limit import RateLimitExceeded
 from el.mcp.server import (
     TOOL_NAMES,
     _fail,
@@ -23,13 +27,13 @@ from el.mcp.server import (
 )
 
 
-def _server():
+def _server(consume_usage=lambda _principal, _tool_name: None):
     sessions = _sessions()
     tools = _tools(sessions)
     principal = _principal(sessions)
     # Stub resolver: the transport's job is dispatch; auth resolution is
     # exercised in test_mcp_auth. Here we inject a fixed principal.
-    return build_server(tools, lambda ctx: principal), sessions
+    return build_server(tools, lambda ctx: principal, consume_usage), sessions
 
 
 def test_server_registers_all_ten_tools():
@@ -40,7 +44,8 @@ def test_server_registers_all_ten_tools():
 
 
 def test_normalize_claim_round_trips_through_transport():
-    mcp, _ = _server()
+    charged = []
+    mcp, _ = _server(lambda _principal, tool_name: charged.append(tool_name))
     result = asyncio.run(mcp.call_tool("normalize_claim", {"input_text": CLEAN}))
     # FastMCP serializes the dict return as a TextContent JSON block.
     payload = result[0] if isinstance(result, (list, tuple)) else result
@@ -48,6 +53,21 @@ def test_normalize_claim_round_trips_through_transport():
     data = json.loads(text) if text else payload
     assert "thesis_analysis_id" in data
     assert data["normalized_claim_summary"]
+    assert charged == ["normalize_claim"]
+
+
+def test_usage_denial_happens_before_tool_dispatch():
+    def deny(_principal, _tool_name):
+        raise RateLimitExceeded(30)
+
+    mcp, sessions = _server(deny)
+    with pytest.raises(Exception, match="rate_limited"):
+        asyncio.run(mcp.call_tool("normalize_claim", {"input_text": CLEAN}))
+    with sessions() as session:
+        assert (
+            session.scalar(select(func.count()).select_from(ThesisAnalysis))
+            == 0
+        )
 
 
 def test_header_resolver_parses_bearer_token():
@@ -80,3 +100,4 @@ def test_fail_maps_errors_to_typed_codes():
     # P2b: UUID/enum ValueErrors -> invalid_argument; McpError keeps its code.
     assert "invalid_argument" in str(_fail(ValueError("not a uuid")))
     assert "not_found" in str(_fail(NotFound("ledger_entry")))
+    assert "rate_limited" in str(_fail(RateLimitExceeded(10)))

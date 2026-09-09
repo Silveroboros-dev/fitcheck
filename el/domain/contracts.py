@@ -8,7 +8,8 @@ Binding rules encoded here (not just documented):
 - conviction events anchor on thesis_analysis_id; ledger_entry_id is
   nullable and back-filled at save (spec v2 Core Objects);
 - a blind prior exists before odds are revealed: prior_type=blind requires
-  market_context_seen=False and odds_revealed_at=None at record time;
+  odds_revealed_at=None at record time. It may truthfully record that an
+  odds-free fit preview was seen first via market_context_seen=True;
 - a conviction event carries a prior, a conviction, or both — never
   neither.
 """
@@ -72,10 +73,6 @@ class ConvictionEventIn(_Contract):
     @model_validator(mode="after")
     def _temporal_rules(self) -> "ConvictionEventIn":
         if self.prior_type is PriorType.BLIND:
-            if self.market_context_seen:
-                raise ValueError(
-                    "blind prior cannot have market_context_seen=True"
-                )
             if self.odds_revealed_at is not None:
                 raise ValueError(
                     "blind prior cannot carry odds_revealed_at"

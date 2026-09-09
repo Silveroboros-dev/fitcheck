@@ -63,3 +63,5 @@ def test_no_restricted_vocabulary_in_system_copy():
 def test_blind_prior_panel_precedes_market_card():
     assert HTML.index('id="s2"') < HTML.index('id="s3"')
     assert "before any market" in HTML
+    assert "before market odds" in HTML
+    assert "before market context" not in HTML

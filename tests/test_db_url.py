@@ -42,14 +42,17 @@ def test_both_set_equal(monkeypatch):
 
 
 def test_both_set_differ_fails_closed(monkeypatch):
-    # Rule 1: disagreement halts (fail-closed), naming both vars.
+    # Rule 1: disagreement halts (fail-closed), naming both vars without ever
+    # copying their potentially credentialed values into startup/migration logs.
     _clear_db_env(monkeypatch)
-    monkeypatch.setenv("FITCHECK_DB_URL", "sqlite:///a.db")
-    monkeypatch.setenv("DATABASE_URL", "sqlite:///b.db")
+    monkeypatch.setenv("FITCHECK_DB_URL", "sensitive-fitcheck-value")
+    monkeypatch.setenv("DATABASE_URL", "sensitive-database-value")
     with pytest.raises(SystemExit) as exc:
         database_url()
     msg = str(exc.value)
     assert "FITCHECK_DB_URL" in msg and "DATABASE_URL" in msg
+    assert "sensitive-fitcheck-value" not in msg
+    assert "sensitive-database-value" not in msg
 
 
 def test_blank_counts_as_unset(monkeypatch):

@@ -26,7 +26,7 @@ REPO = Path(__file__).resolve().parents[1]
 def test_metadata_creates_on_sqlite(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path}/t.db")
     Base.metadata.create_all(engine)
-    assert len(Base.metadata.tables) == 23
+    assert len(Base.metadata.tables) == 24
 
 
 def test_alembic_upgrade_matches_models(tmp_path):

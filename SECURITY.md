@@ -46,6 +46,11 @@ The included Dockerfile intentionally runs only the credential-free fixture UI.
 It does not implement production identity, migrations, or external-provider
 access.
 
+The MCP source includes a SQL-backed, per-key weighted usage limiter as
+application-level defense in depth. Its units are protective request weights,
+not currency or token metering; it does not replace IAM, provider quotas,
+billing alerts, or deployment-level abuse controls.
+
 ## Maintainer handling rules
 
 - Never request that a reporter paste a secret into an issue or pull request.

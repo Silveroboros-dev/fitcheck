@@ -11,7 +11,9 @@ class _StubTools:
 
 
 def _build(**kw):
-    return build_server(_StubTools(), lambda ctx: None, **kw)
+    return build_server(
+        _StubTools(), lambda ctx: None, lambda principal, tool_name: None, **kw
+    )
 
 
 def test_defaults_preserve_local_binding():
