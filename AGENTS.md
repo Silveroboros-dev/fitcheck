@@ -14,7 +14,10 @@ review data, live-provider adapters, deployment state, or private history.
 
 ## Architecture invariants
 
-- Models may propose; deterministic checks and human review govern durable truth.
+- Models may propose. Deterministic checks enforce declared schemas, safety
+  conditions, provenance, and other narrow invariants; human review governs
+  semantic labels and durable decisions. Neither a model nor a deterministic
+  check establishes semantic truth by itself.
 - Frozen fixtures are offline test truth. Live evidence must never rewrite labels.
 - `no_clean_expression` is a valid result.
 - Corrections create review candidates; they do not directly mutate goldens.

@@ -26,7 +26,23 @@ REPO = Path(__file__).resolve().parents[1]
 def test_metadata_creates_on_sqlite(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path}/t.db")
     Base.metadata.create_all(engine)
-    assert len(Base.metadata.tables) == 24
+    tables = set(Base.metadata.tables)
+    # The v3.1 migrations add durable source interpretation, explicit
+    # normalization, and bounded market-pool projections to the PR3 schema.
+    assert {
+        "source_interpretation_requests",
+        "source_interpretations",
+        "source_thesis_candidates",
+        "source_candidate_choices",
+        "normalization_attempts",
+        "normalization_decisions",
+        "market_rules_captures",
+        "market_assessments",
+        "market_display_sets",
+        "market_display_items",
+        "market_choices",
+    } <= tables
+    assert len(tables) == 34
 
 
 def test_alembic_upgrade_matches_models(tmp_path):

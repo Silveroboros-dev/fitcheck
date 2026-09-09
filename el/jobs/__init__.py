@@ -6,6 +6,7 @@ but they never own lifecycle state or business idempotency.
 
 from el.jobs.store import (
     AttemptStatus,
+    EXTERNAL_EFFECT_STARTED_STAGE,
     FailureKind,
     FencedWriteSession,
     IdempotencyConflict,
@@ -19,6 +20,7 @@ from el.jobs.store import (
 
 __all__ = [
     "AttemptStatus",
+    "EXTERNAL_EFFECT_STARTED_STAGE",
     "FailureKind",
     "FencedWriteSession",
     "IdempotencyConflict",

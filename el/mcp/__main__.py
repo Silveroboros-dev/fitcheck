@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from el.domain.db import make_engine
 from el.mcp.rate_limit import SqlUsageLimiter
 from el.mcp.server import build_server, header_principal_resolver
-from el.mcp.wiring import build_gemini_tools
+from el.mcp.wiring import build_gemini_tools, build_gemini_v3_tools
 
 
 def build():
@@ -25,6 +25,7 @@ def build():
     engine = make_engine()  # database_url(): fail-closed FITCHECK_DB_URL/DATABASE_URL
     sessions = sessionmaker(bind=engine, expire_on_commit=False)
     tools = build_gemini_tools(sessions)
+    v3_tools = build_gemini_v3_tools(sessions)
     limiter = SqlUsageLimiter(sessions)
     header = os.environ.get("FITCHECK_API_KEY_HEADER", "x-api-key")
     resolve = header_principal_resolver(sessions, header=header)
@@ -32,6 +33,7 @@ def build():
         tools,
         resolve,
         limiter.consume,
+        v3_tools=v3_tools,
         name="fitcheck",
         host="0.0.0.0",
         port=int(os.environ["PORT"]),

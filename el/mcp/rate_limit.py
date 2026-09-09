@@ -50,6 +50,18 @@ TOOL_COST_UNITS: Mapping[str, int] = {
     "get_ledger_entries": 2,
     "correct_fit": 2,
     "reject_market": 2,
+    # V3 source-to-market journey. These are fixed protective units, reviewed
+    # together with the registered server surface; omitting a tool fails closed.
+    "v3_submit_source_interpretation": 10,
+    "v3_get_source_interpretation_job": 1,
+    "v3_get_source_interpretation_job_by_idempotency": 1,
+    "v3_choose_source_candidate": 2,
+    "v3_propose_selected_normalization": 10,
+    "v3_revise_normalization": 10,
+    "v3_accept_normalization": 2,
+    "v3_reject_normalization": 2,
+    "v3_assess_market_pool": 20,
+    "v3_choose_market": 2,
 }
 
 

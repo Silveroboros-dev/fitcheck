@@ -10,7 +10,7 @@ recommendations, reasons, and labels are CHECKED.
 
 import uuid
 from datetime import date, datetime
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -55,6 +55,22 @@ class ToolRefused(McpError):
     def __init__(self, reasons: list[str]):
         self.reasons = reasons
         super().__init__("; ".join(reasons))
+
+
+class Conflict(McpError):
+    """The requested transition conflicts with immutable or stale state."""
+
+    code: ClassVar[str] = "conflict"
+
+
+class IdempotencyConflictError(Conflict):
+    code: ClassVar[str] = "idempotency_conflict"
+
+
+class Unavailable(McpError):
+    """The configured proposer cannot handle the requested fixture/input."""
+
+    code: ClassVar[str] = "service_unavailable"
 
 
 class _McpOut(BaseModel):
@@ -151,3 +167,149 @@ class ReviewCandidateResult(_McpOut):
     object_id: uuid.UUID
     source: str
     status: str
+
+
+# Product Discovery v3.1 successor responses. These are additive: the legacy
+# result models above retain their historical meanings.
+
+
+class V3SourceThesisCandidateResult(_McpOut):
+    source_thesis_candidate_id: uuid.UUID
+    ordinal: int
+    selected_source_quote: str
+    source_quote_digest: str
+    claim_summary: str
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {"selected_source_quote"}
+    )
+
+
+class V3SourceInterpretationResult(_McpOut):
+    source_interpretation_id: uuid.UUID
+    outcome: str
+    input_digest: str | None
+    reasons: list[str]
+    prompt_policy_version: str
+    system_variant_id: str
+    model_adapter: str | None
+    model_run_id: str | None
+    candidates: list[V3SourceThesisCandidateResult]
+    created_at: datetime
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {"candidates[].selected_source_quote"}
+    )
+
+
+class V3SourceInterpretationJobResult(_McpOut):
+    job_id: uuid.UUID
+    source_interpretation_request_id: uuid.UUID
+    input_digest: str | None
+    status: str
+    stage: str | None
+    created: bool | None
+    error_code: str | None
+    safe_error_message: str | None
+    interpretation: V3SourceInterpretationResult | None
+    created_at: datetime
+    updated_at: datetime
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {"interpretation.candidates[].selected_source_quote"}
+    )
+
+
+class _AgentRelayDecision(_McpOut):
+    # MCP authenticates the agent principal. A separate client trace must bind
+    # any human message; the tool call is never direct human attestation.
+    decision_origin: Literal["agent_relay"] = "agent_relay"
+    human_attestation: Literal[False] = False
+
+
+class V3SourceCandidateChoiceResult(_AgentRelayDecision):
+    source_candidate_choice_id: uuid.UUID
+    source_interpretation_id: uuid.UUID
+    selection_kind: str
+    source_thesis_candidate_id: uuid.UUID | None
+    created_at: datetime
+
+class V3NormalizationAttemptResult(_McpOut):
+    normalization_attempt_id: uuid.UUID
+    predecessor_attempt_id: uuid.UUID | None
+    source_interpretation_id: uuid.UUID | None
+    source_thesis_candidate_id: uuid.UUID | None
+    outcome: str
+    verdict: str
+    input_digest: str | None
+    normalized_claim_summary: str | None
+    extracted_structure: dict | None
+    clarifying_question: str | None
+    reasons: list[str]
+    gate_policy_version: str
+    prompt_policy_version: str
+    system_variant_id: str
+    model_adapter: str | None
+    model_run_id: str | None
+    created_at: datetime
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {"extracted_structure.entities[].name"}
+    )
+
+
+class V3NormalizationDecisionResult(_AgentRelayDecision):
+    normalization_decision_id: uuid.UUID
+    normalization_attempt_id: uuid.UUID
+    action: str
+    thesis_analysis_id: uuid.UUID | None
+    created_at: datetime
+
+
+class V3MarketAssessmentResult(_McpOut):
+    market_assessment_id: uuid.UUID
+    candidate_set_member_id: uuid.UUID
+    market_id: str
+    market_title: str
+    resolution_conditions: str
+    pair_class: str
+    retrieval_rank: int
+    display_rank: int
+    what_it_captures: str
+    what_it_misses: str
+    horizon_match: str | None
+    resolution_risk: str | None
+    fit_confidence: float | None
+    authority: str
+    snapshot_id: str
+    rules_capture_id: uuid.UUID
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {"market_title", "resolution_conditions"}
+    )
+
+
+class V3MarketPoolResult(_McpOut):
+    market_display_set_id: uuid.UUID
+    fit_card_id: uuid.UUID
+    thesis_analysis_id: uuid.UUID
+    candidate_set_id: uuid.UUID
+    snapshot_id: str
+    snapshot_as_of: datetime
+    display_policy_version: str
+    assessed_count: int
+    target_count: int
+    displayed_count: int
+    assessment_complete: bool
+    system_pool_outcome: str
+    incomplete_reasons: list[str]
+    candidate_markets: list[V3MarketAssessmentResult]
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "candidate_markets[].market_title",
+            "candidate_markets[].resolution_conditions",
+        }
+    )
+
+
+class V3MarketChoiceResult(_AgentRelayDecision):
+    market_choice_id: uuid.UUID
+    market_display_set_id: uuid.UUID
+    selection_kind: str
+    market_assessment_id: uuid.UUID | None
+    created_at: datetime

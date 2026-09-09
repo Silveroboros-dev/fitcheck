@@ -21,14 +21,25 @@ from el.marketstructure.service import MarketStructureService
 from el.mcp.tools import McpTools
 
 # Re-exported from the shared wiring module (production-grade, non-demo).
-from el.mcp.wiring import build_gemini_tools, seed_principal
+from el.mcp.wiring import (
+    build_fixture_v3_tools,
+    build_gemini_tools,
+    build_gemini_v3_tools,
+    seed_principal,
+)
 from el.models.adapter import ExtractionProposal, FixtureProposer
 from el.models.draft_adapter import FixtureDraftProposer, ProposedDraft
 from el.models.market_adapter import FixtureMarketStructureProposer
 from el.retrieval.provider import FixtureMarketProvider
 from el.retrieval.service import RetrievalService
 
-__all__ = ["build_fixture_tools", "build_gemini_tools", "seed_principal"]
+__all__ = [
+    "build_fixture_tools",
+    "build_fixture_v3_tools",
+    "build_gemini_tools",
+    "build_gemini_v3_tools",
+    "seed_principal",
+]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FIXTURES_DIR = Path(

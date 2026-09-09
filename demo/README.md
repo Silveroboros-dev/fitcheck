@@ -4,6 +4,18 @@ This package is a demo composition root and two clients for the Step-7 MCP
 surface. It does not add domain logic; it wires the real `el` services behind
 `el.mcp.server.build_server`.
 
+## v3.1 reference status
+
+The scripted journey below is a predecessor compatibility demo, not the v3.1
+first-user journey. The v3.1 UI uses the synchronous fixture protocol
+documented in the repository README: source candidates, explicit human
+selection and confirmation, an assessed market pool, and market-or-`none`
+choice. Its generic MCP source-interpretation protocol is separate and uses a
+bounded fixture job worker. Its focused offline protocol smoke is documented
+in the repository README. This repository
+does not claim a verified third-party client, production MCP deployment, or
+live provider.
+
 ## Modes
 
 | Env var | Default | Meaning |

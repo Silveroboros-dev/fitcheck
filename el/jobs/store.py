@@ -29,6 +29,7 @@ PAYLOAD_HASH_VERSION = 1
 MAX_LEASE_SECONDS = 86_400
 MAX_BACKOFF_SECONDS = 86_400
 REAPER_BATCH_SIZE = 100
+EXTERNAL_EFFECT_STARTED_STAGE = "external_effect_started"
 
 
 class JobStatus(StrEnum):
@@ -659,6 +660,82 @@ class JobStore:
             session.commit()
             return True
 
+    def begin_external_effect(
+        self,
+        claim: JobClaim,
+        *,
+        now: datetime | None = None,
+    ) -> bool:
+        """Seal automatic retries before a non-idempotent external effect.
+
+        A worker calls this immediately before a provider/model operation whose
+        outcome may be ambiguous if the process dies.  Expiry after this point
+        becomes ``needs_operator`` instead of creating another attempt.  A
+        crash before this call remains reclaimable under the submitted attempt
+        budget.
+        """
+
+        with self._sessions() as session:
+            timestamp = self._time(session, now)
+            self._mark_deadline_exceeded(
+                session, timestamp, job_id=claim.job_id
+            )
+            self._mark_exhausted(session, timestamp, job_id=claim.job_id)
+            job = self._lock_claim(session, claim)
+            if job is None:
+                session.commit()
+                return False
+            effect_clock = self._time(session, now)
+            if not self._authority_is_current(job, effect_clock):
+                self._mark_deadline_exceeded(
+                    session, effect_clock, job_id=claim.job_id
+                )
+                self._mark_exhausted(
+                    session, effect_clock, job_id=claim.job_id
+                )
+                session.commit()
+                return False
+            transitioned = session.execute(
+                update(Job)
+                .where(
+                    Job.id == claim.job_id,
+                    Job.status == JobStatus.RUNNING.value,
+                    Job.active_attempt_id == claim.attempt_id,
+                    Job.lease_expires_at.is_not(None),
+                    Job.lease_expires_at > effect_clock,
+                    self._before_deadline(effect_clock),
+                )
+                .values(
+                    stage=EXTERNAL_EFFECT_STARTED_STAGE,
+                    external_effect_started_at=func.coalesce(
+                        Job.external_effect_started_at,
+                        effect_clock,
+                    ),
+                    external_effect_attempt_id=claim.attempt_id,
+                    max_attempts=Job.attempt_count,
+                    heartbeat_at=effect_clock,
+                    updated_at=effect_clock,
+                )
+                .execution_options(synchronize_session=False)
+            )
+            if transitioned.rowcount != 1:
+                session.rollback()
+                self._reap_lost_authority(claim, now=now)
+                return False
+            attempt = session.execute(
+                update(JobAttempt)
+                .where(
+                    JobAttempt.id == claim.attempt_id,
+                    JobAttempt.status == AttemptStatus.RUNNING.value,
+                )
+                .values(heartbeat_at=effect_clock)
+            )
+            if attempt.rowcount != 1:
+                session.rollback()
+                return False
+            session.commit()
+            return True
+
     def succeed(
         self,
         claim: JobClaim,
@@ -943,6 +1020,28 @@ class JobStore:
         *,
         job_id: uuid.UUID | None = None,
     ) -> int:
+        uncertain_predicate = and_(
+            Job.status == JobStatus.RUNNING.value,
+            Job.external_effect_started_at.is_not(None),
+            Job.external_effect_attempt_id == Job.active_attempt_id,
+            Job.deadline_at.is_not(None),
+            Job.deadline_at <= timestamp,
+        )
+        uncertain = cls._transition_terminal_jobs(
+            session,
+            uncertain_predicate,
+            timestamp=timestamp,
+            failure_kind=FailureKind.NEEDS_OPERATOR,
+            error_code="external_effect_outcome_uncertain",
+            safe_message="external model attempt outcome is uncertain",
+            job_id=job_id,
+            job_status=JobStatus.NEEDS_OPERATOR,
+            attempt_failure_kind=FailureKind.NEEDS_OPERATOR,
+            attempt_error_code="external_effect_deadline_exceeded",
+            attempt_safe_message=(
+                "job deadline expired after external effect began"
+            ),
+        )
         predicate = and_(
             Job.status.in_(
                 [
@@ -951,10 +1050,15 @@ class JobStore:
                     JobStatus.RUNNING.value,
                 ]
             ),
+            or_(
+                Job.status != JobStatus.RUNNING.value,
+                Job.external_effect_attempt_id != Job.active_attempt_id,
+                Job.external_effect_attempt_id.is_(None),
+            ),
             Job.deadline_at.is_not(None),
             Job.deadline_at <= timestamp,
         )
-        return cls._transition_terminal_jobs(
+        regular = cls._transition_terminal_jobs(
             session,
             predicate,
             timestamp=timestamp,
@@ -963,6 +1067,7 @@ class JobStore:
             safe_message="job deadline exceeded",
             job_id=job_id,
         )
+        return uncertain + regular
 
     @classmethod
     def _mark_exhausted(
@@ -972,8 +1077,34 @@ class JobStore:
         *,
         job_id: uuid.UUID | None = None,
     ) -> int:
+        uncertain_predicate = and_(
+            Job.status == JobStatus.RUNNING.value,
+            Job.external_effect_started_at.is_not(None),
+            Job.external_effect_attempt_id == Job.active_attempt_id,
+            Job.attempt_count >= Job.max_attempts,
+            Job.lease_expires_at.is_not(None),
+            Job.lease_expires_at <= timestamp,
+        )
+        uncertain = cls._transition_terminal_jobs(
+            session,
+            uncertain_predicate,
+            timestamp=timestamp,
+            failure_kind=FailureKind.NEEDS_OPERATOR,
+            error_code="external_effect_outcome_uncertain",
+            safe_message="external model attempt outcome is uncertain",
+            job_id=job_id,
+            job_status=JobStatus.NEEDS_OPERATOR,
+            attempt_failure_kind=FailureKind.NEEDS_OPERATOR,
+            attempt_error_code="external_effect_lease_expired",
+            attempt_safe_message="worker lease expired after external effect began",
+        )
         predicate = and_(
             Job.attempt_count >= Job.max_attempts,
+            or_(
+                Job.status != JobStatus.RUNNING.value,
+                Job.external_effect_attempt_id != Job.active_attempt_id,
+                Job.external_effect_attempt_id.is_(None),
+            ),
             or_(
                 Job.status.in_(
                     [JobStatus.QUEUED.value, JobStatus.RETRY_WAIT.value]
@@ -985,7 +1116,7 @@ class JobStore:
                 ),
             ),
         )
-        return cls._transition_terminal_jobs(
+        exhausted = cls._transition_terminal_jobs(
             session,
             predicate,
             timestamp=timestamp,
@@ -997,6 +1128,7 @@ class JobStore:
             attempt_error_code="lease_expired",
             attempt_safe_message="worker lease expired",
         )
+        return uncertain + exhausted
 
     @staticmethod
     def _transition_terminal_jobs(
@@ -1011,6 +1143,7 @@ class JobStore:
         attempt_failure_kind: FailureKind | None = None,
         attempt_error_code: str | None = None,
         attempt_safe_message: str | None = None,
+        job_status: JobStatus = JobStatus.FAILED,
     ) -> int:
         """Conditionally terminalize current candidates without lost updates.
 
@@ -1036,7 +1169,7 @@ class JobStore:
                     predicate,
                 )
                 .values(
-                    status=JobStatus.FAILED.value,
+                    status=job_status.value,
                     stage="completed",
                     error_kind=failure_kind.value,
                     error_code=error_code,

@@ -11,7 +11,13 @@ import uuid
 
 from sqlalchemy.orm import sessionmaker
 
-from demo.build import build_fixture_tools, build_gemini_tools, seed_principal
+from demo.build import (
+    build_fixture_tools,
+    build_fixture_v3_tools,
+    build_gemini_tools,
+    build_gemini_v3_tools,
+    seed_principal,
+)
 from el.domain.db import database_url, make_engine
 from el.domain.tables import Base
 from el.mcp.rate_limit import SqlUsageLimiter
@@ -67,7 +73,12 @@ def main() -> None:
     engine = make_engine(db_url)
     Base.metadata.create_all(engine)
     sessions = sessionmaker(bind=engine, expire_on_commit=False)
-    tools = build_gemini_tools(sessions) if proposer == "gemini" else build_fixture_tools(sessions)
+    if proposer == "gemini":
+        tools = build_gemini_tools(sessions)
+        v3_tools = build_gemini_v3_tools(sessions)
+    else:
+        tools = build_fixture_tools(sessions)
+        v3_tools = build_fixture_v3_tools(sessions)
     limiter = SqlUsageLimiter(sessions)
     principal = seed_principal(sessions, api_key)
 
@@ -98,7 +109,9 @@ def main() -> None:
             flush=True,
         )
 
-    mcp = build_server(tools, resolve, limiter.consume, name="fitcheck-demo")
+    mcp = build_server(
+        tools, resolve, limiter.consume, v3_tools=v3_tools, name="fitcheck-demo"
+    )
     mcp.run(transport=transport)
 
 

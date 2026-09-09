@@ -13,6 +13,7 @@ docs/agent-guided-ui-contract-v0.md:
 - fixture-mode proposer misses surface as an explicit unavailable state.
 """
 
+from datetime import timezone
 import json
 import uuid
 from typing import Any, ClassVar
@@ -34,12 +35,18 @@ from el.domain.tables import (
     CandidateSetMember,
     FitCard,
     LedgerEntry,
+    MarketAssessment,
+    MarketDisplayItem,
+    MarketDisplaySet,
     MarketRecommendation,
     MarketRulesCapture,
+    MarketSnapshot,
     RejectedMarketRow,
     ReviewCandidate,
     ThesisAnalysis,
 )
+from el.extraction.service import NormalizationAttemptNotFound
+from el.marketpool.service import MarketPoolConflict, MarketPoolNotFound
 from el.mcp.contracts import (
     BlindPriorRequired,
     NotFound,
@@ -47,7 +54,20 @@ from el.mcp.contracts import (
     ToolRefused,
 )
 from el.mcp.vocab_guard import assert_a7_clean
-from el.product.wiring import CLIENT_REF, HumanActor, ProductServices
+from el.product.wiring import (
+    CLIENT_REF,
+    MULTI_THESIS_FIXTURE,
+    HARBOR_CLARIFICATION_ANSWER,
+    HARBOR_CLARIFICATION_QUESTION,
+    ORCHARD_CLARIFICATION_ANSWER,
+    ORCHARD_CLARIFICATION_QUESTION,
+    HumanActor,
+    ProductServices,
+)
+from el.sourceinterpretation.service import (
+    SourceCandidateChoiceConflict,
+    SourceInterpretationNotFound,
+)
 
 
 class ProposerUnavailable(Exception):
@@ -72,6 +92,72 @@ class IntakeResult(_Out):
     SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
         {"input_text", "extracted_structure.entities[].name"}
     )
+
+
+class NormalizationAttemptUiOut(_Out):
+    normalization_attempt_id: uuid.UUID
+    predecessor_attempt_id: uuid.UUID | None
+    source_interpretation_id: uuid.UUID | None
+    source_thesis_candidate_id: uuid.UUID | None
+    outcome: str
+    verdict: str
+    input_digest: str | None
+    normalized_claim_summary: str | None
+    extracted_structure: dict | None
+    clarifying_question: str | None
+    reasons: list[str]
+    gate_policy_version: str
+    prompt_policy_version: str
+    system_variant_id: str
+    model_adapter: str | None
+    model_run_id: str | None
+    created_at: str
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {"extracted_structure.entities[].name", "reasons[]"}
+    )
+
+
+class NormalizationDecisionUiOut(_Out):
+    normalization_decision_id: uuid.UUID
+    normalization_attempt_id: uuid.UUID
+    action: str
+    thesis_analysis_id: uuid.UUID | None
+    created_at: str
+
+
+class SourceThesisCandidateUiOut(_Out):
+    source_thesis_candidate_id: uuid.UUID
+    ordinal: int
+    selected_source_quote: str
+    source_quote_digest: str
+    claim_summary: str
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {"selected_source_quote"}
+    )
+
+
+class SourceInterpretationUiOut(_Out):
+    source_interpretation_id: uuid.UUID
+    outcome: str
+    input_digest: str | None
+    reasons: list[str]
+    prompt_policy_version: str
+    system_variant_id: str
+    model_adapter: str | None
+    model_run_id: str | None
+    candidates: list[SourceThesisCandidateUiOut]
+    created_at: str
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {"candidates[].selected_source_quote"}
+    )
+
+
+class SourceCandidateChoiceUiOut(_Out):
+    source_candidate_choice_id: uuid.UUID
+    source_interpretation_id: uuid.UUID
+    selection_kind: str
+    source_thesis_candidate_id: uuid.UUID | None
+    created_at: str
 
 
 class BlindPriorOut(_Out):
@@ -134,6 +220,59 @@ class FitCardOut(_Out):
     )
 
 
+class MarketAssessmentUiOut(_Out):
+    market_assessment_id: uuid.UUID
+    candidate_set_member_id: uuid.UUID
+    market_id: str
+    market_title: str
+    resolution_conditions: str
+    pair_class: str
+    retrieval_rank: int
+    display_rank: int
+    what_it_captures: str
+    what_it_misses: str
+    horizon_match: str | None
+    resolution_risk: str | None
+    fit_confidence: float | None
+    authority: str
+    snapshot_id: str
+    rules_capture_id: uuid.UUID
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {"market_title", "resolution_conditions"}
+    )
+
+
+class MarketPoolUiOut(_Out):
+    market_display_set_id: uuid.UUID
+    fit_card_id: uuid.UUID
+    thesis_analysis_id: uuid.UUID
+    candidate_set_id: uuid.UUID
+    snapshot_id: str
+    snapshot_as_of: str
+    display_policy_version: str
+    assessed_count: int
+    target_count: int
+    displayed_count: int
+    assessment_complete: bool
+    system_pool_outcome: str
+    incomplete_reasons: list[str]
+    candidate_markets: list[MarketAssessmentUiOut]
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "candidate_markets[].market_title",
+            "candidate_markets[].resolution_conditions",
+        }
+    )
+
+
+class MarketChoiceUiOut(_Out):
+    market_choice_id: uuid.UUID
+    market_display_set_id: uuid.UUID
+    selection_kind: str
+    market_assessment_id: uuid.UUID | None
+    created_at: str
+
+
 class DraftPreviewOut(_Out):
     generated: bool
     gate_verdict: str | None
@@ -187,6 +326,12 @@ class ProductApi:
         assert_a7_clean(model.model_dump(mode="json"), source_paths=model.SOURCE_PATHS)
         return model
 
+    @staticmethod
+    def _iso_utc(value) -> str:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc).isoformat()
+
     # --- ownership (same no-existence-leak rule as the MCP surface) --------
     def _require_thesis_access(self, thesis_analysis_id: uuid.UUID) -> None:
         with self._sessions() as s:
@@ -206,6 +351,409 @@ class ProductApi:
             raise NotFound("fit_card not found")
         self._require_thesis_access(thesis_analysis_id)
         return thesis_analysis_id
+
+    @staticmethod
+    def _normalization_not_found(exc: Exception) -> None:
+        raise NotFound("normalization_attempt not found") from exc
+
+    def _attempt_out(self, outcome) -> NormalizationAttemptUiOut:
+        return self._guard(
+            NormalizationAttemptUiOut(
+                normalization_attempt_id=outcome.attempt_id,
+                predecessor_attempt_id=outcome.predecessor_attempt_id,
+                source_interpretation_id=outcome.source_interpretation_id,
+                source_thesis_candidate_id=(
+                    outcome.source_thesis_candidate_id
+                ),
+                outcome=outcome.outcome,
+                verdict=outcome.verdict,
+                input_digest=outcome.input_digest,
+                normalized_claim_summary=outcome.normalized_claim_summary,
+                extracted_structure=outcome.extracted_structure,
+                clarifying_question=outcome.clarifying_question,
+                reasons=outcome.reasons,
+                gate_policy_version=outcome.gate_policy_version,
+                prompt_policy_version=outcome.prompt_policy_version,
+                system_variant_id=outcome.system_variant_id,
+                model_adapter=outcome.model_adapter,
+                model_run_id=outcome.model_run_id,
+                created_at=self._iso_utc(outcome.created_at),
+            )
+        )
+
+    def _decision_out(self, outcome) -> NormalizationDecisionUiOut:
+        return self._guard(
+            NormalizationDecisionUiOut(
+                normalization_decision_id=outcome.decision_id,
+                normalization_attempt_id=outcome.attempt_id,
+                action=outcome.action,
+                thesis_analysis_id=outcome.thesis_analysis_id,
+                created_at=self._iso_utc(outcome.created_at),
+            )
+        )
+
+    # --- Product Discovery v3 normalization confirmation -------------------
+    def interpret_source(
+        self, input_text: str, *, source_url: str | None = None
+    ) -> SourceInterpretationUiOut:
+        try:
+            outcome = self._s.source_interpretation.interpret(
+                input_text,
+                source_url=source_url,
+                client_type=self._actor.client_type.value,
+                agent_client_id=self._actor.agent_client_id,
+            )
+        except KeyError:
+            raise ProposerUnavailable(
+                "model service unavailable — fixture mode only recognizes the "
+                "checked-in fixture sources; paste one of those or run in "
+                "gemini mode"
+            )
+        return self._guard(
+            SourceInterpretationUiOut(
+                source_interpretation_id=outcome.source_interpretation_id,
+                outcome=outcome.outcome,
+                input_digest=outcome.input_digest,
+                reasons=outcome.reasons,
+                prompt_policy_version=outcome.prompt_policy_version,
+                system_variant_id=outcome.system_variant_id,
+                model_adapter=outcome.model_adapter,
+                model_run_id=outcome.model_run_id,
+                candidates=[
+                    SourceThesisCandidateUiOut(
+                        source_thesis_candidate_id=(
+                            candidate.source_thesis_candidate_id
+                        ),
+                        ordinal=candidate.ordinal,
+                        selected_source_quote=(
+                            candidate.selected_source_quote
+                        ),
+                        source_quote_digest=candidate.source_quote_digest,
+                        claim_summary=candidate.claim_summary,
+                    )
+                    for candidate in outcome.candidates
+                ],
+                created_at=self._iso_utc(outcome.created_at),
+            )
+        )
+
+    def choose_source_candidate(
+        self,
+        source_interpretation_id: uuid.UUID,
+        *,
+        selection_kind: str,
+        source_thesis_candidate_id: uuid.UUID | None,
+        reason: str | None = None,
+    ) -> SourceCandidateChoiceUiOut:
+        try:
+            outcome = self._s.source_interpretation.choose(
+                source_interpretation_id,
+                selection_kind=selection_kind,
+                source_thesis_candidate_id=source_thesis_candidate_id,
+                actor_id=self._actor.actor_id,
+                client_type=self._actor.client_type.value,
+                agent_client_id=self._actor.agent_client_id,
+                reason=reason,
+            )
+        except SourceInterpretationNotFound as exc:
+            raise NotFound("source interpretation not found") from exc
+        return self._guard(
+            SourceCandidateChoiceUiOut(
+                source_candidate_choice_id=outcome.source_candidate_choice_id,
+                source_interpretation_id=outcome.source_interpretation_id,
+                selection_kind=outcome.selection_kind,
+                source_thesis_candidate_id=(
+                    outcome.source_thesis_candidate_id
+                ),
+                created_at=self._iso_utc(outcome.created_at),
+            )
+        )
+
+    def propose_selected_normalization(
+        self, source_thesis_candidate_id: uuid.UUID
+    ) -> NormalizationAttemptUiOut:
+        try:
+            selected = self._s.source_interpretation.require_selected_candidate(
+                source_thesis_candidate_id,
+                client_type=self._actor.client_type.value,
+                agent_client_id=self._actor.agent_client_id,
+            )
+            outcome = self._s.extraction.propose_selected(
+                ThesisAnalysisIn(
+                    input_text=selected.selected_source_quote,
+                    source_url=selected.source_url,
+                    client_type=self._actor.client_type,
+                    agent_client_id=self._actor.agent_client_id,
+                ),
+                source_interpretation_id=selected.source_interpretation_id,
+                source_thesis_candidate_id=(
+                    selected.source_thesis_candidate_id
+                ),
+            )
+        except SourceInterpretationNotFound as exc:
+            raise NotFound("source thesis candidate not found") from exc
+        except KeyError:
+            raise ProposerUnavailable(
+                "model service unavailable — selected fixture candidate has no "
+                "checked-in normalization fixture"
+            )
+        return self._attempt_out(outcome)
+
+    def propose_normalization(
+        self, input_text: str, *, source_url: str | None = None
+    ) -> NormalizationAttemptUiOut:
+        try:
+            outcome = self._s.extraction.propose(
+                ThesisAnalysisIn(
+                    input_text=input_text,
+                    source_url=source_url,
+                    client_type=self._actor.client_type,
+                    agent_client_id=self._actor.agent_client_id,
+                )
+            )
+        except KeyError:
+            raise ProposerUnavailable(
+                "model service unavailable — fixture mode only recognizes the "
+                "checked-in fixture theses; paste one of those or run in "
+                "gemini mode"
+            )
+        return self._attempt_out(outcome)
+
+    def accept_normalization(
+        self,
+        attempt_id: uuid.UUID,
+        *,
+        expected_input_digest: str | None,
+    ) -> NormalizationDecisionUiOut:
+        try:
+            outcome = self._s.extraction.accept(
+                attempt_id,
+                client_type=self._actor.client_type.value,
+                agent_client_id=self._actor.agent_client_id,
+                actor_id=self._actor.actor_id,
+                expected_input_digest=expected_input_digest,
+            )
+        except NormalizationAttemptNotFound as exc:
+            self._normalization_not_found(exc)
+        return self._decision_out(outcome)
+
+    def reject_normalization(
+        self,
+        attempt_id: uuid.UUID,
+        *,
+        expected_input_digest: str | None,
+        reason: str | None = None,
+    ) -> NormalizationDecisionUiOut:
+        try:
+            outcome = self._s.extraction.reject(
+                attempt_id,
+                client_type=self._actor.client_type.value,
+                agent_client_id=self._actor.agent_client_id,
+                actor_id=self._actor.actor_id,
+                expected_input_digest=expected_input_digest,
+                reason=reason,
+            )
+        except NormalizationAttemptNotFound as exc:
+            self._normalization_not_found(exc)
+        return self._decision_out(outcome)
+
+    def revise_normalization(
+        self,
+        attempt_id: uuid.UUID,
+        *,
+        input_text: str,
+        source_url: str | None = None,
+        expected_input_digest: str | None,
+    ) -> NormalizationAttemptUiOut:
+        try:
+            outcome = self._s.extraction.revise(
+                attempt_id,
+                ThesisAnalysisIn(
+                    input_text=input_text,
+                    source_url=source_url,
+                    client_type=self._actor.client_type,
+                    agent_client_id=self._actor.agent_client_id,
+                ),
+                actor_id=self._actor.actor_id,
+                expected_input_digest=expected_input_digest,
+            )
+        except NormalizationAttemptNotFound as exc:
+            self._normalization_not_found(exc)
+        except KeyError:
+            raise ProposerUnavailable(
+                "fixture mode cannot interpret custom clarification wording — "
+                "use the checked-in fixture answer or run in gemini mode"
+            )
+        return self._attempt_out(outcome)
+
+    # --- Product Discovery v3 top-three market pool ------------------------
+    def assess_market_pool(
+        self, thesis_analysis_id: uuid.UUID
+    ) -> MarketPoolUiOut:
+        try:
+            outcome = self._s.market_pool.build(
+                thesis_analysis_id,
+                client_type=self._actor.client_type.value,
+                agent_client_id=self._actor.agent_client_id,
+            )
+        except MarketPoolNotFound as exc:
+            raise NotFound("confirmed thesis not found") from exc
+        return self._market_pool_out(outcome.market_display_set_id)
+
+    def _market_pool_out(
+        self, market_display_set_id: uuid.UUID
+    ) -> MarketPoolUiOut:
+        with self._sessions() as session:
+            display_set = session.get(
+                MarketDisplaySet, market_display_set_id
+            )
+            if display_set is None:
+                raise NotFound("market pool not found")
+            snapshot = session.get(MarketSnapshot, display_set.snapshot_id)
+            if snapshot is None:
+                raise MarketPoolConflict("market pool snapshot is missing")
+            items = session.scalars(
+                select(MarketDisplayItem)
+                .where(
+                    MarketDisplayItem.market_display_set_id == display_set.id
+                )
+                .order_by(MarketDisplayItem.display_rank)
+            ).all()
+            cards: list[MarketAssessmentUiOut] = []
+            for item in items:
+                assessment = session.get(
+                    MarketAssessment, item.market_assessment_id
+                )
+                if assessment is None:
+                    raise MarketPoolConflict(
+                        "display item assessment is missing"
+                    )
+                capture = session.get(
+                    MarketRulesCapture, assessment.rules_capture_id
+                )
+                if (
+                    assessment.thesis_analysis_id
+                    != display_set.thesis_analysis_id
+                    or assessment.candidate_set_id
+                    != display_set.candidate_set_id
+                    or assessment.fit_card_id != display_set.fit_card_id
+                    or assessment.snapshot_id != display_set.snapshot_id
+                    or capture is None
+                    or capture.market_id != assessment.market_id
+                    or capture.snapshot_id != assessment.snapshot_id
+                ):
+                    raise MarketPoolConflict(
+                        "cross-bound market assessment cannot be rendered"
+                    )
+                cards.append(
+                    MarketAssessmentUiOut(
+                        market_assessment_id=assessment.id,
+                        candidate_set_member_id=(
+                            assessment.candidate_set_member_id
+                        ),
+                        market_id=assessment.market_id,
+                        market_title=capture.contract_terms_text,
+                        resolution_conditions=capture.resolution_rules_text,
+                        pair_class=assessment.pair_class,
+                        retrieval_rank=assessment.retrieval_rank,
+                        display_rank=item.display_rank,
+                        what_it_captures=assessment.what_it_captures,
+                        what_it_misses=assessment.what_it_misses,
+                        horizon_match=assessment.horizon_match,
+                        resolution_risk=assessment.resolution_risk,
+                        fit_confidence=assessment.fit_confidence,
+                        authority=assessment.authority,
+                        snapshot_id=assessment.snapshot_id,
+                        rules_capture_id=assessment.rules_capture_id,
+                    )
+                )
+            if [card.display_rank for card in cards] != list(
+                range(1, len(cards) + 1)
+            ):
+                raise MarketPoolConflict("display ranks are not contiguous")
+            return self._guard(
+                MarketPoolUiOut(
+                    market_display_set_id=display_set.id,
+                    fit_card_id=display_set.fit_card_id,
+                    thesis_analysis_id=display_set.thesis_analysis_id,
+                    candidate_set_id=display_set.candidate_set_id,
+                    snapshot_id=display_set.snapshot_id,
+                    snapshot_as_of=self._iso_utc(snapshot.as_of_ts),
+                    display_policy_version=display_set.display_policy_version,
+                    assessed_count=display_set.assessed_count,
+                    target_count=display_set.target_count,
+                    displayed_count=display_set.displayed_count,
+                    assessment_complete=display_set.assessment_complete,
+                    system_pool_outcome=display_set.system_pool_outcome,
+                    incomplete_reasons=list(display_set.incomplete_reasons),
+                    candidate_markets=cards,
+                )
+            )
+
+    def choose_market(
+        self,
+        market_display_set_id: uuid.UUID,
+        *,
+        selection_kind: str,
+        market_assessment_id: uuid.UUID | None,
+        reason: str | None = None,
+    ) -> MarketChoiceUiOut:
+        try:
+            outcome = self._s.market_pool.choose(
+                market_display_set_id,
+                selection_kind=selection_kind,
+                market_assessment_id=market_assessment_id,
+                actor_id=self._actor.actor_id,
+                client_type=self._actor.client_type.value,
+                agent_client_id=self._actor.agent_client_id,
+                reason=reason,
+            )
+        except MarketPoolNotFound as exc:
+            raise NotFound("market pool not found") from exc
+        return self._guard(
+            MarketChoiceUiOut(
+                market_choice_id=outcome.market_choice_id,
+                market_display_set_id=outcome.market_display_set_id,
+                selection_kind=outcome.selection_kind,
+                market_assessment_id=outcome.market_assessment_id,
+                created_at=self._iso_utc(outcome.created_at),
+            )
+        )
+
+    def record_assessment_feedback(
+        self,
+        market_assessment_id: uuid.UUID,
+        *,
+        feedback_kind: str,
+        note: str,
+    ) -> CorrectionOut:
+        if feedback_kind not in {"wrong_class", "not_an_expression", "other"}:
+            raise ValueError("unsupported assessment feedback kind")
+        if not note.strip():
+            raise ValueError("feedback note is required")
+        try:
+            assessment = self._s.market_pool.require_displayed_assessment(
+                market_assessment_id,
+                client_type=self._actor.client_type.value,
+                agent_client_id=self._actor.agent_client_id,
+            )
+        except MarketPoolNotFound as exc:
+            raise NotFound("market assessment not found") from exc
+        return self._intake(
+            object_type="market_assessment",
+            object_id=assessment.id,
+            source=(
+                ReviewSource.USER_REJECTION
+                if feedback_kind == "not_an_expression"
+                else ReviewSource.USER_CORRECTION
+            ),
+            payload={
+                "market_id": assessment.market_id,
+                "pair_class": assessment.pair_class,
+                "feedback_kind": feedback_kind,
+                "notes": note.strip(),
+            },
+        )
 
     # --- S1 intake ----------------------------------------------------------
     def intake(self, input_text: str) -> IntakeResult:
@@ -593,6 +1141,25 @@ class ProductApi:
         with self._sessions() as s:
             return {
                 "mode": self._s.mode,
+                "fixture_source_examples": (
+                    [MULTI_THESIS_FIXTURE]
+                    if self._s.mode == "fixture"
+                    else []
+                ),
+                "fixture_clarification_examples": (
+                    [
+                        {
+                            "question": HARBOR_CLARIFICATION_QUESTION,
+                            "answer": HARBOR_CLARIFICATION_ANSWER,
+                        },
+                        {
+                            "question": ORCHARD_CLARIFICATION_QUESTION,
+                            "answer": ORCHARD_CLARIFICATION_ANSWER,
+                        },
+                    ]
+                    if self._s.mode == "fixture"
+                    else []
+                ),
                 "ledger_entries": s.scalar(
                     select(func.count())
                     .select_from(LedgerEntry)
