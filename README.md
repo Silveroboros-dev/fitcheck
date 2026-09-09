@@ -12,6 +12,11 @@ missing the thesis's time horizon or target population; FitCheck should show
 that mismatch rather than call it a clean expression. `no_clean_expression` is
 a valid result only for the exact, non-empty, fully assessed displayed pool.
 
+![FitCheck v3.1 thesis-selection UI showing two source-derived candidates and an explicit none option](docs/assets/fitcheck-fixture-ui.png)
+
+*The v3.1 local fixture UI: choose a source-derived thesis or none. Shown with
+synthetic data, before any thesis is confirmed.*
+
 ## Product direction and public boundary
 
 The product direction is to let a person turn source material into a

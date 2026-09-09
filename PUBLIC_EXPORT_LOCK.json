@@ -38,7 +38,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "4633cebb10d2a37c4060fa7e1673609ae762c9d41c3542e8f38da7bd58808b51"
+      "sha256": "a62c303f0261cb815a2f8c422a2d90abfb61c3a6d6d2111a3063f4a223d70b78"
     },
     {
       "path": "SECURITY.md",
@@ -82,7 +82,7 @@
     },
     {
       "path": "docs/assets/fitcheck-fixture-ui.png",
-      "sha256": "1d3abae3deefe01f66bc2a894e5222afb17ac9ef2d38699e6a76401883b935c2"
+      "sha256": "bc61ac3050e7afe0098ab53823701532c64a2dffee1f0ae7eb20b74d32407f7c"
     },
     {
       "path": "docs/correction-loop-ui-contract-v0.md",
