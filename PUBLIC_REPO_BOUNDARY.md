@@ -47,10 +47,11 @@ generated tree must reject unexpected additions.
 
 ## Cloud and provider separation
 
-Public source does not imply public runtime access. The reference deployment is
-IAM-private and uses separately managed secrets, identity, database, quotas,
-and deployment configuration. A future public demo must use a distinct,
-synthetic-data environment with its own abuse controls and budget limits.
+Public source does not imply public runtime access. Any reference deployment
+is operated separately with separately managed secrets, identity, database,
+quotas, and deployment configuration; this repository does not attest its
+current state. A future public demo must use a distinct, synthetic-data
+environment with its own abuse controls and budget limits.
 
 The public retrieval provider interface is an extension boundary, not a claim
 that a live provider implementation or its data is redistributable. The

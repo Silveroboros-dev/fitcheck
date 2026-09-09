@@ -23,7 +23,7 @@ from el.mcp.rate_limit import (
     TierPolicy,
     UsageLimiterUnavailable,
 )
-from el.mcp.server import TOOL_NAMES
+from el.mcp.server import ALL_TOOL_NAMES
 
 UTC = timezone.utc
 
@@ -73,7 +73,7 @@ def _limiter(sessions, now, *, minute=10, day=10):
 
 
 def test_tool_weights_cover_the_registered_surface():
-    assert frozenset(TOOL_NAMES) == frozenset(TOOL_COST_UNITS)
+    assert frozenset(ALL_TOOL_NAMES) == frozenset(TOOL_COST_UNITS)
     assert all(
         isinstance(cost, int) and cost > 0
         for cost in TOOL_COST_UNITS.values()

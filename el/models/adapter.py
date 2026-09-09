@@ -64,6 +64,8 @@ class FixtureProposer:
             model_run_id=f"fixture-{self.calls}",
         )
 
+EXTRACTION_PROMPT_POLICY_VERSION = "loop1-extraction-prompt-v1"
+
 
 _EXTRACTION_PROMPT = """\
 You normalize messy claims about future events into a precise, testable

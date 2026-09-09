@@ -1,3 +1,6 @@
+# Deterministic, explicit source map for the reviewed public FitCheck reference.
+# Direct includes are byte-identical private implementation files. Public-only
+# differences are isolated below public/ and must remain explicit overlays.
 manifest_version = 1
 
 [export]
@@ -8,137 +11,192 @@ source = "alembic.ini"
 destination = "alembic.ini"
 
 [[include]]
-source = "public-export.toml"
-destination = "public-export.toml"
+source = "demo/__init__.py"
+destination = "demo/__init__.py"
+
+[[include]]
+source = "docs/sft-fit-classifier-contract-v1.md"
+destination = "docs/sft-fit-classifier-contract-v1.md"
 
 [[include]]
 source = "el/__init__.py"
 destination = "el/__init__.py"
 
 [[include]]
-source = "el/api"
-destination = "el/api"
-extensions = [".py"]
+source = "el/api/__init__.py"
+destination = "el/api/__init__.py"
 
 [[include]]
-source = "el/classification"
-destination = "el/classification"
-extensions = [".py"]
+source = "el/classification/__init__.py"
+destination = "el/classification/__init__.py"
 
 [[include]]
-source = "el/domain"
-destination = "el/domain"
-extensions = [".py"]
+source = "el/classification/contracts.py"
+destination = "el/classification/contracts.py"
 
 [[include]]
-source = "el/draftcontract"
-destination = "el/draftcontract"
-extensions = [".py"]
+source = "el/classification/planner.py"
+destination = "el/classification/planner.py"
 
 [[include]]
-source = "el/drift"
-destination = "el/drift"
-extensions = [".py"]
+source = "el/classification/worker.py"
+destination = "el/classification/worker.py"
 
 [[include]]
-source = "el/evals"
-destination = "el/evals"
-extensions = [".py"]
+source = "el/domain/__init__.py"
+destination = "el/domain/__init__.py"
 
 [[include]]
-source = "el/extraction"
-destination = "el/extraction"
-extensions = [".py"]
+source = "el/domain/enums.py"
+destination = "el/domain/enums.py"
 
 [[include]]
-source = "el/fitgate"
-destination = "el/fitgate"
-extensions = [".py"]
+source = "el/domain/structures.py"
+destination = "el/domain/structures.py"
 
 [[include]]
-source = "el/jobs"
-destination = "el/jobs"
-extensions = [".py"]
+source = "el/domain/vocabulary.py"
+destination = "el/domain/vocabulary.py"
 
 [[include]]
-source = "el/ledger"
-destination = "el/ledger"
-extensions = [".py"]
+source = "el/draftcontract/__init__.py"
+destination = "el/draftcontract/__init__.py"
 
 [[include]]
-source = "el/marketstructure"
-destination = "el/marketstructure"
-extensions = [".py"]
+source = "el/draftcontract/gate.py"
+destination = "el/draftcontract/gate.py"
+
+[[include]]
+source = "el/draftcontract/service.py"
+destination = "el/draftcontract/service.py"
+
+[[include]]
+source = "el/drift/__init__.py"
+destination = "el/drift/__init__.py"
+
+[[include]]
+source = "el/evals/__init__.py"
+destination = "el/evals/__init__.py"
+
+[[include]]
+source = "el/evals/draftcontract.py"
+destination = "el/evals/draftcontract.py"
+
+[[include]]
+source = "el/evals/fit.py"
+destination = "el/evals/fit.py"
+
+[[include]]
+source = "el/evals/fit_advisory.py"
+destination = "el/evals/fit_advisory.py"
+
+[[include]]
+source = "el/evals/recall.py"
+destination = "el/evals/recall.py"
+
+[[include]]
+source = "el/extraction/__init__.py"
+destination = "el/extraction/__init__.py"
+
+[[include]]
+source = "el/extraction/gate.py"
+destination = "el/extraction/gate.py"
+
+[[include]]
+source = "el/extraction/service.py"
+destination = "el/extraction/service.py"
+
+[[include]]
+source = "el/fitgate/__init__.py"
+destination = "el/fitgate/__init__.py"
+
+[[include]]
+source = "el/fitgate/aliases.py"
+destination = "el/fitgate/aliases.py"
+
+[[include]]
+source = "el/fitgate/checks.py"
+destination = "el/fitgate/checks.py"
+
+[[include]]
+source = "el/fitgate/composite_v2.py"
+destination = "el/fitgate/composite_v2.py"
+
+[[include]]
+source = "el/fitgate/gate.py"
+destination = "el/fitgate/gate.py"
+
+[[include]]
+source = "el/fitgate/policy.py"
+destination = "el/fitgate/policy.py"
+
+[[include]]
+source = "el/fitgate/service.py"
+destination = "el/fitgate/service.py"
+
+[[include]]
+source = "el/jobs/__init__.py"
+destination = "el/jobs/__init__.py"
+
+[[include]]
+source = "el/jobs/store.py"
+destination = "el/jobs/store.py"
+
+[[include]]
+source = "el/ledger/__init__.py"
+destination = "el/ledger/__init__.py"
+
+[[include]]
+source = "el/ledger/odds.py"
+destination = "el/ledger/odds.py"
+
+[[include]]
+source = "el/marketstructure/__init__.py"
+destination = "el/marketstructure/__init__.py"
+
+[[include]]
+source = "el/marketstructure/gate.py"
+destination = "el/marketstructure/gate.py"
+
+[[include]]
+source = "el/marketstructure/service.py"
+destination = "el/marketstructure/service.py"
 
 [[include]]
 source = "el/mcp/__init__.py"
 destination = "el/mcp/__init__.py"
 
 [[include]]
-source = "el/mcp/__main__.py"
-destination = "el/mcp/__main__.py"
-
-[[include]]
-source = "el/mcp/auth.py"
-destination = "el/mcp/auth.py"
-
-[[include]]
-source = "el/mcp/contracts.py"
-destination = "el/mcp/contracts.py"
-
-[[include]]
-source = "el/mcp/rate_limit.py"
-destination = "el/mcp/rate_limit.py"
-
-[[include]]
-source = "el/mcp/server.py"
-destination = "el/mcp/server.py"
-
-[[include]]
-source = "el/mcp/tools.py"
-destination = "el/mcp/tools.py"
-
-[[include]]
 source = "el/mcp/vocab_guard.py"
 destination = "el/mcp/vocab_guard.py"
 
 [[include]]
-source = "el/models"
-destination = "el/models"
-extensions = [".py"]
+source = "el/models/__init__.py"
+destination = "el/models/__init__.py"
+
+[[include]]
+source = "el/models/draft_adapter.py"
+destination = "el/models/draft_adapter.py"
+
+[[include]]
+source = "el/models/fit_adapter.py"
+destination = "el/models/fit_adapter.py"
+
+[[include]]
+source = "el/models/market_adapter.py"
+destination = "el/models/market_adapter.py"
 
 [[include]]
 source = "el/product/__init__.py"
 destination = "el/product/__init__.py"
 
 [[include]]
-source = "el/product/api.py"
-destination = "el/product/api.py"
-
-[[include]]
-source = "el/product/app.py"
-destination = "el/product/app.py"
-
-[[include]]
-source = "el/product/static"
-destination = "el/product/static"
-extensions = [".html"]
-
-[[include]]
 source = "el/retrieval/__init__.py"
 destination = "el/retrieval/__init__.py"
 
 [[include]]
-source = "el/retrieval/agent_retrieval_index.py"
-destination = "el/retrieval/agent_retrieval_index.py"
-
-[[include]]
 source = "el/retrieval/candidate_contracts.py"
 destination = "el/retrieval/candidate_contracts.py"
-
-[[include]]
-source = "el/retrieval/candidate_index.py"
-destination = "el/retrieval/candidate_index.py"
 
 [[include]]
 source = "el/retrieval/gate.py"
@@ -153,36 +211,80 @@ source = "el/retrieval/service.py"
 destination = "el/retrieval/service.py"
 
 [[include]]
-source = "el/retrieval/snapshot_contracts.py"
-destination = "el/retrieval/snapshot_contracts.py"
-
-[[include]]
 source = "el/retrieval/snapshot_store.py"
 destination = "el/retrieval/snapshot_store.py"
 
 [[include]]
-source = "el/retrieval/snapshot_validation.py"
-destination = "el/retrieval/snapshot_validation.py"
+source = "el/review/__init__.py"
+destination = "el/review/__init__.py"
 
 [[include]]
-source = "el/retrieval/snapshot_worker.py"
-destination = "el/retrieval/snapshot_worker.py"
+source = "el/review/candidates.py"
+destination = "el/review/candidates.py"
 
 [[include]]
-source = "el/review"
-destination = "el/review"
-extensions = [".py", ".html"]
+source = "el/review/perturbation.py"
+destination = "el/review/perturbation.py"
 
 [[include]]
-source = "migrations"
-destination = "migrations"
-extensions = [".py", ".mako"]
-names = ["README"]
+source = "el/review/promotion.py"
+destination = "el/review/promotion.py"
 
 [[include]]
-source = "demo"
-destination = "demo"
-extensions = [".py", ".md"]
+source = "el/review/queue.py"
+destination = "el/review/queue.py"
+
+[[include]]
+source = "el/review/store.py"
+destination = "el/review/store.py"
+
+[[include]]
+source = "migrations/README"
+destination = "migrations/README"
+
+[[include]]
+source = "migrations/script.py.mako"
+destination = "migrations/script.py.mako"
+
+[[include]]
+source = "migrations/versions/3496a0e487e3_draft_contract_echo_fields.py"
+destination = "migrations/versions/3496a0e487e3_draft_contract_echo_fields.py"
+
+[[include]]
+source = "migrations/versions/7c2e91ab4d10_market_structure_cache_key.py"
+destination = "migrations/versions/7c2e91ab4d10_market_structure_cache_key.py"
+
+[[include]]
+source = "migrations/versions/9b4e6a2d51c8_fit_confidence_nullable.py"
+destination = "migrations/versions/9b4e6a2d51c8_fit_confidence_nullable.py"
+
+[[include]]
+source = "migrations/versions/a4d8c2e6f0b1_worker_job_snapshot_foundation.py"
+destination = "migrations/versions/a4d8c2e6f0b1_worker_job_snapshot_foundation.py"
+
+[[include]]
+source = "migrations/versions/b1f7c0d9e2a3_step6_odds_capture.py"
+destination = "migrations/versions/b1f7c0d9e2a3_step6_odds_capture.py"
+
+[[include]]
+source = "migrations/versions/c3a9f1e5d7b2_odds_lock_actor_level_unique.py"
+destination = "migrations/versions/c3a9f1e5d7b2_odds_lock_actor_level_unique.py"
+
+[[include]]
+source = "migrations/versions/d5e7f1a9c3b4_ledger_idempotency_unique.py"
+destination = "migrations/versions/d5e7f1a9c3b4_ledger_idempotency_unique.py"
+
+[[include]]
+source = "migrations/versions/ee90f333bae6_draft_contract_provenance.py"
+destination = "migrations/versions/ee90f333bae6_draft_contract_provenance.py"
+
+[[include]]
+source = "migrations/versions/f2a4c6e8b1d3_api_client_revoked_at.py"
+destination = "migrations/versions/f2a4c6e8b1d3_api_client_revoked_at.py"
+
+[[include]]
+source = "public-export.toml"
+destination = "public-export.toml"
 
 [[include]]
 source = "scripts/build_public_export.py"
@@ -193,34 +295,6 @@ source = "scripts/check_public_boundary.py"
 destination = "scripts/check_public_boundary.py"
 
 [[include]]
-source = "scripts/spike_agent_retrieval.py"
-destination = "scripts/spike_agent_retrieval.py"
-
-[[include]]
-source = "docs/agent-guided-ui-contract-v0.md"
-destination = "docs/agent-guided-ui-contract-v0.md"
-
-[[include]]
-source = "docs/correction-loop-ui-contract-v0.md"
-destination = "docs/correction-loop-ui-contract-v0.md"
-
-[[include]]
-source = "docs/reviewed-reference-dataset-spec-v0.md"
-destination = "docs/reviewed-reference-dataset-spec-v0.md"
-
-[[include]]
-source = "docs/sft-fit-classifier-contract-v1.md"
-destination = "docs/sft-fit-classifier-contract-v1.md"
-
-[[include]]
-source = "tests/fixtures/retrieval/frozen_snapshot_phase0.json"
-destination = "tests/fixtures/retrieval/frozen_snapshot_phase0.json"
-
-[[include]]
-source = "tests/test_agent_retrieval_index.py"
-destination = "tests/test_agent_retrieval_index.py"
-
-[[include]]
 source = "tests/test_agent_retrieval_spike.py"
 destination = "tests/test_agent_retrieval_spike.py"
 
@@ -229,32 +303,12 @@ source = "tests/test_aliases.py"
 destination = "tests/test_aliases.py"
 
 [[include]]
-source = "tests/test_candidate_index.py"
-destination = "tests/test_candidate_index.py"
-
-[[include]]
 source = "tests/test_classification_worker.py"
 destination = "tests/test_classification_worker.py"
 
 [[include]]
-source = "tests/test_contracts.py"
-destination = "tests/test_contracts.py"
-
-[[include]]
 source = "tests/test_correction_loop.py"
 destination = "tests/test_correction_loop.py"
-
-[[include]]
-source = "tests/test_db_url.py"
-destination = "tests/test_db_url.py"
-
-[[include]]
-source = "tests/test_demo_cloud_run_auth.py"
-destination = "tests/test_demo_cloud_run_auth.py"
-
-[[include]]
-source = "tests/test_demo_scripted.py"
-destination = "tests/test_demo_scripted.py"
 
 [[include]]
 source = "tests/test_draft_service.py"
@@ -265,24 +319,12 @@ source = "tests/test_draftcontract_gate.py"
 destination = "tests/test_draftcontract_gate.py"
 
 [[include]]
-source = "tests/test_extraction.py"
-destination = "tests/test_extraction.py"
-
-[[include]]
 source = "tests/test_fit_service.py"
 destination = "tests/test_fit_service.py"
 
 [[include]]
 source = "tests/test_fitgate_checks.py"
 destination = "tests/test_fitgate_checks.py"
-
-[[include]]
-source = "tests/test_job_store.py"
-destination = "tests/test_job_store.py"
-
-[[include]]
-source = "tests/test_job_store_postgres.py"
-destination = "tests/test_job_store_postgres.py"
 
 [[include]]
 source = "tests/test_ledger_service.py"
@@ -297,44 +339,12 @@ source = "tests/test_mcp_a7_guard.py"
 destination = "tests/test_mcp_a7_guard.py"
 
 [[include]]
-source = "tests/test_mcp_auth.py"
-destination = "tests/test_mcp_auth.py"
-
-[[include]]
-source = "tests/test_mcp_rate_limit.py"
-destination = "tests/test_mcp_rate_limit.py"
-
-[[include]]
-source = "tests/test_mcp_server.py"
-destination = "tests/test_mcp_server.py"
-
-[[include]]
-source = "tests/test_mcp_server_build.py"
-destination = "tests/test_mcp_server_build.py"
-
-[[include]]
-source = "tests/test_mcp_tools.py"
-destination = "tests/test_mcp_tools.py"
-
-[[include]]
 source = "tests/test_perturbation.py"
 destination = "tests/test_perturbation.py"
 
 [[include]]
-source = "tests/test_prod_entrypoint.py"
-destination = "tests/test_prod_entrypoint.py"
-
-[[include]]
-source = "tests/test_product_api.py"
-destination = "tests/test_product_api.py"
-
-[[include]]
 source = "tests/test_product_contract_doc.py"
 destination = "tests/test_product_contract_doc.py"
-
-[[include]]
-source = "tests/test_product_ui_page.py"
-destination = "tests/test_product_ui_page.py"
 
 [[include]]
 source = "tests/test_public_boundary.py"
@@ -353,24 +363,8 @@ source = "tests/test_review_candidates.py"
 destination = "tests/test_review_candidates.py"
 
 [[include]]
-source = "tests/test_review_console_ui.py"
-destination = "tests/test_review_console_ui.py"
-
-[[include]]
-source = "tests/test_review_dataset_contract.py"
-destination = "tests/test_review_dataset_contract.py"
-
-[[include]]
-source = "tests/test_review_packet_builder.py"
-destination = "tests/test_review_packet_builder.py"
-
-[[include]]
 source = "tests/test_review_queue.py"
 destination = "tests/test_review_queue.py"
-
-[[include]]
-source = "tests/test_schema.py"
-destination = "tests/test_schema.py"
 
 [[include]]
 source = "tests/test_schema_version_invariant.py"
@@ -381,20 +375,12 @@ source = "tests/test_sft_contract_doc.py"
 destination = "tests/test_sft_contract_doc.py"
 
 [[include]]
-source = "tests/test_snapshot_worker.py"
-destination = "tests/test_snapshot_worker.py"
-
-[[include]]
 source = "tests/test_vocabulary.py"
 destination = "tests/test_vocabulary.py"
 
 [[overlay]]
 source = "public/.dockerignore"
 destination = ".dockerignore"
-
-[[overlay]]
-source = "public/AGENTS.md"
-destination = "AGENTS.md"
 
 [[overlay]]
 source = "public/.gcloudignore"
@@ -409,24 +395,16 @@ source = "public/.gitignore"
 destination = ".gitignore"
 
 [[overlay]]
+source = "public/AGENTS.md"
+destination = "AGENTS.md"
+
+[[overlay]]
 source = "public/DATA_CARD.md"
 destination = "DATA_CARD.md"
 
 [[overlay]]
 source = "public/Dockerfile"
 destination = "Dockerfile"
-
-[[overlay]]
-source = "public/docs/assets/fitcheck-fixture-ui.png"
-destination = "docs/assets/fitcheck-fixture-ui.png"
-
-[[overlay]]
-source = "public/docs/engineering-walkthrough.md"
-destination = "docs/engineering-walkthrough.md"
-
-[[overlay]]
-source = "public/docs/experiments/README.md"
-destination = "docs/experiments/README.md"
 
 [[overlay]]
 source = "public/LICENSE"
@@ -445,16 +423,232 @@ source = "public/SECURITY.md"
 destination = "SECURITY.md"
 
 [[overlay]]
+source = "public/demo/README.md"
+destination = "demo/README.md"
+
+[[overlay]]
+source = "public/demo/build.py"
+destination = "demo/build.py"
+
+[[overlay]]
+source = "public/demo/client_adk.py"
+destination = "demo/client_adk.py"
+
+[[overlay]]
+source = "public/demo/client_scripted.py"
+destination = "demo/client_scripted.py"
+
+[[overlay]]
+source = "public/demo/cloud_run_auth.py"
+destination = "demo/cloud_run_auth.py"
+
+[[overlay]]
+source = "public/demo/server.py"
+destination = "demo/server.py"
+
+[[overlay]]
+source = "public/docs/agent-guided-ui-contract-v0.md"
+destination = "docs/agent-guided-ui-contract-v0.md"
+
+[[overlay]]
+source = "public/docs/assets/fitcheck-fixture-ui.png"
+destination = "docs/assets/fitcheck-fixture-ui.png"
+
+[[overlay]]
+source = "public/docs/correction-loop-ui-contract-v0.md"
+destination = "docs/correction-loop-ui-contract-v0.md"
+
+[[overlay]]
+source = "public/docs/engineering-walkthrough.md"
+destination = "docs/engineering-walkthrough.md"
+
+[[overlay]]
+source = "public/docs/experiments/README.md"
+destination = "docs/experiments/README.md"
+
+[[overlay]]
+source = "public/docs/fitcheck-v3.1-ui-contract.md"
+destination = "docs/fitcheck-v3.1-ui-contract.md"
+
+[[overlay]]
+source = "public/docs/reviewed-reference-dataset-spec-v0.md"
+destination = "docs/reviewed-reference-dataset-spec-v0.md"
+
+[[overlay]]
+source = "public/el/domain/contracts.py"
+destination = "el/domain/contracts.py"
+
+[[overlay]]
+source = "public/el/domain/db.py"
+destination = "el/domain/db.py"
+
+[[overlay]]
+source = "public/el/domain/tables.py"
+destination = "el/domain/tables.py"
+
+[[overlay]]
+source = "public/el/extraction/gate_v2.py"
+destination = "el/extraction/gate_v2.py"
+
+[[overlay]]
+source = "public/el/ledger/service.py"
+destination = "el/ledger/service.py"
+
+[[overlay]]
+source = "public/el/marketpool/__init__.py"
+destination = "el/marketpool/__init__.py"
+
+[[overlay]]
+source = "public/el/marketpool/service.py"
+destination = "el/marketpool/service.py"
+
+[[overlay]]
+source = "public/el/mcp/__main__.py"
+destination = "el/mcp/__main__.py"
+
+[[overlay]]
+source = "public/el/mcp/auth.py"
+destination = "el/mcp/auth.py"
+
+[[overlay]]
+source = "public/el/mcp/contracts.py"
+destination = "el/mcp/contracts.py"
+
+[[overlay]]
+source = "public/el/mcp/rate_limit.py"
+destination = "el/mcp/rate_limit.py"
+
+[[overlay]]
+source = "public/el/mcp/server.py"
+destination = "el/mcp/server.py"
+
+[[overlay]]
+source = "public/el/mcp/tools.py"
+destination = "el/mcp/tools.py"
+
+[[overlay]]
+source = "public/el/mcp/v3_tools.py"
+destination = "el/mcp/v3_tools.py"
+
+[[overlay]]
 source = "public/el/mcp/wiring.py"
 destination = "el/mcp/wiring.py"
+
+[[overlay]]
+source = "public/el/models/adapter.py"
+destination = "el/models/adapter.py"
+
+[[overlay]]
+source = "public/el/models/adapter_v2.py"
+destination = "el/models/adapter_v2.py"
+
+[[overlay]]
+source = "public/el/models/source_adapter.py"
+destination = "el/models/source_adapter.py"
+
+[[overlay]]
+source = "public/el/product/api.py"
+destination = "el/product/api.py"
+
+[[overlay]]
+source = "public/el/product/app.py"
+destination = "el/product/app.py"
+
+[[overlay]]
+source = "public/el/product/static/product_console.html"
+destination = "el/product/static/product_console.html"
 
 [[overlay]]
 source = "public/el/product/wiring.py"
 destination = "el/product/wiring.py"
 
 [[overlay]]
+source = "public/el/retrieval/agent_retrieval_index.py"
+destination = "el/retrieval/agent_retrieval_index.py"
+
+[[overlay]]
+source = "public/el/retrieval/candidate_index.py"
+destination = "el/retrieval/candidate_index.py"
+
+[[overlay]]
 source = "public/el/retrieval/provider.py"
 destination = "el/retrieval/provider.py"
+
+[[overlay]]
+source = "public/el/retrieval/snapshot_contracts.py"
+destination = "el/retrieval/snapshot_contracts.py"
+
+[[overlay]]
+source = "public/el/retrieval/snapshot_validation.py"
+destination = "el/retrieval/snapshot_validation.py"
+
+[[overlay]]
+source = "public/el/retrieval/snapshot_worker.py"
+destination = "el/retrieval/snapshot_worker.py"
+
+[[overlay]]
+source = "public/el/review/reference_app.py"
+destination = "el/review/reference_app.py"
+
+[[overlay]]
+source = "public/el/review/reference_dataset.py"
+destination = "el/review/reference_dataset.py"
+
+[[overlay]]
+source = "public/el/review/static/review_console.html"
+destination = "el/review/static/review_console.html"
+
+[[overlay]]
+source = "public/el/sourceinterpretation/__init__.py"
+destination = "el/sourceinterpretation/__init__.py"
+
+[[overlay]]
+source = "public/el/sourceinterpretation/jobs.py"
+destination = "el/sourceinterpretation/jobs.py"
+
+[[overlay]]
+source = "public/el/sourceinterpretation/service.py"
+destination = "el/sourceinterpretation/service.py"
+
+[[overlay]]
+source = "public/el/sourceinterpretation/worker.py"
+destination = "el/sourceinterpretation/worker.py"
+
+[[overlay]]
+source = "public/migrations/env.py"
+destination = "migrations/env.py"
+
+[[overlay]]
+source = "public/migrations/versions/024a5fed003d_initial_domain_schema.py"
+destination = "migrations/versions/024a5fed003d_initial_domain_schema.py"
+
+[[overlay]]
+source = "public/migrations/versions/ab73d8e4f901_async_source_interpretation_jobs.py"
+destination = "migrations/versions/ab73d8e4f901_async_source_interpretation_jobs.py"
+
+[[overlay]]
+source = "public/migrations/versions/c6b5e4d3a2f1_normalization_confirmation.py"
+destination = "migrations/versions/c6b5e4d3a2f1_normalization_confirmation.py"
+
+[[overlay]]
+source = "public/migrations/versions/e6c7a8b9d0f1_mcp_usage_buckets.py"
+destination = "migrations/versions/e6c7a8b9d0f1_mcp_usage_buckets.py"
+
+[[overlay]]
+source = "public/migrations/versions/e8f4a6b2c1d0_v3_market_pool_projection.py"
+destination = "migrations/versions/e8f4a6b2c1d0_v3_market_pool_projection.py"
+
+[[overlay]]
+source = "public/migrations/versions/f9a5b7c3d2e1_v3_1_source_candidate_selection.py"
+destination = "migrations/versions/f9a5b7c3d2e1_v3_1_source_candidate_selection.py"
+
+[[overlay]]
+source = "public/pyproject.toml"
+destination = "pyproject.toml"
+
+[[overlay]]
+source = "public/scripts/spike_agent_retrieval.py"
+destination = "scripts/spike_agent_retrieval.py"
 
 [[overlay]]
 source = "public/tests/fixtures/claims/eval_001_gemini_arena.json"
@@ -477,13 +671,125 @@ source = "public/tests/fixtures/markets/golden_market_structures.json"
 destination = "tests/fixtures/markets/golden_market_structures.json"
 
 [[overlay]]
+source = "public/tests/fixtures/retrieval/frozen_snapshot_phase0.json"
+destination = "tests/fixtures/retrieval/frozen_snapshot_phase0.json"
+
+[[overlay]]
 source = "public/tests/fixtures/retrieval/recall_golden_phase0.json"
 destination = "tests/fixtures/retrieval/recall_golden_phase0.json"
+
+[[overlay]]
+source = "public/tests/test_agent_retrieval_index.py"
+destination = "tests/test_agent_retrieval_index.py"
+
+[[overlay]]
+source = "public/tests/test_candidate_index.py"
+destination = "tests/test_candidate_index.py"
+
+[[overlay]]
+source = "public/tests/test_contracts.py"
+destination = "tests/test_contracts.py"
+
+[[overlay]]
+source = "public/tests/test_db_url.py"
+destination = "tests/test_db_url.py"
+
+[[overlay]]
+source = "public/tests/test_demo_cloud_run_auth.py"
+destination = "tests/test_demo_cloud_run_auth.py"
+
+[[overlay]]
+source = "public/tests/test_demo_scripted.py"
+destination = "tests/test_demo_scripted.py"
+
+[[overlay]]
+source = "public/tests/test_extraction.py"
+destination = "tests/test_extraction.py"
+
+[[overlay]]
+source = "public/tests/test_job_store.py"
+destination = "tests/test_job_store.py"
+
+[[overlay]]
+source = "public/tests/test_job_store_postgres.py"
+destination = "tests/test_job_store_postgres.py"
+
+[[overlay]]
+source = "public/tests/test_mcp_auth.py"
+destination = "tests/test_mcp_auth.py"
+
+[[overlay]]
+source = "public/tests/test_mcp_rate_limit.py"
+destination = "tests/test_mcp_rate_limit.py"
+
+[[overlay]]
+source = "public/tests/test_mcp_server.py"
+destination = "tests/test_mcp_server.py"
+
+[[overlay]]
+source = "public/tests/test_mcp_server_build.py"
+destination = "tests/test_mcp_server_build.py"
+
+[[overlay]]
+source = "public/tests/test_mcp_tools.py"
+destination = "tests/test_mcp_tools.py"
+
+[[overlay]]
+source = "public/tests/test_mcp_v3_fixture_ownership.py"
+destination = "tests/test_mcp_v3_fixture_ownership.py"
+
+[[overlay]]
+source = "public/tests/test_mcp_v3_stdio_smoke.py"
+destination = "tests/test_mcp_v3_stdio_smoke.py"
+
+[[overlay]]
+source = "public/tests/test_mcp_v3_worker_bootstrap.py"
+destination = "tests/test_mcp_v3_worker_bootstrap.py"
+
+[[overlay]]
+source = "public/tests/test_prod_entrypoint.py"
+destination = "tests/test_prod_entrypoint.py"
+
+[[overlay]]
+source = "public/tests/test_product_api.py"
+destination = "tests/test_product_api.py"
+
+[[overlay]]
+source = "public/tests/test_product_ui_page.py"
+destination = "tests/test_product_ui_page.py"
 
 [[overlay]]
 source = "public/tests/test_public_provider.py"
 destination = "tests/test_public_provider.py"
 
 [[overlay]]
-source = "public/pyproject.toml"
-destination = "pyproject.toml"
+source = "public/tests/test_public_v31_security.py"
+destination = "tests/test_public_v31_security.py"
+
+[[overlay]]
+source = "public/tests/test_review_console_ui.py"
+destination = "tests/test_review_console_ui.py"
+
+[[overlay]]
+source = "public/tests/test_review_dataset_contract.py"
+destination = "tests/test_review_dataset_contract.py"
+
+[[overlay]]
+source = "public/tests/test_review_packet_builder.py"
+destination = "tests/test_review_packet_builder.py"
+
+[[overlay]]
+source = "public/tests/test_schema.py"
+destination = "tests/test_schema.py"
+
+[[overlay]]
+source = "public/tests/test_snapshot_worker.py"
+destination = "tests/test_snapshot_worker.py"
+
+[[overlay]]
+source = "public/tests/test_v3_async_source_jobs.py"
+destination = "tests/test_v3_async_source_jobs.py"
+
+[[overlay]]
+source = "public/tests/test_v3_reference_flow.py"
+destination = "tests/test_v3_reference_flow.py"

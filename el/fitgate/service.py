@@ -664,10 +664,17 @@ class FitService:
                 "hard_fails": v.hard_fail_count,
                 "fired": v.fired(),
                 "thesis_side": v.thesis_side,
+                "horizon_match": (
+                    v.horizon_match.value if v.horizon_match else None
+                ),
+                "resolution_risk": (
+                    v.resolution_risk.value if v.resolution_risk else None
+                ),
                 "advisory": advisory_meta,
                 "checks": [
                     {
                         "check_id": o.check_id,
+                        "name": o.name,
                         "status": o.status.value,
                         "cap": o.cap.value if o.cap else None,
                         "hard": o.hard,

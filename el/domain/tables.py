@@ -147,6 +147,13 @@ class Job(_PK, _Created, Base):
     heartbeat_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
+    # Irreversible external-effect boundary. This remains independent of the
+    # mutable progress ``stage`` so later heartbeats cannot erase whether a
+    # provider or model operation may already have happened.
+    external_effect_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    external_effect_attempt_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     cancel_requested_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
@@ -185,6 +192,13 @@ class Job(_PK, _Created, Base):
         ),
         CheckConstraint(
             "attempt_count <= max_attempts", name="ck_jobs_attempt_within_budget"
+        ),
+        CheckConstraint(
+            "((external_effect_started_at IS NULL AND "
+            "external_effect_attempt_id IS NULL) OR "
+            "(external_effect_started_at IS NOT NULL AND "
+            "external_effect_attempt_id IS NOT NULL))",
+            name="ck_jobs_external_effect_binding",
         ),
         CheckConstraint(
             "status IN ('queued', 'running', 'retry_wait', 'succeeded', "
@@ -276,6 +290,230 @@ class ThesisAnalysis(_PK, _Created, Base):
     normalized_claim_summary: Mapped[str] = mapped_column(Text)
     client_type: Mapped[str] = mapped_column(String(16))
     agent_client_id: Mapped[str | None] = mapped_column(String(128))
+
+
+class SourceInterpretationRequest(_PK, _Created, Base):
+    """Immutable actor-owned input and execution pins for async interpretation."""
+
+    __tablename__ = "source_interpretation_requests"
+    owner_client_type: Mapped[str] = mapped_column(String(32))
+    owner_actor_id: Mapped[str] = mapped_column(String(160))
+    agent_client_id: Mapped[str] = mapped_column(String(128))
+    idempotency_key: Mapped[str] = mapped_column(String(160))
+    input_text: Mapped[str | None] = mapped_column(Text)
+    input_digest: Mapped[str | None] = mapped_column(String(64))
+    source_url: Mapped[str | None] = mapped_column(String(2048))
+    privacy_refusal_code: Mapped[str | None] = mapped_column(String(64))
+    pinned_manifest: Mapped[dict] = mapped_column(JSONVariant)
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_client_type",
+            "owner_actor_id",
+            "idempotency_key",
+            name="uq_source_interpretation_request_idempotency",
+        ),
+        CheckConstraint(
+            "((privacy_refusal_code IS NULL AND input_text IS NOT NULL "
+            "AND input_digest IS NOT NULL) OR "
+            "(privacy_refusal_code IS NOT NULL AND input_text IS NULL "
+            "AND input_digest IS NULL AND source_url IS NULL))",
+            name="ck_source_interpretation_request_privacy_shape",
+        ),
+    )
+
+
+class SourceInterpretation(_PK, _Created, Base):
+    """Immutable model evidence about distinct thesis candidates in a source."""
+
+    __tablename__ = "source_interpretations"
+    source_interpretation_request_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("source_interpretation_requests.id"), unique=True
+    )
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("jobs.id"), unique=True
+    )
+    input_text: Mapped[str | None] = mapped_column(Text)
+    input_digest: Mapped[str | None] = mapped_column(String(64))
+    source_url: Mapped[str | None] = mapped_column(String(2048))
+    outcome: Mapped[str] = mapped_column(String(16))
+    reasons: Mapped[list] = mapped_column(JSONVariant, default=list)
+    prompt_policy_version: Mapped[str] = mapped_column(String(64))
+    system_variant_id: Mapped[str] = mapped_column(String(192))
+    model_adapter: Mapped[str | None] = mapped_column(String(128))
+    model_run_id: Mapped[str | None] = mapped_column(String(128))
+    client_type: Mapped[str] = mapped_column(String(16))
+    agent_client_id: Mapped[str] = mapped_column(String(128))
+    __table_args__ = (
+        CheckConstraint(
+            "outcome IN ('candidates', 'refusal')",
+            name="ck_source_interpretation_outcome",
+        ),
+        CheckConstraint(
+            "((input_text IS NULL AND input_digest IS NULL) OR "
+            "(input_text IS NOT NULL AND input_digest IS NOT NULL))",
+            name="ck_source_interpretation_input_retention",
+        ),
+        CheckConstraint(
+            "((model_adapter IS NULL AND model_run_id IS NULL) OR "
+            "(model_adapter IS NOT NULL AND model_run_id IS NOT NULL))",
+            name="ck_source_interpretation_model_provenance",
+        ),
+        CheckConstraint(
+            "((source_interpretation_request_id IS NULL AND job_id IS NULL) "
+            "OR (source_interpretation_request_id IS NOT NULL "
+            "AND job_id IS NOT NULL))",
+            name="ck_source_interpretation_async_binding",
+        ),
+    )
+
+
+class SourceThesisCandidate(_PK, _Created, Base):
+    """One source-grounded option; candidate evidence, never thesis truth."""
+
+    __tablename__ = "source_thesis_candidates"
+    source_interpretation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("source_interpretations.id")
+    )
+    ordinal: Mapped[int] = mapped_column(Integer)
+    selected_source_quote: Mapped[str] = mapped_column(Text)
+    source_quote_digest: Mapped[str] = mapped_column(String(64))
+    claim_summary: Mapped[str] = mapped_column(Text)
+    __table_args__ = (
+        UniqueConstraint(
+            "source_interpretation_id",
+            "ordinal",
+            name="uq_source_thesis_candidate_ordinal",
+        ),
+        UniqueConstraint(
+            "source_interpretation_id",
+            "source_quote_digest",
+            name="uq_source_thesis_candidate_quote",
+        ),
+        CheckConstraint(
+            "ordinal >= 1 AND ordinal <= 3",
+            name="ck_source_thesis_candidate_ordinal",
+        ),
+    )
+
+
+class SourceCandidateChoice(_PK, _Created, Base):
+    """One terminal human choice for a source interpretation."""
+
+    __tablename__ = "source_candidate_choices"
+    source_interpretation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("source_interpretations.id")
+    )
+    selection_kind: Mapped[str] = mapped_column(String(16))
+    source_thesis_candidate_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("source_thesis_candidates.id")
+    )
+    actor_id: Mapped[str] = mapped_column(String(160))
+    client_type: Mapped[str] = mapped_column(String(16))
+    reason: Mapped[str | None] = mapped_column(String(2000))
+    __table_args__ = (
+        UniqueConstraint(
+            "source_interpretation_id",
+            name="uq_source_candidate_choice_interpretation",
+        ),
+        CheckConstraint(
+            "selection_kind IN ('candidate', 'none')",
+            name="ck_source_candidate_choice_selection_kind",
+        ),
+        CheckConstraint(
+            "((selection_kind = 'candidate' AND "
+            "source_thesis_candidate_id IS NOT NULL) OR "
+            "(selection_kind = 'none' AND "
+            "source_thesis_candidate_id IS NULL))",
+            name="ck_source_candidate_choice_selection_shape",
+        ),
+    )
+
+
+class NormalizationAttempt(_PK, _Created, Base):
+    """Immutable model/gate evidence awaiting an explicit human decision."""
+
+    __tablename__ = "normalization_attempts"
+    predecessor_attempt_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("normalization_attempts.id")
+    )
+    source_interpretation_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("source_interpretations.id")
+    )
+    source_thesis_candidate_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("source_thesis_candidates.id")
+    )
+    input_text: Mapped[str | None] = mapped_column(Text)
+    input_digest: Mapped[str | None] = mapped_column(String(64))
+    source_url: Mapped[str | None] = mapped_column(String(2048))
+    outcome: Mapped[str] = mapped_column(String(32))
+    verdict: Mapped[str] = mapped_column(String(32))
+    proposal: Mapped[dict | None] = mapped_column(JSONVariant)
+    clarifying_question: Mapped[str | None] = mapped_column(String(300))
+    reasons: Mapped[list] = mapped_column(JSONVariant, default=list)
+    gate_policy_version: Mapped[str] = mapped_column(String(64))
+    prompt_policy_version: Mapped[str] = mapped_column(String(64))
+    system_variant_id: Mapped[str] = mapped_column(String(192))
+    model_adapter: Mapped[str | None] = mapped_column(String(128))
+    model_run_id: Mapped[str | None] = mapped_column(String(128))
+    client_type: Mapped[str] = mapped_column(String(16))
+    agent_client_id: Mapped[str] = mapped_column(String(128))
+    __table_args__ = (
+        UniqueConstraint(
+            "predecessor_attempt_id",
+            name="uq_normalization_attempt_predecessor",
+        ),
+        UniqueConstraint(
+            "source_thesis_candidate_id",
+            name="uq_normalization_attempt_source_candidate",
+        ),
+        CheckConstraint(
+            "outcome IN ('candidate', 'clarification', 'refusal')",
+            name="ck_normalization_attempt_outcome",
+        ),
+        CheckConstraint(
+            "((input_text IS NULL AND input_digest IS NULL) OR "
+            "(input_text IS NOT NULL AND input_digest IS NOT NULL))",
+            name="ck_normalization_attempt_input_retention",
+        ),
+        CheckConstraint(
+            "((model_adapter IS NULL AND model_run_id IS NULL) OR "
+            "(model_adapter IS NOT NULL AND model_run_id IS NOT NULL))",
+            name="ck_normalization_attempt_model_provenance",
+        ),
+        CheckConstraint(
+            "((source_interpretation_id IS NULL AND "
+            "source_thesis_candidate_id IS NULL) OR "
+            "(source_interpretation_id IS NOT NULL AND "
+            "source_thesis_candidate_id IS NOT NULL))",
+            name="ck_normalization_attempt_source_binding",
+        ),
+    )
+
+
+class NormalizationDecision(_PK, _Created, Base):
+    """One terminal human decision for one normalization attempt."""
+
+    __tablename__ = "normalization_decisions"
+    attempt_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("normalization_attempts.id"), unique=True
+    )
+    action: Mapped[str] = mapped_column(String(16))
+    thesis_analysis_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("thesis_analyses.id"), unique=True
+    )
+    actor_id: Mapped[str] = mapped_column(String(160))
+    reason: Mapped[str | None] = mapped_column(String(2000))
+    __table_args__ = (
+        CheckConstraint(
+            "action IN ('accept', 'edit', 'reject')",
+            name="ck_normalization_decision_action",
+        ),
+        CheckConstraint(
+            "((action = 'accept' AND thesis_analysis_id IS NOT NULL) OR "
+            "(action <> 'accept' AND thesis_analysis_id IS NULL))",
+            name="ck_normalization_decision_analysis_shape",
+        ),
+    )
 
 
 class MarketSnapshot(Base):
@@ -502,6 +740,143 @@ class FitCard(_PK, _Created, Base):
     provenance: Mapped[dict] = mapped_column(JSONVariant)
     job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id"))
     __table_args__ = (UniqueConstraint("job_id", name="uq_fit_card_job"),)
+
+
+class MarketAssessment(_PK, _Created, Base):
+    """One terminal v3 assessment of one candidate in one frozen fit run."""
+
+    __tablename__ = "market_assessments"
+    fit_card_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("fit_cards.id"))
+    thesis_analysis_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("thesis_analyses.id")
+    )
+    candidate_set_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidate_sets.id")
+    )
+    candidate_set_member_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidate_set_members.id")
+    )
+    rules_capture_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("market_rules_captures.id")
+    )
+    snapshot_id: Mapped[str] = mapped_column(ForeignKey("market_snapshots.id"))
+    market_id: Mapped[str] = mapped_column(String(128))
+    retrieval_rank: Mapped[int] = mapped_column(Integer)
+    pair_class: Mapped[str] = mapped_column(String(32))
+    what_it_captures: Mapped[str] = mapped_column(Text)
+    what_it_misses: Mapped[str] = mapped_column(Text)
+    horizon_match: Mapped[str | None] = mapped_column(String(8))
+    resolution_risk: Mapped[str | None] = mapped_column(String(8))
+    authority: Mapped[str] = mapped_column(String(64))
+    fit_confidence: Mapped[float | None] = mapped_column(Float)
+    provenance: Mapped[dict] = mapped_column(JSONVariant)
+    __table_args__ = (
+        UniqueConstraint(
+            "fit_card_id", "market_id", name="uq_market_assessment_pair"
+        ),
+        CheckConstraint(
+            "retrieval_rank > 0", name="ck_market_assessment_retrieval_rank"
+        ),
+        CheckConstraint(
+            "pair_class IN ('direct', 'indirect', 'weak_proxy', "
+            "'not_an_expression')",
+            name="ck_market_assessment_pair_class",
+        ),
+    )
+
+
+class MarketDisplaySet(_PK, _Created, Base):
+    """Versioned, immutable top-three projection over assessed candidates."""
+
+    __tablename__ = "market_display_sets"
+    fit_card_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("fit_cards.id"), unique=True
+    )
+    thesis_analysis_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("thesis_analyses.id")
+    )
+    candidate_set_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidate_sets.id")
+    )
+    snapshot_id: Mapped[str] = mapped_column(ForeignKey("market_snapshots.id"))
+    display_policy_version: Mapped[str] = mapped_column(String(64))
+    assessed_count: Mapped[int] = mapped_column(Integer)
+    target_count: Mapped[int] = mapped_column(Integer)
+    displayed_count: Mapped[int] = mapped_column(Integer)
+    assessment_complete: Mapped[bool] = mapped_column(Boolean)
+    system_pool_outcome: Mapped[str] = mapped_column(String(32))
+    incomplete_reasons: Mapped[list] = mapped_column(JSONVariant, default=list)
+    __table_args__ = (
+        CheckConstraint(
+            "assessed_count >= 0", name="ck_market_display_assessed_count"
+        ),
+        CheckConstraint(
+            "target_count >= 0 AND target_count <= 3",
+            name="ck_market_display_target_count",
+        ),
+        CheckConstraint(
+            "displayed_count >= 0 AND displayed_count <= 3",
+            name="ck_market_display_displayed_count",
+        ),
+        CheckConstraint(
+            "displayed_count <= assessed_count",
+            name="ck_market_display_count_within_assessed",
+        ),
+        CheckConstraint(
+            "system_pool_outcome IN ('candidate_expressions', "
+            "'no_clean_expression', 'incomplete')",
+            name="ck_market_display_pool_outcome",
+        ),
+    )
+
+
+class MarketDisplayItem(_PK, Base):
+    __tablename__ = "market_display_items"
+    market_display_set_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("market_display_sets.id")
+    )
+    market_assessment_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("market_assessments.id"), unique=True
+    )
+    display_rank: Mapped[int] = mapped_column(Integer)
+    __table_args__ = (
+        UniqueConstraint(
+            "market_display_set_id",
+            "display_rank",
+            name="uq_market_display_rank",
+        ),
+        CheckConstraint(
+            "display_rank >= 1 AND display_rank <= 3",
+            name="ck_market_display_rank",
+        ),
+    )
+
+
+class MarketChoice(_PK, _Created, Base):
+    """Append-only human choice for one immutable display projection."""
+
+    __tablename__ = "market_choices"
+    market_display_set_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("market_display_sets.id"), unique=True
+    )
+    selection_kind: Mapped[str] = mapped_column(String(16))
+    market_assessment_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("market_assessments.id")
+    )
+    actor_id: Mapped[str] = mapped_column(String(160))
+    client_type: Mapped[str] = mapped_column(String(16))
+    reason: Mapped[str | None] = mapped_column(String(2000))
+    __table_args__ = (
+        CheckConstraint(
+            "selection_kind IN ('market', 'none')",
+            name="ck_market_choice_selection_kind",
+        ),
+        CheckConstraint(
+            "((selection_kind = 'market' AND market_assessment_id IS NOT NULL) "
+            "OR (selection_kind = 'none' AND market_assessment_id IS NULL))",
+            name="ck_market_choice_selection_shape",
+        ),
+    )
 
 
 class MarketRecommendation(_PK, _Created, Base):

@@ -31,6 +31,10 @@ default improvement paths without a new pre-registered reason. They remain
 dataset-specific measurements and do not establish real-world accuracy,
 calibration, or market coverage.
 
-The underlying review corpus is private. The immediate next measurement is a
-pre-registered held-out evaluation on fresh reviewed rows in August 2026,
-using the same instruments.
+The underlying review corpus is private. This July summary predates the active
+successor evaluation design and remains historical evidence for the reported
+variants and rows. A future comparison, if separately authorized, will compare
+generic Gemini with the complete FitCheck normalization treatment on the same
+cases and model, followed by stage-specific blinded human review. Exposed
+historical rows remain suitable for regression work; they are not a new
+confirmation holdout. This page reports no successor result.

@@ -5,6 +5,14 @@ FitCheck distribution. It distinguishes inspectable implementation and tests
 from the private reference deployment and from integrations that are
 deliberately excluded.
 
+The product-flow description below documents the predecessor reference and
+its retained backend foundations. The current default UI instead follows the
+[v3.1 human-confirmed source-to-market journey](fitcheck-v3.1-ui-contract.md);
+the [README](../README.md) documents its runnable fixture UI and separate MCP
+source worker. The blind-prior and simple-ledger routes remain compatibility
+surfaces. This walkthrough is not evidence of current deployment state or
+semantic accuracy.
+
 ## Problem
 
 Finding a prediction market that mentions the same entity or topic as a thesis
@@ -25,7 +33,7 @@ candidate into a recommendation-shaped result.
 
 ## System
 
-The local product loop accepts an event-risk thesis, records a blind prior,
+The predecessor local product loop accepts an event-risk thesis, records a blind prior,
 retrieves candidates from a frozen synthetic snapshot, applies structure and
 fit gates, produces a fit card, and can save a ledger entry. A disagreement
 with a card creates a review candidate; it does not rewrite the card or a

@@ -19,6 +19,7 @@
     --mono:"SF Mono",Menlo,Consolas,monospace;
   }
   * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
   html { background:var(--room); }
   body { margin:0; font:15px/1.55 var(--sans); color:var(--ink);
          background:
@@ -98,6 +99,37 @@
            border-left:1px solid #7a5148; padding-left:12px; }
   .notice { color:var(--ink-dim); font-size:14px; margin-top:8px;
             font-family:var(--serif); font-style:italic; }
+  .pending-feedback { display:flex; align-items:center; gap:10px; margin-top:14px;
+                      color:var(--ink-dim); font:13px/1.5 var(--sans); }
+  .pending-feedback::before { content:""; width:8px; height:8px; flex:0 0 8px;
+                      border:1px solid var(--brass-bright); border-radius:50%;
+                      box-shadow:0 0 0 0 rgba(210,171,110,.38);
+                      animation:pending-pulse 1.4s ease-out infinite; }
+  @keyframes pending-pulse {
+    0% { box-shadow:0 0 0 0 rgba(210,171,110,.38); }
+    70%, 100% { box-shadow:0 0 0 7px rgba(210,171,110,0); }
+  }
+
+  .proposal { margin-top:18px; padding:18px 20px; border:1px solid var(--brass-dim);
+              background:linear-gradient(120deg, rgba(179,144,90,.08), transparent 70%); }
+  .proposal h3 { margin:0 0 10px; font:400 11.5px/1.4 var(--sans);
+                 letter-spacing:.2em; text-transform:uppercase; color:var(--brass-bright); }
+  .proposal-summary { font:20px/1.45 var(--serif); color:var(--ink); margin:0 0 12px; }
+  .proposal-question { font:18px/1.5 var(--serif); color:var(--ink); }
+  .proposal-meta { font:11px/1.6 var(--mono); color:var(--faint); margin-top:12px; }
+  #proposal-structure { white-space:pre-wrap; overflow-wrap:anywhere; font:11.5px/1.55 var(--mono);
+                        color:var(--mut); padding:0 16px 14px; }
+
+  .source-grid { display:grid; gap:12px; margin-top:14px; }
+  .source-option { display:grid; grid-template-columns:auto 1fr; gap:13px;
+                   padding:15px 17px; border:1px solid var(--line);
+                   background:var(--panel-2); }
+  .source-option:has(input:checked) { border-color:var(--brass); }
+  .source-option input { margin-top:5px; accent-color:var(--brass); }
+  .source-option h3 { margin:0; font:400 18px/1.4 var(--serif); }
+  .source-quote { margin-top:8px; color:var(--mut); font:13px/1.55 var(--serif);
+                  border-left:1px solid var(--line); padding-left:11px; }
+  .source-state { margin-top:8px; font:11px/1.5 var(--mono); color:var(--faint); }
 
   .kv { display:grid; grid-template-columns:190px 1fr; gap:7px 18px; font-size:14px; }
   .kv dt { color:var(--faint); font-size:11.5px; letter-spacing:.14em;
@@ -153,6 +185,24 @@
   .evidence { font:11.5px/1.7 var(--mono); color:var(--faint);
               border-top:1px solid var(--line-soft); margin-top:18px; padding-top:12px; }
 
+  /* v3 market pool — several independent pair judgments, never one copied verdict */
+  .pool-summary { margin:18px 0 0; padding:14px 16px; border-left:2px solid var(--brass);
+                  background:rgba(179,144,90,.055); color:var(--ink-dim); }
+  .pool-summary.incomplete { border-left-color:var(--bone); }
+  .market-grid { display:grid; gap:16px; margin-top:18px; }
+  .market-option { display:grid; grid-template-columns:auto 1fr; gap:14px;
+                   padding:18px 20px; border:1px solid var(--line);
+                   background:var(--panel-2); }
+  .market-option:has(input:checked) { border-color:var(--brass); }
+  .market-option input { margin-top:5px; accent-color:var(--brass); }
+  .market-option h3 { margin:0; font:400 19px/1.4 var(--serif); }
+  .market-rank { color:var(--brass); margin-right:9px; }
+  .market-meta { margin-top:7px; font:11px/1.6 var(--mono); color:var(--faint); }
+  .market-option .capmiss { margin:14px 0 0; }
+  .resolution { margin-top:12px; color:var(--mut); font:13px/1.55 var(--serif); }
+  .choice-none { padding:12px 16px; border:1px dashed var(--line); }
+  .feedback { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+
   /* correction strip — intake, never verdict-adjacent styling */
   .correction { margin-top:18px; padding:14px 16px; border:1px solid var(--line-soft);
                 background:var(--panel-2); }
@@ -187,6 +237,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     #card, #entry-detail { animation:none; }
+    .pending-feedback::before { animation:none; }
     button, section, .step, li.entry { transition:none; }
   }
   @media (max-width:760px) {
@@ -200,16 +251,17 @@
 <body>
 <header>
   <h1>FitCheck</h1>
-  <div class="sub">event-risk legibility — the model proposes, deterministic gates decide
+  <div class="sub">event-risk legibility — the model proposes, you decide, gates guard
     <span id="mode" class="tag"></span></div>
 </header>
 <main>
 
-<section id="s1" data-plate="01">
+<section id="s1" data-plate="01" aria-busy="false">
   <h2>Thesis intake</h2>
   <textarea id="input_text" placeholder="Paste a messy thesis, post, or source text…"></textarea>
   <div class="row">
-    <button id="run">Run analysis</button>
+    <button id="run">Find thesis candidates</button>
+    <button id="load-fixture" class="secondary" hidden>Load synthetic two-thesis fixture</button>
     <span class="status">
       <span class="step pending" id="st-extract">extract</span>
       <span class="step pending" id="st-retrieve">retrieve</span>
@@ -217,19 +269,81 @@
       <span class="step pending" id="st-ledger">ledger-ready</span>
     </span>
   </div>
+  <div id="source-pending" class="pending-feedback" role="status"
+       aria-live="polite" hidden>
+    Source received. Identifying distinct thesis candidates; this may take a moment.
+  </div>
+  <div id="source-review" class="proposal" aria-busy="false" hidden>
+    <h3>Source-derived thesis candidates — your priority decides</h3>
+    <p class="notice">Choose the thesis you want to test first. Source order is
+      not a ranking; unselected candidates remain evidence, not rejected theses.</p>
+    <div id="source-grid" class="source-grid" role="radiogroup" aria-label="Thesis candidate choice"></div>
+    <label class="choice-none row">
+      <input type="radio" name="source-choice" id="source-choose-none" value="none">
+      None of these is the thesis I want to test
+    </label>
+    <div class="row">
+      <button id="submit-source-choice" disabled>Confirm thesis choice</button>
+      <span id="source-choice-state" class="tag">unanswered</span>
+    </div>
+    <div id="source-choice-pending" class="pending-feedback" role="status"
+         aria-live="polite" hidden></div>
+    <div id="source-choice-ack" class="ack" hidden></div>
+    <div id="source-meta" class="proposal-meta"></div>
+  </div>
+  <div id="attempt-review" class="proposal" hidden>
+    <h3 id="proposal-heading">Normalization candidate</h3>
+    <p id="proposal-summary" class="proposal-summary"></p>
+    <p id="proposal-question" class="proposal-question" hidden></p>
+    <div id="proposal-reasons" class="notice" hidden></div>
+    <div id="clarification-form" aria-busy="false" hidden>
+      <label for="clarification-answer">Your answer</label>
+      <textarea id="clarification-answer" placeholder="Add the missing horizon, threshold, or observable criterion…"></textarea>
+      <p class="notice">Your answer creates a successor normalization proposal. It does
+        not accept a thesis; you will review the result separately.</p>
+      <p id="clarification-mode-note" class="notice" hidden></p>
+      <div id="clarification-pending" class="pending-feedback" role="status"
+           aria-live="polite" hidden>
+        Answer received. Preparing a successor proposal; this may take a moment.
+      </div>
+      <div class="row">
+        <button id="submit-clarification" disabled>Answer and rerun</button>
+        <button id="load-clarification-fixture" class="secondary" hidden>Load fixture answer</button>
+      </div>
+    </div>
+    <details id="proposal-details" hidden>
+      <summary>Structured thesis proposal</summary>
+      <pre id="proposal-structure"></pre>
+    </details>
+    <div id="proposal-meta" class="proposal-meta"></div>
+    <div class="row" id="proposal-actions">
+      <button id="accept-proposal">Accept thesis</button>
+      <button id="open-revision" class="secondary">Revise and rerun</button>
+      <button id="reject-proposal" class="secondary">Reject</button>
+    </div>
+    <div id="revision-form" hidden>
+      <p class="notice">Revise the source or thesis below. The successor is a new
+        model proposal and must be accepted separately.</p>
+      <textarea id="revision_text"></textarea>
+      <div class="row">
+        <button id="submit-revision">Create successor proposal</button>
+        <button id="cancel-revision" class="secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
   <div id="s1-out" hidden>
     <dl class="kv" style="margin-top:18px">
-      <dt>Normalized thesis</dt><dd style="font-family:var(--serif); font-size:16px" id="norm-summary"></dd>
+      <dt>Human decision</dt><dd>accepted</dd>
+      <dt>Accepted thesis</dt><dd style="font-family:var(--serif); font-size:16px" id="norm-summary"></dd>
       <dt>Analysis id</dt><dd id="thesis-id" class="id"></dd>
     </dl>
   </div>
   <div class="error" id="s1-err" hidden></div>
 </section>
 
-<section id="s2" class="stale" data-plate="02">
+<section id="s2" class="stale" data-plate="02" hidden>
   <h2>Blind prior <span class="tag">before market odds</span></h2>
-  <p class="notice" style="margin:0 0 6px">Record your probability before any market
-     odds are shown. This is write-once for this thesis.</p>
+  <p class="notice" style="margin:0 0 6px">Record your probability before any market — before market odds are shown. This is write-once for this thesis.</p>
   <div class="row">
     <label>P(thesis true) <input id="prior-p" type="number" min="0" max="1" step="0.01" style="width:90px"></label>
     <select id="prior-conf">
@@ -246,7 +360,44 @@
 </section>
 
 <section id="s3" class="stale" data-plate="03">
-  <h2>Market Fit Card</h2>
+  <h2>Market expressions <span class="tag">up to three independent assessments</span></h2>
+  <p class="notice" style="margin:0">See what each contract can and cannot test,
+    then make your own choice. Retrieval rank is evidence, not a verdict.</p>
+  <div class="row"><button id="find-markets">Find market expressions</button></div>
+  <div id="pool" hidden>
+    <div id="pool-summary" class="pool-summary"></div>
+    <div id="market-grid" class="market-grid" role="radiogroup" aria-label="Market expression choice"></div>
+    <label class="choice-none row">
+      <input type="radio" name="market-choice" id="choose-none" value="none">
+      None of these contracts expresses my thesis
+    </label>
+    <div class="row">
+      <button id="submit-choice" disabled>Confirm my choice</button>
+      <span id="choice-state" class="tag">unanswered</span>
+    </div>
+    <div id="choice-ack" class="ack" hidden></div>
+    <div class="feedback" id="assessment-feedback" hidden>
+      <h3 class="tag">Something wrong with this assessment?</h3>
+      <span class="lens">feedback becomes a pending review candidate; the displayed assessment does not change</span>
+      <div class="row">
+        <select id="feedback-kind">
+          <option value="">feedback type…</option>
+          <option value="wrong_class">wrong expression class</option>
+          <option value="not_an_expression">not an expression</option>
+          <option value="other">other</option>
+        </select>
+        <input id="feedback-note" type="text" placeholder="required: what is wrong?" style="flex:1">
+        <button id="feedback-btn" class="secondary">Send to review</button>
+      </div>
+      <div id="feedback-ack" class="ack" hidden></div>
+      <div id="feedback-err" class="error" hidden></div>
+    </div>
+    <div class="evidence" id="pool-evidence"></div>
+  </div>
+
+  <!-- Legacy single-card journey remains routable for compatibility, but is
+       intentionally outside the v3 first-slice surface. -->
+  <div id="legacy-fit-card" hidden>
   <div class="row"><button id="classify">Classify market fit</button></div>
   <div id="card" hidden>
     <div class="cardhead">
@@ -308,11 +459,11 @@
       <div class="error" id="correction-err" hidden></div>
     </div>
     <div class="evidence" id="evidence"></div>
-  </div>
+  </div></div>
   <div class="error" id="s3-err" hidden></div>
 </section>
 
-<section id="s4" class="stale" data-plate="04">
+<section id="s4" class="stale" data-plate="04" hidden>
   <h2>Conviction &amp; save</h2>
   <div class="row">
     <select id="conviction">
@@ -335,7 +486,7 @@
   <div class="error" id="s4-err" hidden></div>
 </section>
 
-<section id="s5" data-plate="05">
+<section id="s5" data-plate="05" hidden>
   <h2>Ledger</h2>
   <ul id="entries"></ul>
   <div id="entries-empty">no saved entries yet</div>
@@ -358,7 +509,27 @@
 // Current chain identity — every downstream render is bound to these ids.
 // A response whose ids do not match the current chain is dropped (contract
 // §Stale-state clearing rules).
-const chain = { thesisId: null, fitCardId: null };
+const chain = {
+  sourceInterpretationId: null,
+  sourceInputDigest: null,
+  selectedSourceCandidateId: null,
+  sourceChoiceKind: null,
+  normalizationInputText: null,
+  normalizationAttemptId: null,
+  normalizationDigest: null,
+  thesisId: null,
+  fitCardId: null,
+  marketDisplaySetId: null,
+  marketSnapshotId: null,
+  marketCandidateSetId: null,
+  selectedAssessmentId: null,
+  selectionKind: null,
+  feedbackAssessmentId: null,
+  requestToken: 0
+};
+let fixtureSourceExample = null;
+let fixtureClarificationExamples = [];
+let productMode = null;
 
 const $ = (id) => document.getElementById(id);
 const stale = (id, on) => $(id).classList.toggle("stale", on);
@@ -367,10 +538,51 @@ const step = (id, state) => { $(id).className = "step " + state; };
 
 function resetDownstream() {
   // A new/changed thesis clears ALL downstream state (AC-4).
+  chain.requestToken += 1;
+  chain.sourceInterpretationId = null; chain.sourceInputDigest = null;
+  chain.selectedSourceCandidateId = null; chain.sourceChoiceKind = null;
+  chain.normalizationInputText = null;
+  chain.normalizationAttemptId = null; chain.normalizationDigest = null;
   chain.thesisId = null; chain.fitCardId = null;
+  chain.marketDisplaySetId = null; chain.marketSnapshotId = null;
+  chain.marketCandidateSetId = null; chain.selectedAssessmentId = null;
+  chain.selectionKind = null; chain.feedbackAssessmentId = null;
+  setSourcePending(false);
+  setSourceChoicePending(null);
   ["s2","s3","s4"].forEach((s) => stale(s, true));
+  $("source-review").hidden = true; $("source-grid").innerHTML = "";
+  $("source-choose-none").checked = false;
+  $("source-choose-none").disabled = false;
+  $("submit-source-choice").disabled = true;
+  $("submit-source-choice").textContent = "Confirm thesis choice";
+  $("source-choice-state").textContent = "unanswered";
+  $("source-choice-ack").hidden = true;
+  $("attempt-review").hidden = true;
+  $("proposal-actions").hidden = false;
+  $("clarification-form").hidden = true;
+  $("clarification-answer").value = "";
+  $("submit-clarification").disabled = true;
+  $("submit-clarification").textContent = "Answer and rerun";
+  $("clarification-answer").disabled = false;
+  $("clarification-form").setAttribute("aria-busy", "false");
+  $("clarification-pending").hidden = true;
+  $("load-clarification-fixture").hidden = true;
+  $("load-clarification-fixture").disabled = false;
+  $("load-clarification-fixture").dataset.answer = "";
+  $("clarification-mode-note").hidden = true;
+  $("clarification-mode-note").textContent = "";
+  $("revision-form").hidden = true;
   $("s1-out").hidden = true;
   $("card").hidden = true; $("draft").hidden = true; $("noclean").hidden = true;
+  $("pool").hidden = true; $("market-grid").innerHTML = "";
+  $("choose-none").checked = false; $("choose-none").disabled = false;
+  $("submit-choice").disabled = true;
+  $("choice-state").textContent = "unanswered";
+  $("choice-ack").hidden = true; $("choice-ack").textContent = "";
+  $("assessment-feedback").hidden = true;
+  $("feedback-kind").value = ""; $("feedback-note").value = "";
+  $("feedback-ack").hidden = true; $("feedback-ack").textContent = "";
+  err("feedback-err", null);
   $("prior-status").textContent = "";
   ["st-extract","st-retrieve","st-fit","st-ledger"].forEach((s) => step(s, "pending"));
   ["s1-err","s2-err","s3-err","s4-err"].forEach((e) => err(e, null));
@@ -397,24 +609,438 @@ async function api(path, opts) {
 
 $("input_text").addEventListener("input", resetDownstream);
 
+$("load-fixture").onclick = () => {
+  if (!fixtureSourceExample) return;
+  resetDownstream();
+  $("input_text").value = fixtureSourceExample;
+  $("input_text").focus();
+};
+
+function selectSourceChoice(kind, candidateId, quote) {
+  chain.sourceChoiceKind = kind;
+  chain.selectedSourceCandidateId = candidateId || null;
+  chain.normalizationInputText = quote || null;
+  $("submit-source-choice").disabled = false;
+  $("source-choice-state").textContent = kind === "none"
+    ? "explicit none selected"
+    : "candidate selected";
+}
+
+function setSourcePending(isPending) {
+  $("s1").setAttribute("aria-busy", String(isPending));
+  $("source-pending").hidden = !isPending;
+  $("run").disabled = isPending;
+  $("run").textContent = isPending
+    ? "Reading source…"
+    : "Find thesis candidates";
+  $("input_text").disabled = isPending;
+  $("load-fixture").disabled = isPending;
+}
+
+function setSourceChoicePending(phase) {
+  const pending = phase !== null;
+  $("source-review").setAttribute("aria-busy", String(pending));
+  $("source-choice-pending").hidden = !pending;
+  if (phase === "recording") {
+    $("source-choice-pending").textContent =
+      "Choice received. Recording your decision…";
+    $("submit-source-choice").textContent = "Recording choice…";
+  } else if (phase === "normalizing") {
+    $("source-choice-pending").textContent =
+      "Choice recorded. Preparing a normalization proposal; this may take a moment.";
+    $("submit-source-choice").textContent = "Preparing normalization…";
+  }
+  if (pending) {
+    $("submit-source-choice").disabled = true;
+    document.querySelectorAll('input[name="source-choice"]').forEach(
+      (input) => input.disabled = true);
+  }
+}
+
+function sourceCandidateCard(candidate) {
+  const shell = document.createElement("label");
+  shell.className = "source-option";
+  const radio = document.createElement("input");
+  radio.type = "radio"; radio.name = "source-choice";
+  radio.value = candidate.source_thesis_candidate_id;
+  radio.setAttribute("aria-label", "Select thesis candidate " + candidate.ordinal);
+  radio.addEventListener("change", () => selectSourceChoice(
+    "candidate", candidate.source_thesis_candidate_id,
+    candidate.selected_source_quote));
+  const body = document.createElement("div");
+  const heading = document.createElement("h3");
+  heading.textContent = "0" + candidate.ordinal + " · " + candidate.claim_summary;
+  const quote = document.createElement("div");
+  quote.className = "source-quote";
+  quote.textContent = candidate.selected_source_quote;
+  const state = document.createElement("div");
+  state.className = "source-state";
+  state.textContent = "source-grounded candidate · awaiting human choice";
+  body.append(heading, quote, state); shell.append(radio, body);
+  return shell;
+}
+
+function renderSourceInterpretation(out) {
+  chain.sourceInterpretationId = out.source_interpretation_id;
+  chain.sourceInputDigest = out.input_digest;
+  $("source-review").hidden = false;
+  const grid = $("source-grid"); grid.innerHTML = "";
+  out.candidates.forEach((candidate) => grid.append(sourceCandidateCard(candidate)));
+  $("source-meta").textContent =
+    "interpretation " + out.source_interpretation_id + " · variant " +
+    out.system_variant_id + (out.model_adapter
+      ? " · proposer " + out.model_adapter + " · run " + out.model_run_id
+      : " · no model call");
+  if (out.outcome === "refusal") {
+    $("source-choice-state").textContent = "source refused";
+    $("source-choice-ack").hidden = false;
+    $("source-choice-ack").textContent = out.reasons && out.reasons.length
+      ? "No candidate was created: " + out.reasons.join(" · ")
+      : "No source-grounded thesis candidate was created.";
+    $("submit-source-choice").disabled = true;
+    $("source-choose-none").disabled = true;
+    step("st-extract", "failed");
+  }
+}
+
+function renderAttempt(out) {
+  chain.normalizationAttemptId = out.normalization_attempt_id;
+  chain.normalizationDigest = out.input_digest;
+  setClarificationPending(false);
+  $("attempt-review").hidden = false;
+  $("proposal-actions").hidden = false;
+  $("revision-form").hidden = true;
+  $("proposal-question").hidden = true;
+  $("proposal-reasons").hidden = true;
+  $("clarification-form").hidden = true;
+  $("clarification-answer").value = "";
+  $("submit-clarification").disabled = true;
+  $("load-clarification-fixture").hidden = true;
+  $("load-clarification-fixture").dataset.answer = "";
+  $("clarification-mode-note").hidden = true;
+  $("clarification-mode-note").textContent = "";
+  $("proposal-details").hidden = true;
+  $("proposal-summary").textContent = "";
+  $("proposal-question").textContent = "";
+  $("proposal-reasons").textContent = "";
+  $("proposal-structure").textContent = "";
+
+  if (out.outcome === "candidate") {
+    $("proposal-heading").textContent = "Normalization candidate — your decision required";
+    $("proposal-summary").textContent = out.normalized_claim_summary;
+    $("proposal-details").hidden = false;
+    $("proposal-structure").textContent = JSON.stringify(out.extracted_structure, null, 2);
+  } else if (out.outcome === "clarification") {
+    $("proposal-heading").textContent = "Clarification required";
+    $("proposal-question").hidden = false;
+    $("proposal-question").textContent = out.clarifying_question;
+    $("clarification-form").hidden = false;
+    const fixture = fixtureClarificationExamples.find(
+      (item) => item.question === out.clarifying_question
+    );
+    if (fixture) {
+      $("load-clarification-fixture").dataset.answer = fixture.answer;
+      $("load-clarification-fixture").hidden = false;
+    }
+    updateClarificationSubmitState();
+  } else {
+    const schemaInvalid = (out.reasons || []).some(
+      (reason) => reason.startsWith("model_output_schema_invalid:")
+    );
+    $("proposal-heading").textContent = schemaInvalid
+      ? "Model proposal rejected by schema gate"
+      : "Normalization refused";
+    $("proposal-summary").textContent = schemaInvalid
+      ? "No thesis was created. Revise and rerun when ready; no automatic retry occurred."
+      : "No testable thesis candidate was created.";
+  }
+  if (out.reasons && out.reasons.length) {
+    $("proposal-reasons").hidden = false;
+    $("proposal-reasons").textContent = out.reasons.join(" · ");
+  }
+  $("proposal-meta").textContent =
+    "attempt " + out.normalization_attempt_id + " · variant " + out.system_variant_id +
+    (out.model_adapter ? " · proposer " + out.model_adapter + " · run " + out.model_run_id :
+      " · no model call");
+  $("accept-proposal").hidden = out.outcome !== "candidate";
+  $("accept-proposal").disabled = out.outcome !== "candidate";
+  $("open-revision").disabled = !out.input_digest;
+  step("st-extract", out.outcome === "refusal" ? "failed" : "done");
+}
+
 $("run").onclick = async () => {
   resetDownstream();
+  const tokenAtCall = chain.requestToken;
+  setSourcePending(true);
   try {
-    const out = await api("/api/thesis", { method: "POST",
+    const out = await api("/api/v3/source-interpretations", { method: "POST",
       body: JSON.stringify({ input_text: $("input_text").value }) });
-    chain.thesisId = out.thesis_analysis_id;
-    $("norm-summary").textContent = out.normalized_claim_summary;
-    $("thesis-id").textContent = out.thesis_analysis_id;
-    $("s1-out").hidden = false;
-    step("st-extract", "done");
-    stale("s2", false); stale("s3", false);
+    if (tokenAtCall !== chain.requestToken) return; // source changed — drop
+    if (out.outcome === "candidates" &&
+        (out.candidates.length < 1 || out.candidates.length > 3)) {
+      throw new Error("candidate evidence shape mismatch — nothing was rendered");
+    }
+    setSourcePending(false);
+    renderSourceInterpretation(out);
   } catch (e) {
+    if (tokenAtCall !== chain.requestToken) return;
+    setSourcePending(false);
     step("st-extract", "failed");
     const reasons = e.reasons ? "\n· " + e.reasons.join("\n· ") : "";
     err("s1-err", (e.httpStatus === 503 ?
-      "model service unavailable — " + (e.detail || "") :
-      "analysis refused — no analysis was created") + reasons);
+      (e.detail || "model service unavailable") :
+      "source interpretation failed — no analysis was created") + reasons);
   }
+};
+
+$("source-choose-none").addEventListener("change", () =>
+  selectSourceChoice("none", null, null));
+
+$("submit-source-choice").onclick = async () => {
+  if (!chain.sourceInterpretationId || !chain.sourceChoiceKind) return;
+  const interpretationAtCall = chain.sourceInterpretationId;
+  const candidateAtCall = chain.selectedSourceCandidateId;
+  const tokenAtCall = chain.requestToken;
+  let choiceRecorded = false;
+  err("s1-err", null);
+  setSourceChoicePending("recording");
+  try {
+    const choice = await api(
+      `/api/v3/source-interpretations/${interpretationAtCall}/choice`, {
+        method: "POST",
+        body: JSON.stringify({
+          selection_kind: chain.sourceChoiceKind,
+          source_thesis_candidate_id: candidateAtCall
+        })
+      });
+    if (tokenAtCall !== chain.requestToken ||
+        interpretationAtCall !== chain.sourceInterpretationId) return;
+    if (choice.source_interpretation_id !== interpretationAtCall ||
+        choice.source_thesis_candidate_id !== candidateAtCall) {
+      throw new Error("source choice identity mismatch — nothing was advanced");
+    }
+    choiceRecorded = true;
+    $("source-choice-state").textContent = "decision recorded";
+    document.querySelectorAll(".source-option").forEach((option) => {
+      const input = option.querySelector('input[name="source-choice"]');
+      const state = option.querySelector(".source-state");
+      state.textContent = input.value === candidateAtCall
+        ? "human-selected focus · awaiting normalization decision"
+        : "available source candidate · not selected";
+    });
+    if (choice.selection_kind === "none") {
+      setSourceChoicePending(null);
+      $("submit-source-choice").textContent = "Confirm thesis choice";
+      $("source-choice-ack").hidden = false;
+      $("source-choice-ack").textContent =
+        "Recorded: none selected. No normalization or thesis was created.";
+      step("st-extract", "done");
+      return;
+    }
+    setSourceChoicePending("normalizing");
+    const out = await api(
+      `/api/v3/source-thesis-candidates/${candidateAtCall}/normalization-attempt`,
+      { method: "POST" });
+    if (tokenAtCall !== chain.requestToken ||
+        interpretationAtCall !== chain.sourceInterpretationId ||
+        candidateAtCall !== chain.selectedSourceCandidateId) return;
+    if (out.source_interpretation_id !== interpretationAtCall ||
+        out.source_thesis_candidate_id !== candidateAtCall) {
+      throw new Error("normalization identity mismatch — nothing was rendered");
+    }
+    setSourceChoicePending(null);
+    $("submit-source-choice").textContent = "Confirm thesis choice";
+    $("source-choice-ack").hidden = false;
+    $("source-choice-ack").textContent =
+      "Priority recorded. This candidate now enters normalization review.";
+    renderAttempt(out);
+  } catch (e) {
+    if (tokenAtCall !== chain.requestToken) return;
+    setSourceChoicePending(null);
+    if (choiceRecorded && chain.sourceChoiceKind === "candidate") {
+      $("submit-source-choice").disabled = false;
+      $("submit-source-choice").textContent = "Retry normalization";
+      $("source-choice-state").textContent =
+        "choice recorded · normalization unavailable";
+    } else if (!choiceRecorded) {
+      document.querySelectorAll('input[name="source-choice"]').forEach(
+        (input) => input.disabled = false);
+      $("submit-source-choice").disabled = false;
+      $("submit-source-choice").textContent = "Confirm thesis choice";
+      $("source-choice-state").textContent = chain.sourceChoiceKind === "none"
+        ? "explicit none selected"
+        : "candidate selected";
+    }
+    err("s1-err", e.httpStatus === 503
+      ? (e.detail || "model service unavailable")
+      : e.detail || e.message);
+  }
+};
+
+$("accept-proposal").onclick = async () => {
+  if (!chain.normalizationAttemptId) return;
+  const attemptAtCall = chain.normalizationAttemptId;
+  const tokenAtCall = chain.requestToken;
+  err("s1-err", null);
+  try {
+    const out = await api(`/api/v3/normalization-attempts/${attemptAtCall}/accept`, {
+      method: "POST",
+      body: JSON.stringify({ expected_input_digest: chain.normalizationDigest })
+    });
+    if (tokenAtCall !== chain.requestToken ||
+        attemptAtCall !== chain.normalizationAttemptId ||
+        out.normalization_attempt_id !== chain.normalizationAttemptId) return;
+    chain.thesisId = out.thesis_analysis_id;
+    const selectedSourceState = document.querySelector(
+      '.source-option input[name="source-choice"]:checked'
+    )?.closest(".source-option")?.querySelector(".source-state");
+    if (selectedSourceState) {
+      selectedSourceState.textContent =
+        "human-selected focus · normalization accepted";
+    }
+    $("norm-summary").textContent = $("proposal-summary").textContent;
+    $("thesis-id").textContent = out.thesis_analysis_id;
+    $("s1-out").hidden = false;
+    $("proposal-actions").hidden = true;
+    stale("s3", false);
+  } catch (e) { err("s1-err", e.detail || e.message); }
+};
+
+function updateClarificationSubmitState() {
+  const answer = $("clarification-answer").value.trim();
+  const fixtureAnswer =
+    ($("load-clarification-fixture").dataset.answer || "").trim();
+  const note = $("clarification-mode-note");
+  if (productMode !== "fixture") {
+    note.hidden = true;
+    $("submit-clarification").disabled = answer.length === 0;
+    return;
+  }
+  note.hidden = false;
+  if (!answer) {
+    note.textContent = "This fixture question replays one checked-in answer; it does not interpret custom wording.";
+  } else if (fixtureAnswer && answer === fixtureAnswer) {
+    note.textContent = "Checked-in fixture answer ready. No live model call will be made.";
+  } else {
+    note.textContent = "Custom wording is not replayable for this fixture question. Use Load fixture answer, or run in Gemini mode.";
+  }
+  $("submit-clarification").disabled =
+    !fixtureAnswer || answer !== fixtureAnswer;
+}
+
+function setClarificationPending(isPending) {
+  $("clarification-form").setAttribute("aria-busy", String(isPending));
+  $("clarification-pending").hidden = !isPending;
+  $("submit-clarification").textContent = isPending
+    ? "Preparing proposal…"
+    : "Answer and rerun";
+  $("clarification-answer").disabled = isPending;
+  $("load-clarification-fixture").disabled = isPending;
+  $("open-revision").disabled = isPending || !chain.normalizationDigest;
+  $("reject-proposal").disabled = isPending;
+  if (!isPending) updateClarificationSubmitState();
+}
+
+$("clarification-answer").addEventListener(
+  "input", updateClarificationSubmitState
+);
+
+$("load-clarification-fixture").onclick = () => {
+  const answer = $("load-clarification-fixture").dataset.answer || "";
+  $("clarification-answer").value = answer;
+  updateClarificationSubmitState();
+  $("clarification-answer").focus();
+};
+
+$("submit-clarification").onclick = async () => {
+  const answer = $("clarification-answer").value.trim();
+  const fixtureAnswer =
+    ($("load-clarification-fixture").dataset.answer || "").trim();
+  if (!answer || !chain.normalizationAttemptId || !chain.normalizationDigest ||
+      !chain.selectedSourceCandidateId) return;
+  if (productMode === "fixture" && answer !== fixtureAnswer) {
+    updateClarificationSubmitState();
+    return;
+  }
+  const attemptAtCall = chain.normalizationAttemptId;
+  const digestAtCall = chain.normalizationDigest;
+  const candidateAtCall = chain.selectedSourceCandidateId;
+  const tokenAtCall = chain.requestToken;
+  const clarifiedInput = (chain.normalizationInputText || "") +
+    "\n\nHuman clarification: " + answer;
+  setClarificationPending(true);
+  err("s1-err", null);
+  try {
+    const out = await api(`/api/v3/normalization-attempts/${attemptAtCall}/revise`, {
+      method: "POST",
+      body: JSON.stringify({
+        expected_input_digest: digestAtCall,
+        input_text: clarifiedInput
+      })
+    });
+    if (tokenAtCall !== chain.requestToken ||
+        candidateAtCall !== chain.selectedSourceCandidateId ||
+        attemptAtCall !== chain.normalizationAttemptId ||
+        out.predecessor_attempt_id !== attemptAtCall) return;
+    chain.normalizationInputText = clarifiedInput;
+    renderAttempt(out);
+  } catch (e) {
+    if (tokenAtCall !== chain.requestToken ||
+        attemptAtCall !== chain.normalizationAttemptId) return;
+    setClarificationPending(false);
+    err("s1-err", e.detail || e.message);
+  }
+};
+
+$("open-revision").onclick = () => {
+  if (!chain.normalizationAttemptId || !chain.normalizationDigest) return;
+  $("revision_text").value = chain.normalizationInputText || "";
+  $("revision-form").hidden = false;
+  $("revision_text").focus();
+};
+
+$("cancel-revision").onclick = () => { $("revision-form").hidden = true; };
+
+$("submit-revision").onclick = async () => {
+  if (!chain.normalizationAttemptId || !chain.normalizationDigest) return;
+  const attemptAtCall = chain.normalizationAttemptId;
+  const digestAtCall = chain.normalizationDigest;
+  const tokenAtCall = chain.requestToken;
+  err("s1-err", null);
+  try {
+    const out = await api(`/api/v3/normalization-attempts/${attemptAtCall}/revise`, {
+      method: "POST",
+      body: JSON.stringify({
+        expected_input_digest: digestAtCall,
+        input_text: $("revision_text").value
+      })
+    });
+    if (tokenAtCall !== chain.requestToken ||
+        attemptAtCall !== chain.normalizationAttemptId ||
+        out.predecessor_attempt_id !== attemptAtCall) return;
+    chain.normalizationInputText = $("revision_text").value;
+    renderAttempt(out);
+  } catch (e) { err("s1-err", e.detail || e.message); }
+};
+
+$("reject-proposal").onclick = async () => {
+  if (!chain.normalizationAttemptId) return;
+  const attemptAtCall = chain.normalizationAttemptId;
+  const tokenAtCall = chain.requestToken;
+  err("s1-err", null);
+  try {
+    const out = await api(`/api/v3/normalization-attempts/${attemptAtCall}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ expected_input_digest: chain.normalizationDigest })
+    });
+    if (tokenAtCall !== chain.requestToken ||
+        attemptAtCall !== chain.normalizationAttemptId ||
+        out.normalization_attempt_id !== chain.normalizationAttemptId) return;
+    $("proposal-heading").textContent = "Normalization rejected";
+    $("proposal-actions").hidden = true;
+    $("revision-form").hidden = true;
+    step("st-extract", "failed");
+  } catch (e) { err("s1-err", e.detail || e.message); }
 };
 
 $("submit-prior").onclick = async () => {
@@ -430,6 +1056,216 @@ $("submit-prior").onclick = async () => {
     if (thesisAtCall !== chain.thesisId) return; // stale response — drop
     $("prior-status").textContent = "blind prior locked (" + out.status + ") — odds may now be revealed";
   } catch (e) { err("s2-err", e.message); }
+};
+
+// --- v3 market pool: independent pair assessments + human choice ---------
+const PAIR_LABEL = {
+  direct: "direct expression",
+  indirect: "indirect expression",
+  weak_proxy: "weak proxy",
+  not_an_expression: "not an expression"
+};
+
+function clearPoolProjection() {
+  chain.marketDisplaySetId = null; chain.marketSnapshotId = null;
+  chain.marketCandidateSetId = null; chain.selectedAssessmentId = null;
+  chain.selectionKind = null; chain.feedbackAssessmentId = null;
+  $("pool").hidden = true; $("market-grid").innerHTML = "";
+  $("choose-none").checked = false; $("choose-none").disabled = false;
+  $("submit-choice").disabled = true;
+  $("choice-state").textContent = "unanswered";
+  $("choice-ack").hidden = true; $("assessment-feedback").hidden = true;
+  $("feedback-ack").hidden = true; err("feedback-err", null);
+}
+
+function selectMarketChoice(kind, assessmentId) {
+  chain.selectionKind = kind;
+  chain.selectedAssessmentId = assessmentId || null;
+  chain.feedbackAssessmentId = assessmentId || null;
+  $("submit-choice").disabled = false;
+  $("choice-state").textContent = kind === "none"
+    ? "explicit none selected"
+    : "market selected";
+  $("assessment-feedback").hidden = !assessmentId;
+  $("feedback-ack").hidden = true;
+  err("feedback-err", null);
+}
+
+function assessmentCard(card) {
+  const shell = document.createElement("article");
+  shell.className = "market-option";
+
+  const radio = document.createElement("input");
+  radio.type = "radio"; radio.name = "market-choice";
+  radio.value = card.market_assessment_id;
+  radio.setAttribute("aria-label", "Select displayed market " + card.display_rank);
+  radio.addEventListener("change", () =>
+    selectMarketChoice("market", card.market_assessment_id));
+
+  const body = document.createElement("div");
+  const title = document.createElement("h3");
+  const rank = document.createElement("span");
+  rank.className = "market-rank"; rank.textContent = "0" + card.display_rank;
+  const titleText = document.createElement("span");
+  titleText.textContent = card.market_title;
+  title.append(rank, document.createTextNode(" "), titleText);
+
+  const meta = document.createElement("div");
+  meta.className = "market-meta";
+  meta.textContent = (PAIR_LABEL[card.pair_class] || card.pair_class) +
+    " · retrieval rank " + card.retrieval_rank + " · market " + card.market_id;
+
+  const report = document.createElement("div"); report.className = "capmiss";
+  const captures = document.createElement("div"); captures.className = "captures";
+  const capturesHeading = document.createElement("h3"); capturesHeading.textContent = "What it captures";
+  const capturesBody = document.createElement("div"); capturesBody.className = "body";
+  capturesBody.textContent = card.what_it_captures;
+  captures.append(capturesHeading, capturesBody);
+  const misses = document.createElement("div"); misses.className = "misses";
+  const missesHeading = document.createElement("h3"); missesHeading.textContent = "What it misses";
+  const missesBody = document.createElement("div"); missesBody.className = "body";
+  missesBody.textContent = card.what_it_misses;
+  misses.append(missesHeading, missesBody); report.append(captures, misses);
+
+  const resolution = document.createElement("details"); resolution.className = "resolution";
+  const resolutionHeading = document.createElement("summary");
+  resolutionHeading.textContent = "Frozen resolution conditions";
+  const resolutionText = document.createElement("p");
+  resolutionText.textContent = card.resolution_conditions;
+  resolution.append(resolutionHeading, resolutionText);
+
+  const flag = document.createElement("button");
+  flag.type = "button"; flag.className = "secondary rowbtn";
+  flag.textContent = "Review this assessment";
+  flag.addEventListener("click", () => {
+    chain.feedbackAssessmentId = card.market_assessment_id;
+    $("assessment-feedback").hidden = false;
+    $("feedback-ack").hidden = true; err("feedback-err", null);
+    $("feedback-note").focus();
+  });
+
+  body.append(title, meta, report, resolution, flag);
+  shell.append(radio, body);
+  return shell;
+}
+
+function validatePoolBinding(out, thesisId) {
+  if (out.thesis_analysis_id !== thesisId ||
+      out.displayed_count !== out.candidate_markets.length ||
+      out.displayed_count > 3) return false;
+  const ids = new Set();
+  for (let index = 0; index < out.candidate_markets.length; index += 1) {
+    const card = out.candidate_markets[index];
+    if (card.display_rank !== index + 1 || card.snapshot_id !== out.snapshot_id ||
+        !card.market_assessment_id || !card.candidate_set_member_id ||
+        !card.rules_capture_id || ids.has(card.market_assessment_id)) return false;
+    ids.add(card.market_assessment_id);
+  }
+  return true;
+}
+
+function renderMarketPool(out) {
+  chain.marketDisplaySetId = out.market_display_set_id;
+  chain.marketSnapshotId = out.snapshot_id;
+  chain.marketCandidateSetId = out.candidate_set_id;
+  $("pool").hidden = false;
+  const summary = $("pool-summary"); summary.className = "pool-summary";
+  if (out.system_pool_outcome === "candidate_expressions") {
+    summary.textContent = out.displayed_count +
+      " assessed contract" + (out.displayed_count === 1 ? "" : "s") +
+      " — compare their resolution conditions before choosing.";
+  } else if (out.system_pool_outcome === "no_clean_expression") {
+    summary.textContent = "No clean expression exists in this complete displayed pool. " +
+      "The weak or negative matches remain visible so you can inspect why.";
+  } else {
+    summary.classList.add("incomplete");
+    summary.textContent = "Assessment incomplete — " +
+      (out.incomplete_reasons.length ? out.incomplete_reasons.join("; ") : "reason unavailable") +
+      ". No pool conclusion was made.";
+  }
+  const grid = $("market-grid"); grid.innerHTML = "";
+  out.candidate_markets.forEach((card) => grid.append(assessmentCard(card)));
+  $("pool-evidence").textContent =
+    "frozen candidate evidence · snapshot " + out.snapshot_id + " as of " + out.snapshot_as_of +
+    " · " + out.assessed_count + " assessed · display policy " + out.display_policy_version;
+}
+
+$("find-markets").onclick = async () => {
+  if (!chain.thesisId) return;
+  const thesisAtCall = chain.thesisId;
+  const tokenAtCall = chain.requestToken;
+  clearPoolProjection(); err("s3-err", null);
+  step("st-retrieve", "pending"); step("st-fit", "pending");
+  try {
+    const out = await api(`/api/v3/theses/${thesisAtCall}/market-pool`, { method: "POST" });
+    if (tokenAtCall !== chain.requestToken || thesisAtCall !== chain.thesisId) return;
+    if (!validatePoolBinding(out, thesisAtCall)) {
+      clearPoolProjection();
+      throw new Error("market evidence identity mismatch — nothing was rendered");
+    }
+    renderMarketPool(out);
+    step("st-retrieve", "done"); step("st-fit", out.assessment_complete ? "done" : "failed");
+  } catch (e) {
+    if (tokenAtCall !== chain.requestToken || thesisAtCall !== chain.thesisId) return;
+    clearPoolProjection();
+    err("s3-err", e.httpStatus === 503
+      ? "retrieval/model service unavailable — " + (e.detail || "")
+      : e.message);
+    step("st-fit", "failed");
+  }
+};
+
+$("choose-none").addEventListener("change", () => selectMarketChoice("none", null));
+
+$("submit-choice").onclick = async () => {
+  if (!chain.marketDisplaySetId || !chain.selectionKind) return;
+  const displaySetAtCall = chain.marketDisplaySetId;
+  const tokenAtCall = chain.requestToken;
+  err("s3-err", null);
+  try {
+    const out = await api(`/api/v3/market-pools/${displaySetAtCall}/choice`, {
+      method: "POST",
+      body: JSON.stringify({
+        selection_kind: chain.selectionKind,
+        market_assessment_id: chain.selectedAssessmentId
+      })
+    });
+    if (tokenAtCall !== chain.requestToken ||
+        displaySetAtCall !== chain.marketDisplaySetId ||
+        out.market_display_set_id !== displaySetAtCall) return;
+    $("choice-ack").hidden = false;
+    $("choice-ack").textContent = out.selection_kind === "none"
+      ? "Recorded: none of the displayed contracts."
+      : "Recorded your selected contract.";
+    $("choice-state").textContent = "decision recorded";
+    $("submit-choice").disabled = true;
+    document.querySelectorAll('input[name="market-choice"]').forEach((input) => input.disabled = true);
+    step("st-ledger", "done");
+  } catch (e) { err("s3-err", e.message); }
+};
+
+$("feedback-btn").onclick = async () => {
+  if (!chain.feedbackAssessmentId) return;
+  const assessmentAtCall = chain.feedbackAssessmentId;
+  const tokenAtCall = chain.requestToken;
+  err("feedback-err", null);
+  if (!$("feedback-kind").value || !$("feedback-note").value.trim()) {
+    err("feedback-err", "a feedback type and note are required"); return;
+  }
+  try {
+    const out = await api(`/api/v3/market-assessments/${assessmentAtCall}/feedback`, {
+      method: "POST",
+      body: JSON.stringify({
+        feedback_kind: $("feedback-kind").value,
+        note: $("feedback-note").value
+      })
+    });
+    if (tokenAtCall !== chain.requestToken || assessmentAtCall !== chain.feedbackAssessmentId) return;
+    $("feedback-ack").hidden = false;
+    $("feedback-ack").textContent = out.already_recorded
+      ? "Already pending human review; this assessment is unchanged."
+      : "Recorded for human review; this assessment is unchanged.";
+  } catch (e) { err("feedback-err", e.message); }
 };
 
 $("classify").onclick = async () => {
@@ -639,7 +1475,17 @@ function showEntry(e) {
   $("e-created").textContent = e.created_at || "";
 }
 
-api("/api/health").then((h) => { $("mode").textContent = "mode: " + h.mode; });
+api("/api/health").then((h) => {
+  productMode = h.mode;
+  $("mode").textContent = "mode: " + h.mode;
+  if (h.mode === "fixture" && h.fixture_source_examples?.length) {
+    fixtureSourceExample = h.fixture_source_examples[0];
+    $("load-fixture").hidden = false;
+  }
+  if (h.mode === "fixture" && h.fixture_clarification_examples?.length) {
+    fixtureClarificationExamples = h.fixture_clarification_examples;
+  }
+});
 loadLedger();
 </script>
 </body>
