@@ -48,7 +48,8 @@ from el.domain.tables import (
     ThesisAnalysis,
 )
 from el.fitgate.checks import TOKEN_RULES_VERSION
-from el.fitgate.policy import FIT_GATE_POLICY_VERSION, FitPolicy
+from el.fitgate.m1_subject_only import gate_policy_version, ordinary_discovery_fit_policy
+from el.fitgate.policy import FitPolicy
 from el.jobs import FailureKind, FencedWriteSession, JobClaim, JobStatus, JobStore
 from el.marketstructure.gate import GATE_POLICY_VERSION as STRUCTURE_GATE_VERSION
 from el.marketstructure.service import SCHEMA_VERSION as MARKET_SCHEMA_VERSION
@@ -132,7 +133,7 @@ class ClassificationRuntimeConfig:
     query_limit: int = 50
     structure_limit: int = 15
     retrieval_policy: Loop2Policy = field(default_factory=Loop2Policy)
-    fit_policy: FitPolicy = field(default_factory=FitPolicy)
+    fit_policy: FitPolicy = field(default_factory=ordinary_discovery_fit_policy)
 
     def __post_init__(self) -> None:
         for value in (
@@ -177,7 +178,7 @@ class ClassificationRuntimeConfig:
 
     def fit_pins(self) -> FitPins:
         return FitPins(
-            gate_policy_version=FIT_GATE_POLICY_VERSION,
+            gate_policy_version=gate_policy_version(self.fit_policy),
             token_rules_version=TOKEN_RULES_VERSION,
             alias_rules_version=self.fit_policy.alias_rules_version,
             stacking_threshold=self.fit_policy.stacking_threshold,

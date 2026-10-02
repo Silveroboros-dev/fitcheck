@@ -6,7 +6,7 @@ then applies a separately versioned display policy and records human choice.
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
@@ -20,11 +20,15 @@ from el.domain.tables import (
     MarketDisplayItem,
     MarketDisplaySet,
     MarketRulesCapture,
+    MarketStructureRow,
     NormalizationAttempt,
     NormalizationDecision,
+    ThesisAnalysis,
 )
+from el.domain.structures import ExtractedStructure, MarketStructure
 from el.domain.vocabulary import vocabulary_violations
 from el.fitgate.service import FitService
+from el.models.market_adapter import MARKET_EXTRACTION_POLICY_VERSION
 from el.retrieval.service import RetrievalService
 
 DISPLAY_POLICY_VERSION = "fit-class-then-retrieval-v1"
@@ -105,38 +109,259 @@ def project_pool_outcome(
     return True, "no_clean_expression", []
 
 
-def _assessment_text(payload: dict) -> tuple[str, str]:
-    checks = payload.get("checks") or []
-    passed = [
-        check.get("name") or check["check_id"]
-        for check in checks
-        if check.get("status") == "pass"
-    ]
-    mismatches = [
-        check.get("detail")
-        for check in checks
-        if check.get("cap") is not None and check.get("detail")
-    ]
-    captures = (
-        "Matched conditions: " + ", ".join(passed) + "."
-        if passed
-        else "No checked condition established a clean match."
+_STAGE_CONDITIONS = {
+    "announced": "an announcement",
+    "launched": "a launch",
+    "shipped": "a shipment",
+    "adopted": "adoption",
+    "measured": "a measured result",
+    "resolved": "a resolved outcome",
+}
+
+
+def _raw_subject_names(
+    structure: ExtractedStructure | MarketStructure,
+) -> tuple[str, ...]:
+    """Compare recorded subject identities before display-safe redaction."""
+
+    return tuple(
+        entity.name.strip()
+        for entity in structure.entities
+        if entity.role == "subject" and entity.name.strip()
     )
-    misses = (
-        "; ".join(mismatches)
-        if mismatches
-        else (
-            "No deterministic mismatch fired; semantic correctness still "
-            "requires human review."
+
+
+def _subject_names(structure: ExtractedStructure | MarketStructure) -> str:
+    names = _raw_subject_names(structure)
+    if not names or any(vocabulary_violations(name) for name in names):
+        return "the named subject"
+    return ", ".join(names)
+
+
+def _same_subjects(claim: ExtractedStructure, market: MarketStructure) -> bool:
+    claim_names = _raw_subject_names(claim)
+    market_names = _raw_subject_names(market)
+    return bool(claim_names) and tuple(
+        name.casefold() for name in claim_names
+    ) == tuple(name.casefold() for name in market_names)
+
+
+def _safe_fact(value: str | None, fallback: str) -> str:
+    candidate = (value or "").strip()
+    return candidate if candidate and not vocabulary_violations(candidate) else fallback
+
+
+def _human_date(value: date) -> str:
+    return value.strftime("%B %d, %Y").replace(" 0", " ")
+
+
+def _structured_condition(structure: ExtractedStructure | MarketStructure) -> str:
+    horizon = (
+        structure.horizon.window_end
+        if isinstance(structure, ExtractedStructure)
+        else structure.horizon.resolution_date
+    )
+    return (
+        f"{_STAGE_CONDITIONS[structure.event_stage.value]} for "
+        f"{_safe_fact(structure.metric.what, 'the stated outcome')} "
+        f"for {_subject_names(structure)}, by {_human_date(horizon)}"
+    )
+
+
+def _contract_condition(market: MarketStructure) -> str:
+    details = [f"This contract tests {_structured_condition(market)}."]
+    if market.threshold is not None:
+        details.append(
+            f"It requires {_safe_fact(market.threshold, 'a stated value')}."
         )
+    if market.direction is not None:
+        details.append(
+            "It is about "
+            f"{_safe_fact(market.direction, 'a stated direction')} outcomes."
+        )
+    return " ".join(details)
+
+
+def _accepted_thesis_text(claim: ExtractedStructure) -> str:
+    accepted = claim.contractible_version.strip() or claim.claim_summary.strip()
+    if accepted and not vocabulary_violations(accepted):
+        return f"Your accepted thesis: {accepted}"
+    return (
+        "Your accepted thesis is shown above. Its wording cannot be repeated "
+        "here, so this comparison uses only the available details."
     )
+
+
+def _side_text(payload: dict) -> str:
+    side = payload.get("thesis_side")
+    if side == "yes":
+        return "The recorded fit result maps this contract to the YES outcome for your thesis."
+    if side == "no":
+        return "The recorded fit result maps this contract to the NO outcome for your thesis."
+    return (
+        "The recorded fit result does not establish which contract outcome "
+        "corresponds to your thesis."
+    )
+
+
+def _assessment_text(
+    claim: ExtractedStructure | None,
+    market: MarketStructure | None,
+    payload: dict,
+) -> tuple[str, str]:
+    """Explain an already classified pair from its frozen structures."""
+
+    if market is None:
+        captures = (
+            "This contract's displayed resolution terms are available, but its "
+            "condition details are unavailable."
+        )
+        misses = (
+            "Its stage, metric, or date evidence is unavailable, so FitCheck "
+            "cannot state a precise comparison with your thesis."
+        )
+    elif claim is None:
+        captures = _contract_condition(market)
+        misses = (
+            "FitCheck does not have enough accepted-thesis detail to make a "
+            "precise comparison with this contract."
+        )
+    else:
+        captures = _contract_condition(market)
+        differences: list[str] = [_accepted_thesis_text(claim)]
+        cautions: list[str] = []
+        same_subjects = _same_subjects(claim, market)
+        if not same_subjects:
+            market_subjects = _subject_names(market)
+            claim_subjects = _subject_names(claim)
+            if (
+                market_subjects != "the named subject"
+                and claim_subjects != "the named subject"
+            ):
+                differences.append(
+                    f"It names {market_subjects}; your thesis names {claim_subjects}."
+                )
+            else:
+                differences.append(
+                    "The recorded subject wording differs; a subject match has "
+                    "not been established."
+                )
+        stage_differs = market.event_stage != claim.event_stage
+        if stage_differs:
+            differences.append(
+                "It resolves "
+                f"{_STAGE_CONDITIONS[market.event_stage.value]}; your thesis "
+                f"requires {_STAGE_CONDITIONS[claim.event_stage.value]}."
+            )
+        market_metric = _safe_fact(market.metric.what, "the stated outcome")
+        claim_metric = _safe_fact(claim.metric.what, "the stated outcome")
+        metric_differs = market.metric.what.casefold() != claim.metric.what.casefold()
+        if metric_differs:
+            differences.append(
+                f"It asks about {market_metric}; your thesis asks about {claim_metric}."
+            )
+        horizon_differs = market.horizon.resolution_date != claim.horizon.window_end
+        if horizon_differs:
+            differences.append(
+                f"It resolves by {_human_date(market.horizon.resolution_date)}; "
+                f"your thesis is due {_human_date(claim.horizon.window_end)}."
+            )
+        if market.threshold is not None:
+            cautions.append(
+                "A matching threshold in your thesis has not been established."
+            )
+        if market.direction is not None:
+            cautions.append(
+                "A matching direction in your thesis has not been established."
+            )
+        if claim.mechanism.is_composite or claim.mechanism.asserted_causal_chain:
+            cautions.append(
+                "Your thesis includes a causal or composite condition; the "
+                "available contract structure does not establish how it is covered."
+            )
+        capped_checks = {
+            check.get("check_id")
+            for check in payload.get("checks") or []
+            if check.get("cap") is not None
+        }
+        metric_identity_uncertain = any(
+            check.get("check_id") == "M1"
+            and check.get("status") in {"inconclusive", "unknown", "fail"}
+            for check in payload.get("checks") or []
+        )
+        if "E1" in capped_checks and same_subjects:
+            cautions.append(
+                "The available evidence does not establish that the named subjects "
+                "are equivalent."
+            )
+        if ("M1" in capped_checks or metric_identity_uncertain) and not metric_differs:
+            cautions.append(
+                "The available evidence does not establish that the contract outcome "
+                "measures the same thing as your thesis."
+            )
+        if "S1" in capped_checks and not stage_differs:
+            cautions.append(
+                "The available evidence does not establish that the contract and "
+                "thesis use the same event stage."
+            )
+        if "H1" in capped_checks and not horizon_differs:
+            cautions.append(
+                "The available evidence does not establish that the contract date "
+                "answers the same time window as your thesis."
+            )
+        if "M2" in capped_checks or "M3" in capped_checks:
+            cautions.append(
+                "The available evidence does not establish that both outcomes have "
+                "the same level of objective measurement."
+            )
+        if "X1" in capped_checks or "X2" in capped_checks:
+            cautions.append(
+                "The available evidence does not establish that one contract tests "
+                "every condition in your thesis."
+            )
+        if stage_differs and metric_differs:
+            differences.append(
+                f"{_STAGE_CONDITIONS[market.event_stage.value].capitalize()} "
+                "does not establish "
+                f"the {claim_metric} target."
+            )
+        misses = " ".join([*differences, *cautions, _side_text(payload)])
     for value in (captures, misses):
-        violations = vocabulary_violations(value)
-        if violations:
+        if vocabulary_violations(value):
             raise MarketPoolConflict(
                 "market assessment text violated product vocabulary"
             )
     return captures, misses
+
+
+def _claim_structure(thesis: ThesisAnalysis) -> ExtractedStructure | None:
+    try:
+        return ExtractedStructure.model_validate(thesis.extracted_structure)
+    except ValueError:
+        return None
+
+
+def _market_structure(
+    session: Session, capture: MarketRulesCapture
+) -> MarketStructure | None:
+    row = session.scalar(
+        select(MarketStructureRow)
+        .where(
+            MarketStructureRow.market_id == capture.market_id,
+            MarketStructureRow.contract_terms_hash == capture.contract_terms_hash,
+            MarketStructureRow.resolution_rules_hash == capture.resolution_rules_hash,
+            MarketStructureRow.schema_version == 1,
+            MarketStructureRow.extraction_policy_version
+            == MARKET_EXTRACTION_POLICY_VERSION,
+        )
+        .order_by(MarketStructureRow.created_at.desc())
+    )
+    if row is None:
+        return None
+    try:
+        return MarketStructure.model_validate(row.structure)
+    except ValueError:
+        return None
 
 
 class MarketPoolService:
@@ -203,6 +428,10 @@ class MarketPoolService:
                 or card.candidate_set_id != retrieval.candidate_set_id
             ):
                 raise MarketPoolConflict("fit card identity does not match retrieval")
+            thesis = session.get(ThesisAnalysis, thesis_analysis_id)
+            if thesis is None:
+                raise MarketPoolConflict("accepted thesis disappeared before projection")
+            claim = _claim_structure(thesis)
             per_market = (card.provenance or {}).get("per_market")
             if not isinstance(per_market, dict):
                 raise MarketPoolConflict("fit card has no per-market evidence")
@@ -231,7 +460,9 @@ class MarketPoolService:
                     raise MarketPoolConflict(
                         "display candidate has no frozen rules capture"
                     )
-                captures, misses = _assessment_text(payload)
+                captures, misses = _assessment_text(
+                    claim, _market_structure(session, capture), payload
+                )
                 advisory = payload.get("advisory") or {}
                 assessment = MarketAssessment(
                     fit_card_id=card.id,

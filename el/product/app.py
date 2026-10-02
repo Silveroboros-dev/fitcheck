@@ -235,6 +235,12 @@ def build_app(api: ProductApi) -> FastAPI:
             mode="json"
         )
 
+    @app.get("/api/v3/theses/{thesis_analysis_id}/accepted-state")
+    def accepted_thesis_state(thesis_analysis_id: uuid.UUID):
+        return api.get_accepted_thesis_state(thesis_analysis_id).model_dump(
+            mode="json"
+        )
+
     @app.post("/api/v3/market-pools/{market_display_set_id}/choice")
     def choose_market(
         market_display_set_id: uuid.UUID, payload: MarketChoiceIn

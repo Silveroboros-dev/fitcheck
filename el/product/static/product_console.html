@@ -130,6 +130,12 @@
   .source-quote { margin-top:8px; color:var(--mut); font:13px/1.55 var(--serif);
                   border-left:1px solid var(--line); padding-left:11px; }
   .source-state { margin-top:8px; font:11px/1.5 var(--mono); color:var(--faint); }
+  .restored-source-text { white-space:pre-wrap; overflow-wrap:anywhere;
+                          max-height:260px; overflow-y:auto;
+                          padding:12px 14px; border:1px solid var(--line);
+                          background:var(--well); color:var(--ink); }
+  .restored-source-detail { margin-top:10px; white-space:pre-wrap;
+                            overflow-wrap:anywhere; color:var(--ink-dim); }
 
   .kv { display:grid; grid-template-columns:190px 1fr; gap:7px 18px; font-size:14px; }
   .kv dt { color:var(--faint); font-size:11.5px; letter-spacing:.14em;
@@ -257,8 +263,10 @@
 <main>
 
 <section id="s1" data-plate="01" aria-busy="false">
-  <h2>Thesis intake</h2>
+  <h2>Source intake <span class="tag">raw input, not yet a chosen thesis</span></h2>
   <textarea id="input_text" placeholder="Paste a messy thesis, post, or source text…"></textarea>
+  <p id="restored-source-note" class="notice" hidden>The field above starts a new source journey.
+    Historical source context for the accepted thesis is shown read-only below.</p>
   <div class="row">
     <button id="run">Find thesis candidates</button>
     <button id="load-fixture" class="secondary" hidden>Load synthetic two-thesis fixture</button>
@@ -333,9 +341,18 @@
   </div>
   <div id="s1-out" hidden>
     <dl class="kv" style="margin-top:18px">
+      <dt id="restored-source-label" hidden>Original source</dt>
+      <dd id="restored-source" hidden>
+        <div id="restored-source-text" class="restored-source-text"></div>
+        <div id="restored-source-quote" class="restored-source-detail" hidden></div>
+        <div id="restored-source-normalization-input" class="restored-source-detail" hidden></div>
+        <div id="restored-source-url" class="restored-source-detail" hidden></div>
+      </dd>
       <dt>Human decision</dt><dd>accepted</dd>
       <dt>Accepted thesis</dt><dd style="font-family:var(--serif); font-size:16px" id="norm-summary"></dd>
       <dt>Analysis id</dt><dd id="thesis-id" class="id"></dd>
+      <dt id="restored-acceptance-label" hidden>Restored evidence</dt>
+      <dd id="restored-acceptance" hidden></dd>
     </dl>
   </div>
   <div class="error" id="s1-err" hidden></div>
@@ -366,6 +383,7 @@
   <div class="row"><button id="find-markets">Find market expressions</button></div>
   <div id="pool" hidden>
     <div id="pool-summary" class="pool-summary"></div>
+    <p id="pool-thesis" class="notice"></p>
     <div id="market-grid" class="market-grid" role="radiogroup" aria-label="Market expression choice"></div>
     <label class="choice-none row">
       <input type="radio" name="market-choice" id="choose-none" value="none">
@@ -426,8 +444,7 @@
       </div>
     </div>
     <div id="noclean" hidden>
-      <p class="notice">No clean expression exists for this thesis in the candidate
-         set — that is the verdict, not a failure. A draft contract candidate can
+      <p class="notice">No clean expression among the checked candidates. A draft contract candidate can
          describe the market that <em>would</em> test it.</p>
       <div class="row"><button id="draft-btn" class="secondary">Preview draft contract candidate</button></div>
       <div class="draft" id="draft" hidden></div>
@@ -530,6 +547,9 @@ const chain = {
 let fixtureSourceExample = null;
 let fixtureClarificationExamples = [];
 let productMode = null;
+const RESUME_THESIS_ID_PARAM = "resume_thesis_id";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const BOOTSTRAP_RESUME_TOKEN = chain.requestToken;
 
 const $ = (id) => document.getElementById(id);
 const stale = (id, on) => $(id).classList.toggle("stale", on);
@@ -573,8 +593,22 @@ function resetDownstream() {
   $("clarification-mode-note").textContent = "";
   $("revision-form").hidden = true;
   $("s1-out").hidden = true;
+  $("restored-source-note").hidden = true;
+  $("restored-source-label").hidden = true;
+  $("restored-source").hidden = true;
+  $("restored-source-text").textContent = "";
+  $("restored-source-quote").hidden = true;
+  $("restored-source-quote").textContent = "";
+  $("restored-source-normalization-input").hidden = true;
+  $("restored-source-normalization-input").textContent = "";
+  $("restored-source-url").hidden = true;
+  $("restored-source-url").textContent = "";
+  $("restored-acceptance-label").hidden = true;
+  $("restored-acceptance").hidden = true;
+  $("restored-acceptance").textContent = "";
   $("card").hidden = true; $("draft").hidden = true; $("noclean").hidden = true;
   $("pool").hidden = true; $("market-grid").innerHTML = "";
+  $("pool-thesis").textContent = "";
   $("choose-none").checked = false; $("choose-none").disabled = false;
   $("submit-choice").disabled = true;
   $("choice-state").textContent = "unanswered";
@@ -900,11 +934,118 @@ $("accept-proposal").onclick = async () => {
     }
     $("norm-summary").textContent = $("proposal-summary").textContent;
     $("thesis-id").textContent = out.thesis_analysis_id;
+    $("restored-acceptance-label").hidden = true;
+    $("restored-acceptance").hidden = true;
+    $("restored-acceptance").textContent = "";
     $("s1-out").hidden = false;
     $("proposal-actions").hidden = true;
     stale("s3", false);
   } catch (e) { err("s1-err", e.detail || e.message); }
 };
+
+function requestedResumeThesisId() {
+  const requested = new URLSearchParams(window.location.search)
+    .get(RESUME_THESIS_ID_PARAM);
+  return requested && UUID_PATTERN.test(requested) ? requested.toLowerCase() : null;
+}
+
+function restoredSourceIsBound(source, accepted) {
+  if (source === null) return true; // Legacy acceptance without source lineage.
+  return source &&
+    String(source.thesis_analysis_id || "").toLowerCase() ===
+      String(accepted.thesis_analysis_id).toLowerCase() &&
+    String(source.normalization_decision_id || "").toLowerCase() ===
+      String(accepted.normalization_decision_id).toLowerCase() &&
+    UUID_PATTERN.test(String(source.source_interpretation_id || "")) &&
+    UUID_PATTERN.test(String(source.source_thesis_candidate_id || "")) &&
+    UUID_PATTERN.test(String(source.source_candidate_choice_id || "")) &&
+    (source.source_interpretation_request_id === null ||
+      UUID_PATTERN.test(String(source.source_interpretation_request_id || ""))) &&
+    typeof source.original_source_text === "string" &&
+    typeof source.selected_source_quote === "string" &&
+    source.selected_source_quote.length > 0 &&
+    source.original_source_text.includes(source.selected_source_quote) &&
+    typeof source.accepted_normalization_input === "string" &&
+    source.accepted_normalization_input.trim().length > 0 &&
+    (source.source_url === null || typeof source.source_url === "string");
+}
+
+function acceptedStateIsBound(out, expectedThesisId) {
+  return out &&
+    String(out.thesis_analysis_id || "").toLowerCase() === expectedThesisId &&
+    typeof out.accepted_thesis_summary === "string" &&
+    out.accepted_thesis_summary.trim().length > 0 &&
+    UUID_PATTERN.test(String(out.normalization_decision_id || "")) &&
+    typeof out.accepted_at === "string" && out.accepted_at.length > 0 &&
+    out.acceptance_origin === "human_ui" &&
+    restoredSourceIsBound(out.restored_source, out);
+}
+
+function renderRestoredAcceptedThesis(out) {
+  // Historical source context is read-only. No source choice or proposal is
+  // reconstructed as an active control.
+  chain.thesisId = out.thesis_analysis_id;
+  $("norm-summary").textContent = out.accepted_thesis_summary;
+  $("thesis-id").textContent = out.thesis_analysis_id;
+  $("restored-acceptance").textContent =
+    "Restored original human acceptance — no new decision was recorded. " +
+    "Decision " + out.normalization_decision_id + " · accepted " + out.accepted_at;
+  $("restored-acceptance-label").hidden = false;
+  $("restored-acceptance").hidden = false;
+  const source = out.restored_source;
+  $("restored-source-text").textContent = source
+    ? source.original_source_text
+    : "Original source is unavailable in this saved thesis.";
+  $("restored-source-quote").textContent = source
+    ? "Selected excerpt: " + source.selected_source_quote : "";
+  $("restored-source-quote").hidden = !source;
+  const revisedInput = source && source.accepted_normalization_input !==
+    source.selected_source_quote;
+  $("restored-source-normalization-input").textContent = revisedInput
+    ? "Input used for accepted normalization: " +
+      source.accepted_normalization_input : "";
+  $("restored-source-normalization-input").hidden = !revisedInput;
+  $("restored-source-url").textContent = source?.source_url
+    ? "Source URL: " + source.source_url : "";
+  $("restored-source-url").hidden = !source?.source_url;
+  $("restored-source-note").hidden = false;
+  $("restored-source-label").hidden = false;
+  $("restored-source").hidden = false;
+  $("s1-out").hidden = false;
+  $("proposal-actions").hidden = true;
+  stale("s3", false);
+}
+
+async function resumeAcceptedThesis(
+  bootstrapRequestToken = chain.requestToken
+) {
+  const hasResumeParameter = new URLSearchParams(window.location.search)
+    .has(RESUME_THESIS_ID_PARAM);
+  if (bootstrapRequestToken !== chain.requestToken) return hasResumeParameter;
+  const requestedThesisId = requestedResumeThesisId();
+  if (!requestedThesisId) {
+    if (hasResumeParameter) {
+      err("s1-err", "Saved accepted thesis is unavailable for this local session.");
+      return true;
+    }
+    return false;
+  }
+  const tokenAtCall = chain.requestToken;
+  err("s1-err", null);
+  try {
+    const out = await api(`/api/v3/theses/${requestedThesisId}/accepted-state`);
+    if (tokenAtCall !== chain.requestToken) return true;
+    if (!acceptedStateIsBound(out, requestedThesisId)) {
+      throw new Error("saved accepted thesis did not bind to this journey");
+    }
+    renderRestoredAcceptedThesis(out);
+  } catch (_) {
+    if (tokenAtCall === chain.requestToken) {
+      err("s1-err", "Saved accepted thesis is unavailable for this local session.");
+    }
+  }
+  return true;
+}
 
 function updateClarificationSubmitState() {
   const answer = $("clarification-answer").value.trim();
@@ -967,7 +1108,7 @@ $("submit-clarification").onclick = async () => {
   const candidateAtCall = chain.selectedSourceCandidateId;
   const tokenAtCall = chain.requestToken;
   const clarifiedInput = (chain.normalizationInputText || "") +
-    "\n\nHuman clarification: " + answer;
+    " Human clarification: " + answer;
   setClarificationPending(true);
   err("s1-err", null);
   try {
@@ -1071,6 +1212,7 @@ function clearPoolProjection() {
   chain.marketCandidateSetId = null; chain.selectedAssessmentId = null;
   chain.selectionKind = null; chain.feedbackAssessmentId = null;
   $("pool").hidden = true; $("market-grid").innerHTML = "";
+  $("pool-thesis").textContent = ""; $("pool-evidence").textContent = "";
   $("choose-none").checked = false; $("choose-none").disabled = false;
   $("submit-choice").disabled = true;
   $("choice-state").textContent = "unanswered";
@@ -1117,19 +1259,22 @@ function assessmentCard(card) {
 
   const report = document.createElement("div"); report.className = "capmiss";
   const captures = document.createElement("div"); captures.className = "captures";
-  const capturesHeading = document.createElement("h3"); capturesHeading.textContent = "What it captures";
+  const capturesHeading = document.createElement("h3"); capturesHeading.textContent = "What this contract tests";
   const capturesBody = document.createElement("div"); capturesBody.className = "body";
   capturesBody.textContent = card.what_it_captures;
   captures.append(capturesHeading, capturesBody);
   const misses = document.createElement("div"); misses.className = "misses";
-  const missesHeading = document.createElement("h3"); missesHeading.textContent = "What it misses";
+  const missesHeading = document.createElement("h3"); missesHeading.textContent =
+    ["direct", "indirect"].includes(card.pair_class)
+      ? "Comparison with your thesis"
+      : "Why it does not cleanly test your thesis";
   const missesBody = document.createElement("div"); missesBody.className = "body";
   missesBody.textContent = card.what_it_misses;
   misses.append(missesHeading, missesBody); report.append(captures, misses);
 
   const resolution = document.createElement("details"); resolution.className = "resolution";
   const resolutionHeading = document.createElement("summary");
-  resolutionHeading.textContent = "Frozen resolution conditions";
+  resolutionHeading.textContent = "Contract resolution conditions";
   const resolutionText = document.createElement("p");
   resolutionText.textContent = card.resolution_conditions;
   resolution.append(resolutionHeading, resolutionText);
@@ -1152,7 +1297,7 @@ function assessmentCard(card) {
 function validatePoolBinding(out, thesisId) {
   if (out.thesis_analysis_id !== thesisId ||
       out.displayed_count !== out.candidate_markets.length ||
-      out.displayed_count > 3) return false;
+      out.displayed_count > 3 || !out.accepted_thesis_summary) return false;
   const ids = new Set();
   for (let index = 0; index < out.candidate_markets.length; index += 1) {
     const card = out.candidate_markets[index];
@@ -1175,7 +1320,7 @@ function renderMarketPool(out) {
       " assessed contract" + (out.displayed_count === 1 ? "" : "s") +
       " — compare their resolution conditions before choosing.";
   } else if (out.system_pool_outcome === "no_clean_expression") {
-    summary.textContent = "No clean expression exists in this complete displayed pool. " +
+    summary.textContent = "No clean expression among the checked candidates. " +
       "The weak or negative matches remain visible so you can inspect why.";
   } else {
     summary.classList.add("incomplete");
@@ -1185,9 +1330,20 @@ function renderMarketPool(out) {
   }
   const grid = $("market-grid"); grid.innerHTML = "";
   out.candidate_markets.forEach((card) => grid.append(assessmentCard(card)));
+  $("pool-thesis").textContent = "Accepted thesis for this comparison: " +
+    out.accepted_thesis_summary;
+  const scope = out.retrieval_scope;
+  const scopeText = !scope
+    ? "Search scope is unavailable for this historical candidate set."
+    : "Retrieved from " + scope.provider + ": " +
+      scope.returned_count + " returned · " +
+      scope.lifecycle_eligible_count + " lifecycle-eligible · " +
+      scope.gate_eligible_count + " passed initial gates · " +
+      out.assessed_count + " assessed for " + out.target_count + " target" +
+      (out.target_count === 1 ? "." : "s.");
   $("pool-evidence").textContent =
-    "frozen candidate evidence · snapshot " + out.snapshot_id + " as of " + out.snapshot_as_of +
-    " · " + out.assessed_count + " assessed · display policy " + out.display_policy_version;
+    scopeText + " Frozen candidate evidence · snapshot " + out.snapshot_id +
+    " as of " + out.snapshot_as_of + " · display policy " + out.display_policy_version;
 }
 
 $("find-markets").onclick = async () => {
@@ -1485,7 +1641,7 @@ api("/api/health").then((h) => {
   if (h.mode === "fixture" && h.fixture_clarification_examples?.length) {
     fixtureClarificationExamples = h.fixture_clarification_examples;
   }
-});
+}).then(() => resumeAcceptedThesis(BOOTSTRAP_RESUME_TOKEN));
 loadLedger();
 </script>
 </body>

@@ -18,11 +18,13 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from el.domain.contracts import ThesisAnalysisIn
 from el.domain.tables import (
+    CandidateSet,
     MarketAssessment,
     MarketDisplayItem,
     MarketDisplaySet,
     MarketRulesCapture,
     MarketSnapshot,
+    ThesisAnalysis,
 )
 from el.extraction.service import (
     NormalizationAttemptConflict,
@@ -51,6 +53,7 @@ from el.mcp.contracts import (
     V3SourceThesisCandidateResult,
 )
 from el.mcp.vocab_guard import assert_a7_clean
+from el.retrieval.scope import persisted_candidate_set_scope
 from el.sourceinterpretation.service import (
     SourceCandidateChoiceConflict,
     SourceInterpretationNotFound,
@@ -404,6 +407,27 @@ class McpV3Tools:
                 snapshot = session.get(MarketSnapshot, display_set.snapshot_id)
                 if snapshot is None:
                     raise MarketPoolConflict("market pool snapshot is missing")
+                thesis = session.get(ThesisAnalysis, display_set.thesis_analysis_id)
+                if thesis is None:
+                    raise MarketPoolConflict("market pool accepted thesis is missing")
+                candidate_set = session.get(CandidateSet, display_set.candidate_set_id)
+                if (
+                    candidate_set is None
+                    or candidate_set.thesis_analysis_id != display_set.thesis_analysis_id
+                    or candidate_set.snapshot_id != display_set.snapshot_id
+                ):
+                    raise MarketPoolConflict("market pool candidate-set binding is invalid")
+                try:
+                    retrieval_scope = persisted_candidate_set_scope(
+                        candidate_set.retrieval_scope
+                    )
+                except ValueError as exc:
+                    raise MarketPoolConflict("candidate retrieval scope is invalid") from exc
+                if retrieval_scope is not None and (
+                    retrieval_scope.snapshot_id != candidate_set.snapshot_id
+                    or retrieval_scope.retrieval_id != candidate_set.retrieval_id
+                ):
+                    raise MarketPoolConflict("candidate retrieval scope is not bound")
                 items = session.scalars(
                     select(MarketDisplayItem)
                     .where(
@@ -515,7 +539,9 @@ class McpV3Tools:
                     market_display_set_id=display_set.id,
                     fit_card_id=display_set.fit_card_id,
                     thesis_analysis_id=display_set.thesis_analysis_id,
+                    accepted_thesis_summary=thesis.normalized_claim_summary,
                     candidate_set_id=display_set.candidate_set_id,
+                    retrieval_scope=retrieval_scope,
                     snapshot_id=display_set.snapshot_id,
                     snapshot_as_of=_utc(snapshot.as_of_ts),
                     display_policy_version=display_set.display_policy_version,

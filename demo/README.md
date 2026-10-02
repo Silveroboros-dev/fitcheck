@@ -11,8 +11,9 @@ first-user journey. The v3.1 UI uses the synchronous fixture protocol
 documented in the repository README: source candidates, explicit human
 selection and confirmation, an assessed market pool, and market-or-`none`
 choice. Its generic MCP source-interpretation protocol is separate and uses a
-bounded fixture job worker. Its focused offline protocol smoke is documented
-in the repository README. This repository
+bounded fixture job worker. The offline STDIO test in the repository README
+continues from the worker result through choice, normalization, acceptance,
+pool assessment, and market-or-`none` choice. This repository
 does not claim a verified third-party client, production MCP deployment, or
 live provider.
 

@@ -21,6 +21,7 @@ from el.classification import (
     BoundMarketStructureProposer,
     CandidateIndexPin,
     ClassificationJobSubmitter,
+    ClassificationPinManifest,
     ClassificationRuntimeConfig,
     ClassificationWorker,
     LocalSqliteIndexResolver,
@@ -53,7 +54,13 @@ from el.domain.tables import (
     RejectedMarketRow,
     ThesisAnalysis,
 )
-from el.jobs import JobStatus, JobStore
+from el.jobs import JobStatus, JobStore, canonical_payload_hash
+from el.fitgate.m1_subject_only import (
+    M1_SUBJECT_ONLY_POLICY_VERSION,
+    fit_policy_from_pins,
+    gate_policy_version,
+    ordinary_discovery_fit_policy,
+)
 from el.fitgate.policy import FitPolicy
 from el.models.market_adapter import FixtureMarketStructureProposer
 from el.retrieval.agent_retrieval_index import (
@@ -81,6 +88,94 @@ from el.retrieval.snapshot_validation import (
 
 NOW = datetime(2026, 8, 6, 12, 0, tzinfo=timezone.utc)
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def test_new_classification_runtime_pins_m1_successor_by_default():
+    config = ClassificationRuntimeConfig(
+        code_version="classification-test-build-v1",
+        structure_model_adapter="fixture",
+        structure_model_version="fixture-goldens-v1",
+        structure_prompt_version="fixture-prompt-v1",
+    )
+
+    assert config.fit_policy.gate_policy_version == M1_SUBJECT_ONLY_POLICY_VERSION
+    pins = config.fit_pins()
+    assert pins.gate_policy_version == M1_SUBJECT_ONLY_POLICY_VERSION
+    assert "m1_subject_only_residual_guard" not in pins.model_dump(mode="json")
+    restored = fit_policy_from_pins(
+        gate_policy_version=pins.gate_policy_version,
+        stacking_threshold=pins.stacking_threshold,
+        escalation_confidence_floor=pins.escalation_confidence_floor,
+        horizon_tolerances=dict(pins.horizon_tolerances),
+        alias_rules_version=pins.alias_rules_version,
+        m1_direction_guard=pins.m1_direction_guard,
+    )
+    assert restored.gate_policy_version == M1_SUBJECT_ONLY_POLICY_VERSION
+
+
+def test_legacy_predecessor_manifest_reenqueues_with_its_original_hash(
+    tmp_path,
+):
+    environment = _environment(tmp_path, fit_policy=FitPolicy())
+    first = environment.submit(key="legacy-predecessor-retry")
+    job = environment.jobs.get(first.job_id)
+    raw_manifest = job.pinned_manifest
+
+    # This is the exact v1 predecessor JSON a queued job stores. Parsing it
+    # must not add a successor-only key before the retry is hashed.
+    assert (
+        "m1_subject_only_residual_guard" not in raw_manifest["fit"]
+    )
+    assert (
+        ClassificationPinManifest.model_validate(raw_manifest).model_dump(
+            mode="json"
+        )
+        == raw_manifest
+    )
+    assert job.payload_hash == canonical_payload_hash(
+        job.payload,
+        raw_manifest,
+        execution_guarantees={
+            "max_attempts": 3,
+            "priority": 100,
+            "available_at": {"mode": "submission_time"},
+            "deadline_at": None,
+        },
+    )
+
+    retry = environment.submit(key="legacy-predecessor-retry")
+    assert not retry.created
+    assert retry.job_id == first.job_id
+
+    result = environment.worker().run_once(now=NOW)
+    assert result.status == "succeeded"
+    with environment.sessions() as session:
+        card = session.scalars(select(FitCard)).one()
+        assert card.provenance["per_market"]["mkt_gemini_lmsys_1"][
+            "gate_policy_version"
+        ] == gate_policy_version(FitPolicy())
+
+
+def test_successor_manifest_derives_guard_from_policy_identity_at_runtime(tmp_path):
+    environment = _environment(
+        tmp_path,
+        fit_policy=ordinary_discovery_fit_policy(),
+    )
+    submitted = environment.submit(key="successor-policy-runtime")
+    job = environment.jobs.get(submitted.job_id)
+
+    assert job.pinned_manifest["fit"]["gate_policy_version"] == (
+        M1_SUBJECT_ONLY_POLICY_VERSION
+    )
+    assert "m1_subject_only_residual_guard" not in job.pinned_manifest["fit"]
+
+    result = environment.worker().run_once(now=NOW)
+    assert result.status == "succeeded"
+    with environment.sessions() as session:
+        card = session.scalars(select(FitCard)).one()
+        assert card.provenance["per_market"]["mkt_gemini_lmsys_1"][
+            "gate_policy_version"
+        ] == M1_SUBJECT_ONLY_POLICY_VERSION
 
 
 def _claim(**overrides) -> ExtractedStructure:

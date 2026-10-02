@@ -166,6 +166,9 @@ class Job(_PK, _Created, Base):
     # Operator-only structured diagnostics. A future public status DTO must
     # exclude this field even when its current producer stores bounded data.
     error_details: Mapped[dict | None] = mapped_column(JSONVariant)
+    # Validated W3C context is operational only: outside payloads, pins,
+    # idempotency, and business correlations.
+    accepted_traceparent: Mapped[str | None] = mapped_column(String(55))
     correlation_id: Mapped[str] = mapped_column(String(64))
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
@@ -658,6 +661,8 @@ class CandidateSet(_PK, _Created, Base):
     # Claim-specific retrieval provenance belongs here, not on the shared
     # legacy market snapshot row.
     retrieval_id: Mapped[str | None] = mapped_column(String(128))
+    # Retained scope from the actual retrieval; historical nulls stay unknown.
+    retrieval_scope: Mapped[dict | None] = mapped_column(JSONVariant)
     job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id"))
     __table_args__ = (UniqueConstraint("job_id", name="uq_candidate_set_job"),)
 

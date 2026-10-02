@@ -114,6 +114,10 @@ HARBOR_REVISED_INPUT = (
     f"{HARBOR_CANDIDATE}\n\nHuman clarification: "
     f"{HARBOR_CLARIFICATION_ANSWER}"
 )
+HARBOR_UI_REVISED_INPUT = (
+    f"{HARBOR_CANDIDATE} Human clarification: "
+    f"{HARBOR_CLARIFICATION_ANSWER}"
+)
 ORCHARD_CLARIFICATION_QUESTION = (
     "What observable criterion would show Orchard Exchange supports that "
     "settlement, and by when?"
@@ -125,6 +129,10 @@ ORCHARD_CLARIFICATION_ANSWER = (
 )
 ORCHARD_REVISED_INPUT = (
     f"{ORCHARD_CANDIDATE}\n\nHuman clarification: "
+    f"{ORCHARD_CLARIFICATION_ANSWER}"
+)
+ORCHARD_UI_REVISED_INPUT = (
+    f"{ORCHARD_CANDIDATE} Human clarification: "
     f"{ORCHARD_CLARIFICATION_ANSWER}"
 )
 
@@ -383,6 +391,10 @@ def _add_multi_normalization_fixtures(
         ),
         clarification=None,
     )
+    # Historical replay keys retain their original delimiter; browser-created
+    # clarification input uses one literal space before the label.
+    fixtures[HARBOR_UI_REVISED_INPUT] = fixtures[HARBOR_REVISED_INPUT]
+    fixtures[ORCHARD_UI_REVISED_INPUT] = fixtures[ORCHARD_REVISED_INPUT]
 
 
 def _market_goldens() -> dict[str, MarketStructure]:

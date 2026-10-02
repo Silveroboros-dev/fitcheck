@@ -14,9 +14,10 @@ docs/agent-guided-ui-contract-v0.md:
 """
 
 from datetime import timezone
+from hashlib import sha256
 import json
 import uuid
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
@@ -24,6 +25,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from el.domain.contracts import ThesisAnalysisIn
 from el.domain.enums import (
+    ClientType,
     ConvictionLevel,
     ExposureBucket,
     FitClass,
@@ -32,6 +34,7 @@ from el.domain.enums import (
     ReviewStatus,
 )
 from el.domain.tables import (
+    CandidateSet,
     CandidateSetMember,
     FitCard,
     LedgerEntry,
@@ -41,8 +44,14 @@ from el.domain.tables import (
     MarketRecommendation,
     MarketRulesCapture,
     MarketSnapshot,
+    NormalizationAttempt,
+    NormalizationDecision,
     RejectedMarketRow,
     ReviewCandidate,
+    SourceCandidateChoice,
+    SourceInterpretation,
+    SourceInterpretationRequest,
+    SourceThesisCandidate,
     ThesisAnalysis,
 )
 from el.extraction.service import NormalizationAttemptNotFound
@@ -63,6 +72,10 @@ from el.product.wiring import (
     ORCHARD_CLARIFICATION_QUESTION,
     HumanActor,
     ProductServices,
+)
+from el.retrieval.scope import (
+    CandidateSetRetrievalScope,
+    persisted_candidate_set_scope,
 )
 from el.sourceinterpretation.service import (
     SourceCandidateChoiceConflict,
@@ -123,6 +136,40 @@ class NormalizationDecisionUiOut(_Out):
     action: str
     thesis_analysis_id: uuid.UUID | None
     created_at: str
+
+
+class RestoredSourceUiOut(_Out):
+    """Historical source context, never an active input or source choice."""
+
+    thesis_analysis_id: uuid.UUID
+    normalization_decision_id: uuid.UUID
+    source_interpretation_request_id: uuid.UUID | None
+    source_interpretation_id: uuid.UUID
+    source_thesis_candidate_id: uuid.UUID
+    source_candidate_choice_id: uuid.UUID
+    original_source_text: str
+    selected_source_quote: str
+    accepted_normalization_input: str
+    source_url: str | None
+
+
+class AcceptedThesisStateUiOut(_Out):
+    """Read-only evidence of one locally accepted v3 thesis."""
+
+    thesis_analysis_id: uuid.UUID
+    accepted_thesis_summary: str
+    normalization_decision_id: uuid.UUID
+    accepted_at: str
+    acceptance_origin: Literal["human_ui"]
+    restored_source: RestoredSourceUiOut | None
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "restored_source.original_source_text",
+            "restored_source.selected_source_quote",
+            "restored_source.accepted_normalization_input",
+            "restored_source.source_url",
+        }
+    )
 
 
 class SourceThesisCandidateUiOut(_Out):
@@ -246,7 +293,9 @@ class MarketPoolUiOut(_Out):
     market_display_set_id: uuid.UUID
     fit_card_id: uuid.UUID
     thesis_analysis_id: uuid.UUID
+    accepted_thesis_summary: str
     candidate_set_id: uuid.UUID
+    retrieval_scope: CandidateSetRetrievalScope | None
     snapshot_id: str
     snapshot_as_of: str
     display_policy_version: str
@@ -257,6 +306,8 @@ class MarketPoolUiOut(_Out):
     system_pool_outcome: str
     incomplete_reasons: list[str]
     candidate_markets: list[MarketAssessmentUiOut]
+    # Only captured contract text is quoted source. The normalized thesis
+    # summary and observed query provenance are checked system output.
     SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
         {
             "candidate_markets[].market_title",
@@ -537,6 +588,173 @@ class ProductApi:
             self._normalization_not_found(exc)
         return self._decision_out(outcome)
 
+    def get_accepted_thesis_state(
+        self, thesis_analysis_id: uuid.UUID
+    ) -> AcceptedThesisStateUiOut:
+        """Read an owned acceptance and its verified historical source chain."""
+
+        missing = NotFound("accepted thesis state not found")
+        if self._actor.client_type != ClientType.HUMAN_UI:
+            raise missing
+        with self._sessions() as session:
+            thesis = session.get(ThesisAnalysis, thesis_analysis_id)
+            if (
+                thesis is None
+                or thesis.client_type != ClientType.HUMAN_UI.value
+                or thesis.agent_client_id != self._actor.agent_client_id
+            ):
+                raise missing
+            decision = session.scalar(
+                select(NormalizationDecision).where(
+                    NormalizationDecision.thesis_analysis_id == thesis_analysis_id,
+                    NormalizationDecision.action == "accept",
+                )
+            )
+            if decision is None or decision.actor_id != self._actor.actor_id:
+                raise missing
+            attempt = session.get(NormalizationAttempt, decision.attempt_id)
+            if (
+                attempt is None
+                or attempt.outcome != "candidate"
+                or attempt.client_type != ClientType.HUMAN_UI.value
+                or attempt.agent_client_id != self._actor.agent_client_id
+                or attempt.input_text != thesis.input_text
+            ):
+                raise missing
+            source = self._restored_source_for_acceptance(
+                session, thesis.id, decision.id, attempt
+            )
+            return self._guard(
+                AcceptedThesisStateUiOut(
+                    thesis_analysis_id=thesis.id,
+                    accepted_thesis_summary=thesis.normalized_claim_summary,
+                    normalization_decision_id=decision.id,
+                    accepted_at=self._iso_utc(decision.created_at),
+                    acceptance_origin=ClientType.HUMAN_UI.value,
+                    restored_source=source,
+                )
+            )
+
+    def _restored_source_for_acceptance(
+        self,
+        session: Session,
+        thesis_id: uuid.UUID,
+        decision_id: uuid.UUID,
+        accepted_attempt: NormalizationAttempt,
+    ) -> RestoredSourceUiOut | None:
+        """Follow accepted edits to the selected source, failing closed on drift."""
+
+        missing = NotFound("accepted thesis state not found")
+        attempt = accepted_attempt
+        visited: set[uuid.UUID] = set()
+        for _ in range(32):
+            if (
+                attempt.id in visited
+                or attempt.client_type != ClientType.HUMAN_UI.value
+                or attempt.agent_client_id != self._actor.agent_client_id
+            ):
+                raise missing
+            visited.add(attempt.id)
+            has_source = (
+                attempt.source_interpretation_id is not None
+                or attempt.source_thesis_candidate_id is not None
+            )
+            if has_source:
+                if (
+                    attempt.source_interpretation_id is None
+                    or attempt.source_thesis_candidate_id is None
+                    or attempt.predecessor_attempt_id is not None
+                ):
+                    raise missing
+                break
+            if attempt.predecessor_attempt_id is None:
+                return None
+            prior = session.get(NormalizationAttempt, attempt.predecessor_attempt_id)
+            prior_decision = session.scalar(
+                select(NormalizationDecision).where(
+                    NormalizationDecision.attempt_id == attempt.predecessor_attempt_id
+                )
+            )
+            if (
+                prior is None
+                or prior_decision is None
+                or prior_decision.action != "edit"
+                or prior_decision.actor_id != self._actor.actor_id
+            ):
+                raise missing
+            attempt = prior
+        else:
+            raise missing
+
+        interpretation = session.get(
+            SourceInterpretation, attempt.source_interpretation_id
+        )
+        candidate = session.get(
+            SourceThesisCandidate, attempt.source_thesis_candidate_id
+        )
+        choice = session.scalar(
+            select(SourceCandidateChoice).where(
+                SourceCandidateChoice.source_interpretation_id
+                == attempt.source_interpretation_id
+            )
+        )
+        if (
+            interpretation is None
+            or interpretation.outcome != "candidates"
+            or interpretation.client_type != ClientType.HUMAN_UI.value
+            or interpretation.agent_client_id != self._actor.agent_client_id
+            or interpretation.input_text is None
+            or candidate is None
+            or candidate.source_interpretation_id != interpretation.id
+            or choice is None
+            or choice.selection_kind != "candidate"
+            or choice.source_thesis_candidate_id != candidate.id
+            or choice.client_type != ClientType.HUMAN_UI.value
+            or choice.actor_id != self._actor.actor_id
+            or attempt.input_text != candidate.selected_source_quote
+            or attempt.input_digest != candidate.source_quote_digest
+        ):
+            raise missing
+
+        source_text = interpretation.input_text
+        quote = candidate.selected_source_quote
+        if (
+            not source_text
+            or not quote
+            or quote not in source_text
+            or interpretation.input_digest
+            != sha256(source_text.encode("utf-8")).hexdigest()
+            or candidate.source_quote_digest
+            != sha256(quote.encode("utf-8")).hexdigest()
+        ):
+            raise missing
+        request_id = interpretation.source_interpretation_request_id
+        if request_id is not None:
+            request = session.get(SourceInterpretationRequest, request_id)
+            if (
+                request is None
+                or request.owner_client_type != ClientType.HUMAN_UI.value
+                or request.owner_actor_id != self._actor.actor_id
+                or request.agent_client_id != self._actor.agent_client_id
+                or request.input_text != source_text
+                or request.input_digest != interpretation.input_digest
+                or request.source_url != interpretation.source_url
+            ):
+                raise missing
+
+        return RestoredSourceUiOut(
+            thesis_analysis_id=thesis_id,
+            normalization_decision_id=decision_id,
+            source_interpretation_request_id=request_id,
+            source_interpretation_id=interpretation.id,
+            source_thesis_candidate_id=candidate.id,
+            source_candidate_choice_id=choice.id,
+            original_source_text=source_text,
+            selected_source_quote=quote,
+            accepted_normalization_input=accepted_attempt.input_text,
+            source_url=interpretation.source_url,
+        )
+
     def reject_normalization(
         self,
         attempt_id: uuid.UUID,
@@ -612,6 +830,27 @@ class ProductApi:
             snapshot = session.get(MarketSnapshot, display_set.snapshot_id)
             if snapshot is None:
                 raise MarketPoolConflict("market pool snapshot is missing")
+            thesis = session.get(ThesisAnalysis, display_set.thesis_analysis_id)
+            if thesis is None:
+                raise MarketPoolConflict("market pool accepted thesis is missing")
+            candidate_set = session.get(CandidateSet, display_set.candidate_set_id)
+            if (
+                candidate_set is None
+                or candidate_set.thesis_analysis_id != display_set.thesis_analysis_id
+                or candidate_set.snapshot_id != display_set.snapshot_id
+            ):
+                raise MarketPoolConflict("market pool candidate-set binding is invalid")
+            try:
+                retrieval_scope = persisted_candidate_set_scope(
+                    candidate_set.retrieval_scope
+                )
+            except ValueError as exc:
+                raise MarketPoolConflict("candidate retrieval scope is invalid") from exc
+            if retrieval_scope is not None and (
+                retrieval_scope.snapshot_id != candidate_set.snapshot_id
+                or retrieval_scope.retrieval_id != candidate_set.retrieval_id
+            ):
+                raise MarketPoolConflict("candidate retrieval scope is not bound")
             items = session.scalars(
                 select(MarketDisplayItem)
                 .where(
@@ -676,7 +915,9 @@ class ProductApi:
                     market_display_set_id=display_set.id,
                     fit_card_id=display_set.fit_card_id,
                     thesis_analysis_id=display_set.thesis_analysis_id,
+                    accepted_thesis_summary=thesis.normalized_claim_summary,
                     candidate_set_id=display_set.candidate_set_id,
+                    retrieval_scope=retrieval_scope,
                     snapshot_id=display_set.snapshot_id,
                     snapshot_as_of=self._iso_utc(snapshot.as_of_ts),
                     display_policy_version=display_set.display_policy_version,

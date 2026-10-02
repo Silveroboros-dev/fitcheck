@@ -30,12 +30,17 @@ market proves a thesis true.
    a thesis.
 5. Only a human-approved thesis reaches the market pool. Retrieval rank,
    per-market assessment, and display rank remain distinct. The UI shows up to
-   three assessed candidates with their resolution conditions, what each
-   captures, what it misses, and frozen-snapshot provenance. The person selects
-   a market or explicitly selects `none`.
+   three assessed candidates. Each card states what its contract tests, how it
+   differs from the accepted thesis, and its expandable frozen resolution
+   conditions. The displayed pool repeats the accepted thesis and the bounded
+   retrieval scope. The person selects a market or explicitly selects `none`.
 6. `no_clean_expression` is an aggregate outcome only for the exact,
    non-empty, fully assessed displayed pool. It never claims that the complete
    market universe has been searched.
+7. Reopening a locally accepted thesis by its analysis ID shows its original
+   source, selected excerpt, and accepted normalization input when that
+   immutable lineage is complete. This is a read-only view of the recorded
+   acceptance. A source edit starts a new journey and clears the restored view.
 
 ## State and authority rules
 

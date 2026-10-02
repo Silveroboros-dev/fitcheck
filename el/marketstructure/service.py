@@ -33,8 +33,13 @@ from el.models.market_adapter import (
     MARKET_EXTRACTION_POLICY_VERSION,
     MarketStructureProposer,
 )
+from el.models.market_adapter_variants import FixtureMarketStructureUnavailable
 
 SCHEMA_VERSION = 1
+
+
+class MarketStructureUnavailable(RuntimeError):
+    """The configured replay lacks a compatible structure proposer entry."""
 
 
 class _Out(BaseModel):
@@ -145,12 +150,17 @@ class MarketStructureService:
                     structures.append(structure)
                     continue
 
-                proposed = self._proposer.propose_market_structure(
-                    market_id=member.market_id,
-                    snapshot_id=snapshot_id,
-                    contract_terms_text=capture.contract_terms_text,
-                    resolution_rules_text=capture.resolution_rules_text,
-                )
+                try:
+                    proposed = self._proposer.propose_market_structure(
+                        market_id=member.market_id,
+                        snapshot_id=snapshot_id,
+                        contract_terms_text=capture.contract_terms_text,
+                        resolution_rules_text=capture.resolution_rules_text,
+                    )
+                except FixtureMarketStructureUnavailable as exc:
+                    raise MarketStructureUnavailable(
+                        "configured replay has no compatible market structure"
+                    ) from exc
                 result = market_structure_gate(
                     market_id=member.market_id,
                     snapshot_id=snapshot_id,

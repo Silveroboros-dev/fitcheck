@@ -31,14 +31,22 @@ def test_candidate_markets_labeled_as_evidence_not_verdict():
 
 
 def test_captures_misses_and_tempting_rejections_are_first_class():
-    assert "What this market captures" in HTML
-    assert "What it misses" in HTML
+    assert "What this contract tests" in HTML
+    assert "Comparison with your thesis" in HTML
     assert "Rejected tempting markets" in HTML
 
 
 def test_no_clean_state_is_first_class():
-    assert "No clean expression exists" in HTML
+    assert "No clean expression among the checked candidates" in HTML
     assert "draft contract candidate" in HTML.lower()
+
+
+def test_restored_source_precedes_accepted_thesis_and_clears_on_edit():
+    accepted = HTML[HTML.index('id="s1-out"'):HTML.index('id="s1-err"')]
+    assert accepted.index('id="restored-source"') < accepted.index('id="norm-summary"')
+    assert 'id="restored-source-text"' in accepted
+    assert '$("restored-source-text").textContent = ""' in HTML
+    assert "function resumeAcceptedThesis(" in HTML
 
 
 def test_save_starts_disabled_and_requires_fields():

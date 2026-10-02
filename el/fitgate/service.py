@@ -50,6 +50,7 @@ from el.fitgate.gate import (
     merge_advisory,
     quote_span_violations,
 )
+from el.fitgate.m1_subject_only import aggregate_thesis, evaluate_market, gate_policy_version
 from el.fitgate.policy import (
     AUTHORITY_DETERMINISTIC_ONLY,
     AUTHORITY_FALLBACK,
@@ -57,9 +58,7 @@ from el.fitgate.policy import (
     FitPolicy,
     MarketFitVerdict,
     ThesisFit,
-    aggregate_thesis,
     class_rank,
-    evaluate_market,
     new_trace_id,
 )
 from el.marketstructure.service import (
@@ -202,7 +201,7 @@ class FitService:
             # Rebuild judgments list in the order of structures
             judgments = [judgments_by_market[m.market_id] for m in structures.structures]
             verdicts = [(j.merge.verdict, j.rank) for j in judgments]
-            thesis = aggregate_thesis(verdicts)
+            thesis = aggregate_thesis(verdicts, policy=self._policy)
 
             initial_fit_class = thesis.fit_class.value
             initial_rec_id = thesis.recommended_market_id
@@ -242,7 +241,7 @@ class FitService:
                 # Rebuild judgments list in the final expanded order
                 judgments = [judgments_by_market[m.market_id] for m in structures.structures]
                 verdicts = [(j.merge.verdict, j.rank) for j in judgments]
-                thesis = aggregate_thesis(verdicts)
+                thesis = aggregate_thesis(verdicts, policy=self._policy)
 
         with self._sessions() as session:
             claim, input_text = self._load_claim(session, thesis_analysis_id)
@@ -412,6 +411,7 @@ class FitService:
                     for j in judgments
                     if j.advisory_meta.get("status") == "fallback"
                 ),
+                gate_policy_version=thesis.gate_policy_version,
                 expanded=expanded,
                 final_cap=final_cap,
             )
@@ -639,7 +639,7 @@ class FitService:
             reference_judgment.advisory_meta if reference_judgment else {}
         )
         base = Provenance(
-            gate_policy_version=FIT_GATE_POLICY_VERSION,
+            gate_policy_version=gate_policy_version(self._policy),
             extraction_schema_version=claim.schema_version,
             market_structure_schema_version=MARKET_SCHEMA_VERSION,
             model_adapter=reference_meta.get(
@@ -658,6 +658,7 @@ class FitService:
             advisory_meta.pop("what_it_captures", None)
             advisory_meta.pop("what_it_misses", None)
             per_market[v.market_id] = {
+                "gate_policy_version": v.gate_policy_version,
                 "ceiling": v.deterministic_ceiling.value,
                 "published": v.published.value,
                 "authority": v.authority,

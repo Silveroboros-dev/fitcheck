@@ -24,7 +24,8 @@ from pydantic import BaseModel, ConfigDict
 
 from el.domain.enums import EventStage, FitClass
 from el.domain.structures import ExtractedStructure, MarketStructure
-from el.fitgate.policy import FitPolicy, class_rank, evaluate_market
+from el.fitgate.m1_subject_only import evaluate_market
+from el.fitgate.policy import FitPolicy, class_rank
 from el.review.candidates import ReviewCandidateSpec, candidate_fingerprint
 
 PERTURBATION_VERSION = "perturb-v1"

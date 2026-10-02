@@ -114,6 +114,7 @@ def evaluate_composite_coverage(
     *,
     alias_rules_version: str = ALIAS_RULES_VERSION,
     m1_direction_guard: bool = True,
+    m1_subject_only_residual_guard: bool = False,
     horizon_tolerances: dict | None = None,
 ) -> CompositeCoverageResult:
     """Return whether explicit sidecar data proves full composite coverage."""
@@ -146,6 +147,7 @@ def evaluate_composite_coverage(
         market_spec,
         alias_rules_version=alias_rules_version,
         m1_direction_guard=m1_direction_guard,
+        m1_subject_only_residual_guard=m1_subject_only_residual_guard,
         horizon_tolerances=horizon_tolerances,
     )
     if matched is None:
@@ -204,6 +206,7 @@ def _match_all_legs(
     *,
     alias_rules_version: str,
     m1_direction_guard: bool,
+    m1_subject_only_residual_guard: bool,
     horizon_tolerances: dict | None,
 ) -> list[tuple[str, str]] | None:
     if len(market.legs) < len(claim.legs):
@@ -219,6 +222,7 @@ def _match_all_legs(
                 market_leg,
                 alias_rules_version=alias_rules_version,
                 m1_direction_guard=m1_direction_guard,
+                m1_subject_only_residual_guard=m1_subject_only_residual_guard,
                 horizon_tolerances=horizon_tolerances,
             )
             if not ok:
@@ -231,6 +235,7 @@ def _match_all_legs(
         market.legs,
         alias_rules_version=alias_rules_version,
         m1_direction_guard=m1_direction_guard,
+        m1_subject_only_residual_guard=m1_subject_only_residual_guard,
         horizon_tolerances=horizon_tolerances,
         used=set(),
         index=0,
@@ -244,6 +249,7 @@ def _search_leg_matching(
     *,
     alias_rules_version: str,
     m1_direction_guard: bool,
+    m1_subject_only_residual_guard: bool,
     horizon_tolerances: dict | None,
     used: set[int],
     index: int,
@@ -260,6 +266,7 @@ def _search_leg_matching(
             market_leg,
             alias_rules_version=alias_rules_version,
             m1_direction_guard=m1_direction_guard,
+            m1_subject_only_residual_guard=m1_subject_only_residual_guard,
             horizon_tolerances=horizon_tolerances,
         )
         if not ok:
@@ -269,6 +276,7 @@ def _search_leg_matching(
             market_legs,
             alias_rules_version=alias_rules_version,
             m1_direction_guard=m1_direction_guard,
+            m1_subject_only_residual_guard=m1_subject_only_residual_guard,
             horizon_tolerances=horizon_tolerances,
             used=used | {market_index},
             index=index + 1,
@@ -285,6 +293,7 @@ def _leg_matches(
     *,
     alias_rules_version: str,
     m1_direction_guard: bool,
+    m1_subject_only_residual_guard: bool,
     horizon_tolerances: dict | None,
 ) -> tuple[bool, list[str]]:
     from el.fitgate.checks import (
@@ -303,12 +312,20 @@ def _leg_matches(
         if horizon_tolerances is None
         else check_horizon_tolerance(claim, market, horizon_tolerances)
     )
+    if m1_subject_only_residual_guard:
+        from el.fitgate.m1_subject_only import check_subject_only_metric_lexical_floor
+
+        metric = check_subject_only_metric_lexical_floor(
+            claim, market, alias_rules_version, m1_direction_guard
+        )
+    else:
+        metric = check_metric_lexical_floor(
+            claim, market, alias_rules_version, m1_direction_guard
+        )
     outcomes = [
         check_subject_lexical_floor(claim, market),
         check_event_stage_match(claim, market),
-        check_metric_lexical_floor(
-            claim, market, alias_rules_version, m1_direction_guard
-        ),
+        metric,
         horizon,
         check_objectivity_conflict(claim, market),
         check_outcome_polarity(claim, market),

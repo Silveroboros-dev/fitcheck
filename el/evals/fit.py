@@ -35,14 +35,13 @@ from el.domain.enums import FitClass
 from el.domain.structures import ExtractedStructure, MarketStructure
 from el.fitgate.aliases import ALIAS_RULES_EMPTY
 from el.fitgate.checks import TOKEN_RULES_VERSION
+from el.fitgate.m1_subject_only import aggregate_thesis, evaluate_market, gate_policy_version
 from el.fitgate.policy import (
     FIT_GATE_POLICY_VERSION,
     STRONG_CLASSES,
     WEAK_CLASSES,
     FitPolicy,
-    aggregate_thesis,
     class_rank,
-    evaluate_market,
 )
 
 # A case joins in the same commit as the check that makes its label
@@ -252,7 +251,7 @@ def _evaluate_case(
         (evaluate_market(case.structure, registry[market_id], policy), rank)
         for rank, market_id in enumerate(case.pool_market_ids)
     ]
-    thesis = aggregate_thesis(verdicts)
+    thesis = aggregate_thesis(verdicts, policy=policy)
     actual_rejected = [v.market_id for v in thesis.rejected]
 
     class_ok = thesis.fit_class == case.expected_class
@@ -383,6 +382,7 @@ def run_fit_eval(
         and r.gated
     ]
     return FitEvalReport(
+        gate_policy_version=gate_policy_version(policy),
         alias_rules_version=policy.alias_rules_version,
         gated_cases=sorted(GATED_CASES),
         cases=results,
@@ -449,6 +449,7 @@ def run_pool_sweep(
             ):
                 off_label.append(f"{case.case_id}::{market_id}")
     return PoolSweepReport(
+        gate_policy_version=gate_policy_version(policy),
         alias_rules_version=policy.alias_rules_version,
         pairs_total=pairs,
         off_label_direct=sorted(off_label),
