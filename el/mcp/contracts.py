@@ -13,6 +13,7 @@ from datetime import date, datetime
 from typing import ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict
+from el.retrieval.scope import CandidateSetRetrievalScope
 
 
 class McpError(Exception):
@@ -288,7 +289,9 @@ class V3MarketPoolResult(_McpOut):
     market_display_set_id: uuid.UUID
     fit_card_id: uuid.UUID
     thesis_analysis_id: uuid.UUID
+    accepted_thesis_summary: str
     candidate_set_id: uuid.UUID
+    retrieval_scope: CandidateSetRetrievalScope | None
     snapshot_id: str
     snapshot_as_of: datetime
     display_policy_version: str
@@ -299,6 +302,8 @@ class V3MarketPoolResult(_McpOut):
     system_pool_outcome: str
     incomplete_reasons: list[str]
     candidate_markets: list[V3MarketAssessmentResult]
+    # Only captured contract text is quoted source. The normalized thesis
+    # summary and observed query provenance are checked system output.
     SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
         {
             "candidate_markets[].market_title",

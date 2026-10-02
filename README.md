@@ -36,7 +36,8 @@ is recorded in the [v3.1 UI contract](docs/fitcheck-v3.1-ui-contract.md).
 The local v3.1 UI provides a synchronous, offline fixture path: source
 interpretation, explicit candidate-or-`none` choice, normalization
 confirmation, an assessed market pool, and market-or-`none` choice. The MCP
-source path uses separate submission and worker processes, as described below.
+source path uses separate submission and worker processes. Its STDIO fixture
+test also exercises the subsequent decision and market-pool tools.
 Legacy predecessor routes remain available for compatibility and are not the
 default journey.
 
@@ -97,6 +98,7 @@ handling behind those links, see the
 | Surface | Status | Boundary |
 | --- | --- | --- |
 | v3.1 source -> selected candidate -> confirmed thesis -> market-pool -> market-or-none fixture journey | **Public, offline fixture reference** | Synchronous local SQLite flow using project-authored synthetic source and frozen market fixtures. It makes no live provider or model call. |
+| Accepted-thesis restoration | **Public, local fixture reference** | A read-only, actor-bound `accepted-state` view restores the original source and selected excerpt when their retained lineage is complete. It does not record another decision or automatically assess a market pool. |
 | Legacy predecessor classify, blind-prior, draft, and simple-ledger routes | **Public compatibility reference** | Retained for replay and compatibility; they are not the default v3.1 journey. |
 | Durable jobs, classification worker, and snapshot validation | **Public, separately tested foundations** | The fixture UI does not use these as an asynchronous workflow. The MCP source-interpretation protocol reuses a bounded fixture worker separately. Public CI adds a disposable PostgreSQL contention gate. |
 | Deterministic fit policies, correction intake, review queue, and MCP contracts | **Public, offline fixture reference** | MCP source interpretation submits, runs, and polls a bounded fixture job; that is distinct from the synchronous UI path. SQL-backed per-key admission applies. Synthetic tests establish declared contracts, not live-data accuracy, production readiness, or a verified external client. |
@@ -136,7 +138,9 @@ runs the local fixture UI; it is not a reference deployment image.
 
 ## Quick start: v3.1 synchronous fixture reference
 
-Python 3.12 or newer is required.
+Python 3.12 or newer is required. The full offline test suite also uses
+Node.js 22 or newer for a dependency-free DOM regression; the fixture UI and
+MCP server do not require Node.js at runtime.
 
 ```bash
 python3.12 -m venv .venv
@@ -170,7 +174,12 @@ FITCHECK_UI_DB_URL=sqlite:////tmp/fitcheck-v31-fixture.db \
 Open `http://127.0.0.1:8100`. Select **Load synthetic two-thesis fixture** to replay one
 project-authored fictional source with two candidate theses, then choose one,
 answer its fixture clarification, accept the resulting proposal, and inspect
-the market pool. The app uses a local SQLite database and frozen synthetic
+the market pool. Each card compares the accepted thesis with the frozen
+contract structure and lets you expand its resolution conditions. Keep the
+displayed analysis ID after acceptance; reopening
+`http://127.0.0.1:8100/?resume_thesis_id=<analysis-id>` shows the original
+source before the accepted thesis. The resumed source is read-only, and market
+assessment still requires a separate click. The app uses a local SQLite database and frozen synthetic
 fixtures. It needs no cloud account, provider credential, or model credential.
 Use a distinct disposable SQLite path for each fixture run. `FITCHECK_UI_DB_URL`
 is deliberately for the synchronous UI only; do not reuse it for MCP jobs.
@@ -185,10 +194,33 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. \
 .venv/bin/python -m pytest tests/test_mcp_v3_stdio_smoke.py
 ```
 
-It opens an SDK stdio session, submits a fixture v3 source job, runs a separate
-worker process, and polls through a new stdio session. For a manually submitted
-fixture MCP job, migrate and use that same MCP database with no
-`FITCHECK_UI_DB_URL` override:
+It opens SDK STDIO sessions, submits a fixture v3 source job, runs a separate
+worker process, recovers the result by job ID and idempotency key, then calls
+the source-choice, normalization, confirmation, market-pool, and market-choice
+tools. Decision responses identify an `agent_relay`; they are not direct human
+attestations. The test is a transport check using synthetic fixtures, not a
+named-client compatibility claim.
+
+To connect a local MCP client, launch the server from this checkout with
+`command` set to the checkout's `.venv/bin/python` and `args` set to
+`["-m", "demo.server"]`. Give that process these environment settings:
+
+```text
+PYTHONPATH=<absolute path to this checkout>
+FITCHECK_DB_URL=sqlite+pysqlite:////tmp/fitcheck-v31-mcp.db
+FITCHECK_PROPOSER=fixture
+FITCHECK_MCP_TRANSPORT=stdio
+FITCHECK_API_KEY=<local demo key retained for this database>
+MARKET_PROVIDER=fixture
+```
+
+The client must show every source candidate and wait for an explicit user
+decision before `v3_choose_source_candidate`, `v3_revise_normalization`,
+`v3_accept_normalization` or `v3_reject_normalization`, and `v3_choose_market`.
+Call `v3_assess_market_pool` only after acceptance, then retain the returned
+display-set ID. A source job stays queued until the separate worker runs. For
+a manually submitted fixture MCP job, migrate and run that worker against the
+same MCP database, with no `FITCHECK_UI_DB_URL` override:
 
 ```bash
 FITCHECK_DB_URL=sqlite+pysqlite:////tmp/fitcheck-v31-mcp.db \

@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.sql import Select
 
 from el.domain.tables import Job, JobAttempt
+from el.observability import parse_traceparent
 
 PAYLOAD_HASH_VERSION = 1
 MAX_LEASE_SECONDS = 86_400
@@ -91,6 +92,7 @@ class JobClaim:
     job_type: str
     payload: dict[str, Any]
     pinned_manifest: dict[str, Any]
+    accepted_traceparent: str | None
     job_correlation_id: str
     attempt_trace_id: str
     deadline_at: datetime | None
@@ -216,6 +218,7 @@ class JobStore:
         available_at: datetime | None = None,
         deadline_at: datetime | None = None,
         correlation_id: str | None = None,
+        accepted_traceparent: str | None = None,
         now: datetime | None = None,
     ) -> SubmissionResult:
         if not all(
@@ -245,6 +248,11 @@ class JobStore:
                 raise ValueError("correlation_id must be nonblank")
             if len(correlation_id) > 64:
                 raise ValueError("correlation_id exceeds 64 characters")
+        if (
+            accepted_traceparent is not None
+            and parse_traceparent(accepted_traceparent) != accepted_traceparent
+        ):
+            raise ValueError("accepted_traceparent must be a W3C version 00 traceparent")
         if not -(2**31) <= priority < 2**31:
             raise ValueError("priority is outside the database integer range")
         pins = pinned_manifest or {}
@@ -303,6 +311,7 @@ class JobStore:
                 safe_error_message=(
                     "job deadline exceeded" if deadline_expired else None
                 ),
+                accepted_traceparent=accepted_traceparent,
                 correlation_id=(
                     correlation_id or f"job_{uuid.uuid4().hex}"
                 ),
@@ -565,6 +574,7 @@ class JobStore:
                     job_type=candidate.job_type,
                     payload=dict(candidate.payload),
                     pinned_manifest=dict(candidate.pinned_manifest),
+                    accepted_traceparent=candidate.accepted_traceparent,
                     job_correlation_id=candidate.correlation_id,
                     attempt_trace_id=attempt_trace_id,
                     deadline_at=(

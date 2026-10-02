@@ -27,6 +27,10 @@ from el.domain.tables import (
     RejectedMarketRow,
     ThesisAnalysis,
 )
+from el.fitgate.m1_subject_only import (
+    M1_SUBJECT_ONLY_POLICY_VERSION,
+    ordinary_discovery_fit_policy,
+)
 from el.fitgate.service import FitService
 from el.marketstructure.service import MarketStructureService
 from el.models.market_adapter import FixtureMarketStructureProposer
@@ -76,7 +80,12 @@ def _lmsys_claim(**overrides) -> ExtractedStructure:
     return ExtractedStructure(**base)
 
 
-def _classify(structure: ExtractedStructure, *, structure_cap: int | None = None):
+def _classify(
+    structure: ExtractedStructure,
+    *,
+    structure_cap: int | None = None,
+    policy=None,
+):
     sessions = _session_factory()
     with sessions() as session:
         analysis = ThesisAnalysis(
@@ -98,6 +107,7 @@ def _classify(structure: ExtractedStructure, *, structure_cap: int | None = None
             FixtureMarketStructureProposer(GOLDENS), sessions, top_n=structure_cap
         ),
         sessions,
+        **({"policy": policy} if policy is not None else {}),
     )
     outcome = service.classify_fit(
         thesis_analysis_id, retrieval.candidate_set_id
@@ -174,6 +184,22 @@ def test_provenance_is_complete_or_nothing():
         recommended = provenance["per_market"]["mkt_gemini_lmsys_1"]
         assert recommended["ceiling"] == "direct"
         assert len(recommended["checks"]) == 10  # the full §14 check set
+
+
+def test_explicit_successor_reaches_verdict_card_and_outcome_provenance():
+    outcome, sessions = _classify(
+        _lmsys_claim(), policy=ordinary_discovery_fit_policy()
+    )
+    assert outcome.gate_policy_version == M1_SUBJECT_ONLY_POLICY_VERSION
+    with sessions() as session:
+        card = session.get(FitCard, outcome.fit_card_id)
+        assert card.provenance["gate_policy_version"] == (
+            M1_SUBJECT_ONLY_POLICY_VERSION
+        )
+        assert {
+            row["gate_policy_version"]
+            for row in card.provenance["per_market"].values()
+        } == {M1_SUBJECT_ONLY_POLICY_VERSION}
 
 
 def test_no_clean_claim_persists_null_recommendation_and_draft_flag():

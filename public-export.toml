@@ -131,6 +131,10 @@ source = "el/fitgate/policy.py"
 destination = "el/fitgate/policy.py"
 
 [[include]]
+source = "el/fitgate/m1_subject_only.py"
+destination = "el/fitgate/m1_subject_only.py"
+
+[[include]]
 source = "el/fitgate/service.py"
 destination = "el/fitgate/service.py"
 
@@ -141,6 +145,18 @@ destination = "el/jobs/__init__.py"
 [[include]]
 source = "el/jobs/store.py"
 destination = "el/jobs/store.py"
+
+[[include]]
+source = "el/observability/__init__.py"
+destination = "el/observability/__init__.py"
+
+[[include]]
+source = "el/observability/events.py"
+destination = "el/observability/events.py"
+
+[[include]]
+source = "el/observability/telemetry.py"
+destination = "el/observability/telemetry.py"
 
 [[include]]
 source = "el/ledger/__init__.py"
@@ -187,6 +203,10 @@ source = "el/models/market_adapter.py"
 destination = "el/models/market_adapter.py"
 
 [[include]]
+source = "el/models/market_adapter_variants.py"
+destination = "el/models/market_adapter_variants.py"
+
+[[include]]
 source = "el/product/__init__.py"
 destination = "el/product/__init__.py"
 
@@ -209,6 +229,10 @@ destination = "el/retrieval/ranking.py"
 [[include]]
 source = "el/retrieval/service.py"
 destination = "el/retrieval/service.py"
+
+[[include]]
+source = "el/retrieval/scope.py"
+destination = "el/retrieval/scope.py"
 
 [[include]]
 source = "el/retrieval/snapshot_store.py"
@@ -249,6 +273,14 @@ destination = "migrations/script.py.mako"
 [[include]]
 source = "migrations/versions/3496a0e487e3_draft_contract_echo_fields.py"
 destination = "migrations/versions/3496a0e487e3_draft_contract_echo_fields.py"
+
+[[include]]
+source = "migrations/versions/4d93d1f5a7b2_candidate_set_retrieval_scope.py"
+destination = "migrations/versions/4d93d1f5a7b2_candidate_set_retrieval_scope.py"
+
+[[include]]
+source = "migrations/versions/6a01d9c2b7e4_job_accepted_traceparent.py"
+destination = "migrations/versions/6a01d9c2b7e4_job_accepted_traceparent.py"
 
 [[include]]
 source = "migrations/versions/7c2e91ab4d10_market_structure_cache_key.py"
@@ -293,6 +325,10 @@ destination = "scripts/build_public_export.py"
 [[include]]
 source = "scripts/check_public_boundary.py"
 destination = "scripts/check_public_boundary.py"
+
+[[include]]
+source = "tests/product_console_accepted_thesis_resume_dom.js"
+destination = "tests/product_console_accepted_thesis_resume_dom.js"
 
 [[include]]
 source = "tests/test_agent_retrieval_spike.py"
@@ -343,6 +379,10 @@ source = "tests/test_perturbation.py"
 destination = "tests/test_perturbation.py"
 
 [[include]]
+source = "tests/test_product_console_accepted_thesis_resume_dom.py"
+destination = "tests/test_product_console_accepted_thesis_resume_dom.py"
+
+[[include]]
 source = "tests/test_product_contract_doc.py"
 destination = "tests/test_product_contract_doc.py"
 
@@ -373,6 +413,10 @@ destination = "tests/test_schema_version_invariant.py"
 [[include]]
 source = "tests/test_sft_contract_doc.py"
 destination = "tests/test_sft_contract_doc.py"
+
+[[include]]
+source = "tests/test_telemetry_disabled.py"
+destination = "tests/test_telemetry_disabled.py"
 
 [[include]]
 source = "tests/test_vocabulary.py"

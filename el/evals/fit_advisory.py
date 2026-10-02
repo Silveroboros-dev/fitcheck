@@ -27,12 +27,12 @@ from el.domain.enums import FitClass
 from el.evals.fit import load_fit_cases, load_market_registry
 from el.domain.structures import ExtractedStructure
 from el.fitgate.gate import merge_advisory, quote_span_violations
+from el.fitgate.m1_subject_only import evaluate_market
 from el.fitgate.policy import (
     STRONG_CLASSES,
     WEAK_CLASSES,
     FitPolicy,
     class_rank,
-    evaluate_market,
 )
 from el.models.fit_adapter import FitAdvisoryProposer
 

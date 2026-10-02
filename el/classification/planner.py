@@ -17,14 +17,16 @@ from el.domain.enums import HorizonMatch, ResolutionRisk
 from el.domain.structures import ExtractedStructure, MarketStructure, Provenance
 from el.domain.vocabulary import vocabulary_violations
 from el.fitgate.gate import merge_advisory
+from el.fitgate.m1_subject_only import (
+    aggregate_thesis,
+    evaluate_market,
+    fit_policy_from_pins,
+)
 from el.fitgate.policy import (
     AUTHORITY_DETERMINISTIC_ONLY,
-    FitPolicy,
     MarketFitVerdict,
     ThesisFit,
-    aggregate_thesis,
     class_rank,
-    evaluate_market,
 )
 from el.marketstructure.gate import MarketGateVerdict, market_structure_gate
 from el.models.market_adapter import MarketStructureProposer
@@ -196,7 +198,8 @@ def build_classification_plan(
             )
         checkpoint(f"structure:{market_id}:after")
 
-    fit_policy = FitPolicy(
+    fit_policy = fit_policy_from_pins(
+        gate_policy_version=pins.fit.gate_policy_version,
         stacking_threshold=pins.fit.stacking_threshold,
         escalation_confidence_floor=pins.fit.escalation_confidence_floor,
         horizon_tolerances=dict(pins.fit.horizon_tolerances),
@@ -222,7 +225,8 @@ def build_classification_plan(
             )
         )
     thesis = aggregate_thesis(
-        [(judgment.verdict, judgment.rank) for judgment in judgments]
+        [(judgment.verdict, judgment.rank) for judgment in judgments],
+        policy=fit_policy,
     )
     reference = _reference(thesis, judgments)
     authority = (
@@ -395,6 +399,7 @@ def _provenance(
         verdict = judgment.verdict
         planned = structures_by_market[verdict.market_id]
         per_market[verdict.market_id] = {
+            "gate_policy_version": verdict.gate_policy_version,
             "ceiling": verdict.deterministic_ceiling.value,
             "published": verdict.published.value,
             "authority": verdict.authority,

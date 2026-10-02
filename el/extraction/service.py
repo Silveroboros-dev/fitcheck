@@ -123,7 +123,16 @@ class ExtractionService:
             f"{self._prompt_policy_version}/{self._gate_policy_version}"
         )
 
-    def _evaluate(self, request: ThesisAnalysisIn) -> ExtractionOutcome:
+    def _evaluate(
+        self,
+        request: ThesisAnalysisIn,
+        *,
+        reservation_stage: str = "normalization_initial",
+        predecessor_attempt_id: uuid.UUID | None = None,
+        source_interpretation_id: uuid.UUID | None = None,
+        source_thesis_candidate_id: uuid.UUID | None = None,
+        decision_actor_id: str | None = None,
+    ) -> ExtractionOutcome:
         screen = (
             insider_screen_v2
             if self._gate_policy_version == LOOP1_V2_GATE_POLICY_VERSION
@@ -144,7 +153,36 @@ class ExtractionService:
             return ExtractionOutcome(result=refusal)
 
         try:
-            proposed = self._proposer.propose_extraction(request.input_text)
+            reserved = getattr(
+                self._proposer, "propose_extraction_with_reservation", None
+            )
+            if reserved is None:
+                proposed = self._proposer.propose_extraction(request.input_text)
+            else:
+                identity: dict[str, str | dict[str, str]] = {
+                    "input_sha256": self._input_digest(request.input_text),
+                    "actor_scope": {
+                        "client_type": request.client_type.value,
+                        "agent_client_id": request.agent_client_id,
+                    },
+                }
+                if predecessor_attempt_id is not None:
+                    identity["predecessor_attempt_id"] = str(predecessor_attempt_id)
+                if source_interpretation_id is not None:
+                    identity["source_interpretation_id"] = str(
+                        source_interpretation_id
+                    )
+                if source_thesis_candidate_id is not None:
+                    identity["source_thesis_candidate_id"] = str(
+                        source_thesis_candidate_id
+                    )
+                if decision_actor_id is not None:
+                    identity["decision_actor_id"] = decision_actor_id
+                proposed = reserved(
+                    request.input_text,
+                    reservation_stage=reservation_stage,
+                    request_identity=identity,
+                )
         except ModelOutputValidationFailure as error:
             refusal = (
                 Loop1V2Result(
@@ -324,6 +362,10 @@ class ExtractionService:
 
         if not request.agent_client_id:
             raise ValueError("v3 normalization requires an actor identity")
+        if getattr(self._proposer, "requires_selected_source_parent", False):
+            raise NormalizationAttemptConflict(
+                "custom-answer normalization requires a selected source candidate"
+            )
         outcome = self._evaluate(request)
         with self._sessions() as session:
             row = NormalizationAttempt(
@@ -367,7 +409,11 @@ class ExtractionService:
                     )
                 return self._attempt_out(existing)
 
-        outcome = self._evaluate(request)
+        outcome = self._evaluate(
+            request,
+            source_interpretation_id=source_interpretation_id,
+            source_thesis_candidate_id=source_thesis_candidate_id,
+        )
         with self._sessions() as session:
             row = NormalizationAttempt(
                 **self._attempt_values(
@@ -560,7 +606,12 @@ class ExtractionService:
                     "normalization attempt already has a decision"
                 )
 
-        outcome = self._evaluate(request)
+        outcome = self._evaluate(
+            request,
+            reservation_stage="normalization_successor",
+            predecessor_attempt_id=predecessor_attempt_id,
+            decision_actor_id=actor_id,
+        )
         with self._sessions() as session:
             predecessor = self._owned_attempt(
                 session,
