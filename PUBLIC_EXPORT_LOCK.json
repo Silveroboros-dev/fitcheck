@@ -250,7 +250,7 @@
     },
     {
       "path": "el/jobs/store.py",
-      "sha256": "4689a9656fa55a2cf4bee86b0c1833aa62fcbf78a701a06b055f3e21de5b7973"
+      "sha256": "1840229f390602a80f4d4261189e4e21ea70bafce735d8b109efc5b4a70ba52e"
     },
     {
       "path": "el/ledger/__init__.py",
@@ -362,7 +362,7 @@
     },
     {
       "path": "el/observability/events.py",
-      "sha256": "c7f1319cc31ad50d7c8bb5ba492d9e0e9bd6ef77d406e5017fa10e68951d472e"
+      "sha256": "6710cabee0f178b3bfb8d64061b5c085aebe3206ffa05b7a09f451841b40ffde"
     },
     {
       "path": "el/observability/telemetry.py",
@@ -686,11 +686,11 @@
     },
     {
       "path": "tests/test_job_store.py",
-      "sha256": "46c14125ef93c53c45a77cade0ef8168cf33a0949dff3e7a2e867775e266eced"
+      "sha256": "c700efa1b05ecf70108871f331b13ffbae1d1e2c74cea4b690708b97d260d744"
     },
     {
       "path": "tests/test_job_store_postgres.py",
-      "sha256": "b6b5aceb294a54d5e88dd6ccd2cb0bfb78b6dfeaa2daea458641d80948d1c080"
+      "sha256": "19077df6264cc07a9a48775061d29266420089a8bc71e40ea05db876e43ffd95"
     },
     {
       "path": "tests/test_ledger_service.py",

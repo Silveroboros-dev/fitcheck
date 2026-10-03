@@ -13,6 +13,7 @@ import hashlib
 import json
 import uuid
 from collections.abc import Callable, Iterable
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
@@ -31,6 +32,10 @@ MAX_LEASE_SECONDS = 86_400
 MAX_BACKOFF_SECONDS = 86_400
 REAPER_BATCH_SIZE = 100
 EXTERNAL_EFFECT_STARTED_STAGE = "external_effect_started"
+NON_PILOT_SOURCE = or_(
+    Job.job_type != "source_interpretation_v1",
+    Job.submitted_by_api_client_id.is_(None),
+)
 
 
 class JobStatus(StrEnum):
@@ -76,6 +81,21 @@ class IdempotencyConflict(RuntimeError):
 
 class JobNotFound(LookupError):
     """Used for both missing and unauthorized jobs to avoid existence leaks."""
+
+
+class ExternalEffectDenied(RuntimeError):
+    """The current attempt was safely ended before an external operation."""
+
+
+def _is_job_idempotency_collision(exc: IntegrityError) -> bool:
+    if getattr(getattr(exc.orig, "diag", None), "constraint_name", None) == "uq_job_idempotency":
+        return True
+    return (
+        getattr(exc.orig, "sqlite_errorname", None) == "SQLITE_CONSTRAINT_UNIQUE"
+        and str(exc.orig)
+        == "UNIQUE constraint failed: jobs.owner_client_type, "
+        "jobs.owner_actor_id, jobs.job_type, jobs.idempotency_key"
+    )
 
 
 @dataclass(frozen=True)
@@ -220,6 +240,7 @@ class JobStore:
         correlation_id: str | None = None,
         accepted_traceparent: str | None = None,
         now: datetime | None = None,
+        session: Session | None = None,
     ) -> SubmissionResult:
         if not all(
             value and value.strip()
@@ -275,8 +296,31 @@ class JobStore:
         )
         job_id = uuid.uuid4()
 
-        with self._sessions() as session:
-            timestamp = _aware(now) if now else self._database_now(session)
+        with (nullcontext(session) if session is not None else self._sessions()) as active:
+            if session is not None:
+                # begin_nested() flushes all pending objects before opening its
+                # savepoint. Flush caller work deliberately outside the Job
+                # insert savepoint so a duplicate Job cannot roll it back.
+                active.flush()
+                existing = active.scalar(
+                    select(Job).where(
+                        Job.owner_client_type == owner_client_type,
+                        Job.owner_actor_id == owner_actor_id,
+                        Job.job_type == job_type,
+                        Job.idempotency_key == idempotency_key,
+                    )
+                )
+                if existing is not None:
+                    if (
+                        existing.payload_hash_version != PAYLOAD_HASH_VERSION
+                        or existing.payload_hash != digest
+                    ):
+                        raise IdempotencyConflict(
+                            "idempotency key reused with different input or "
+                            "execution guarantees/hash version"
+                        )
+                    return SubmissionResult(job_id=existing.id, created=False)
+            timestamp = _aware(now) if now else self._database_now(active)
             deadline_expired = (
                 normalized_deadline_at is not None
                 and normalized_deadline_at <= timestamp
@@ -319,13 +363,41 @@ class JobStore:
                 created_at=timestamp,
                 updated_at=timestamp,
             )
-            session.add(row)
+            if session is not None:
+                try:
+                    with active.begin_nested():
+                        active.add(row)
+                        active.flush([row])
+                    return SubmissionResult(job_id=job_id, created=True)
+                except IntegrityError as exc:
+                    if not _is_job_idempotency_collision(exc):
+                        raise
+                    existing = active.scalar(
+                        select(Job).where(
+                            Job.owner_client_type == owner_client_type,
+                            Job.owner_actor_id == owner_actor_id,
+                            Job.job_type == job_type,
+                            Job.idempotency_key == idempotency_key,
+                        )
+                    )
+                    if existing is None:
+                        raise
+                    if (
+                        existing.payload_hash_version != PAYLOAD_HASH_VERSION
+                        or existing.payload_hash != digest
+                    ):
+                        raise IdempotencyConflict(
+                            "idempotency key reused with different input or "
+                            "execution guarantees/hash version"
+                        ) from exc
+                    return SubmissionResult(job_id=existing.id, created=False)
+            active.add(row)
             try:
-                session.commit()
+                active.commit()
                 return SubmissionResult(job_id=job_id, created=True)
             except IntegrityError:
-                session.rollback()
-                existing = session.scalar(
+                active.rollback()
+                existing = active.scalar(
                     select(Job).where(
                         Job.owner_client_type == owner_client_type,
                         Job.owner_actor_id == owner_actor_id,
@@ -468,6 +540,11 @@ class JobStore:
         worker_id: str,
         lease_seconds: int = 60,
         job_types: Iterable[str] | None = None,
+        job_id: uuid.UUID | None = None,
+        expected_owner_client_type: str | None = None,
+        expected_owner_actor_id: str | None = None,
+        expected_pinned_manifest: dict[str, Any] | None = None,
+        exclude_api_submitted: bool = False,
         now: datetime | None = None,
         contention_retries: int = 8,
     ) -> JobClaim | None:
@@ -479,19 +556,66 @@ class JobStore:
         if contention_retries < 1:
             raise ValueError("contention_retries must be positive")
         allowed_types = tuple(job_types or ())
+        targeted = job_id is not None
+        if targeted:
+            if not isinstance(job_id, uuid.UUID):
+                raise ValueError("job_id must be a UUID")
+            if (
+                len(allowed_types) != 1
+                or not expected_owner_client_type
+                or not expected_owner_actor_id
+                or expected_pinned_manifest is None
+            ):
+                raise ValueError("targeted claim requires kind, owner, and pins")
+            target_scope = (
+                Job.id == job_id,
+                Job.job_type == allowed_types[0],
+                Job.owner_client_type == expected_owner_client_type,
+                Job.owner_actor_id == expected_owner_actor_id,
+            )
+        else:
+            if any(
+                value is not None
+                for value in (
+                    expected_owner_client_type,
+                    expected_owner_actor_id,
+                    expected_pinned_manifest,
+                )
+            ):
+                raise ValueError("target guards require job_id")
+            target_scope = ()
 
         for _ in range(contention_retries):
             with self._sessions() as session:
                 timestamp = _aware(now) if now else self._database_now(session)
-                self._mark_deadline_exceeded(session, timestamp)
-                self._mark_exhausted(session, timestamp)
+                if targeted:
+                    # Check immutable identity and runtime pins before any
+                    # reconciliation write. A mismatched canary must leave
+                    # every job and attempt untouched.
+                    target = session.scalar(select(Job).where(*target_scope))
+                    if (
+                        target is None
+                        or target.pinned_manifest != expected_pinned_manifest
+                    ):
+                        session.rollback()
+                        return None
+                self._mark_deadline_exceeded(
+                    session, timestamp, job_id=job_id,
+                    exclude_api_submitted=exclude_api_submitted,
+                )
+                self._mark_exhausted(
+                    session, timestamp, job_id=job_id,
+                    exclude_api_submitted=exclude_api_submitted,
+                )
                 # Reconciliation is independent of this worker's subsequent
                 # claim CAS. Preserve terminal transitions even if contention
                 # makes the claim lose and retry.
                 session.commit()
                 timestamp = _aware(now) if now else self._database_now(session)
                 predicate = self._claimable(timestamp)
-                query = select(Job).where(predicate)
+                query = select(Job).where(predicate, *target_scope)
+                if exclude_api_submitted:
+                    query = query.where(NON_PILOT_SOURCE)
                 if allowed_types:
                     query = query.where(Job.job_type.in_(allowed_types))
                 candidate = session.scalar(
@@ -514,12 +638,17 @@ class JobStore:
                     f"{candidate.correlation_id[:36]}:a{attempt_number}:"
                     f"{attempt_id.hex[:8]}"
                 )
+                target_cas = (
+                    (Job.payload_hash == candidate.payload_hash,) if targeted else ()
+                )
                 updated = session.execute(
                     update(Job)
                     .where(
                         Job.id == candidate.id,
                         Job.attempt_count == candidate.attempt_count,
                         self._claimable(timestamp),
+                        *target_cas,
+                        *target_scope,
                     )
                     .values(
                         status=JobStatus.RUNNING.value,
@@ -675,6 +804,7 @@ class JobStore:
         claim: JobClaim,
         *,
         now: datetime | None = None,
+        allow_effect: Callable[[Session, Job, datetime], bool] | None = None,
     ) -> bool:
         """Seal automatic retries before a non-idempotent external effect.
 
@@ -705,6 +835,68 @@ class JobStore:
                 )
                 session.commit()
                 return False
+            # A pilot guard may wait on the actor row. Refresh DB time after
+            # that lock before judging expiry or lease authority.
+            guard_allowed = (
+                allow_effect(session, job, effect_clock)
+                if allow_effect is not None else True
+            )
+            effect_clock = self._time(session, now)
+            if not self._authority_is_current(job, effect_clock):
+                self._mark_deadline_exceeded(
+                    session, effect_clock, job_id=claim.job_id
+                )
+                self._mark_exhausted(session, effect_clock, job_id=claim.job_id)
+                session.commit()
+                return False
+            if guard_allowed and allow_effect is not None:
+                guard_allowed = allow_effect(session, job, effect_clock)
+            marked_source_without_policy = (
+                job.job_type == "source_interpretation_v1"
+                and job.submitted_by_api_client_id is not None
+                and allow_effect is None
+            )
+            if marked_source_without_policy or not guard_allowed:
+                denied_at = self._completion_clock(session, now)
+                ended = session.execute(
+                    update(Job)
+                    .where(
+                        Job.id == claim.job_id,
+                        Job.status == JobStatus.RUNNING.value,
+                        Job.active_attempt_id == claim.attempt_id,
+                    )
+                    .values(
+                        status=JobStatus.FAILED.value,
+                        stage="completed",
+                        result=None,
+                        error_kind=FailureKind.PERMANENT.value,
+                        error_code="source_pilot_effect_denied",
+                        safe_error_message="source pilot authorization expired or was revoked",
+                        active_attempt_id=None,
+                        lease_owner=None,
+                        lease_expires_at=None,
+                        heartbeat_at=denied_at,
+                        completed_at=denied_at,
+                        updated_at=denied_at,
+                    )
+                )
+                attempt = session.execute(
+                    update(JobAttempt)
+                    .where(JobAttempt.id == claim.attempt_id,
+                           JobAttempt.status == AttemptStatus.RUNNING.value)
+                    .values(
+                        status=AttemptStatus.FAILED.value,
+                        error_kind=FailureKind.PERMANENT.value,
+                        error_code="source_pilot_effect_denied",
+                        safe_error_message="source pilot authorization expired or was revoked",
+                        finished_at=denied_at,
+                    )
+                )
+                if ended.rowcount != 1 or attempt.rowcount != 1:
+                    session.rollback()
+                    return False
+                session.commit()
+                raise ExternalEffectDenied("source pilot effect denied")
             transitioned = session.execute(
                 update(Job)
                 .where(
@@ -1029,6 +1221,7 @@ class JobStore:
         timestamp: datetime,
         *,
         job_id: uuid.UUID | None = None,
+        exclude_api_submitted: bool = False,
     ) -> int:
         uncertain_predicate = and_(
             Job.status == JobStatus.RUNNING.value,
@@ -1037,6 +1230,8 @@ class JobStore:
             Job.deadline_at.is_not(None),
             Job.deadline_at <= timestamp,
         )
+        if exclude_api_submitted:
+            uncertain_predicate = and_(uncertain_predicate, NON_PILOT_SOURCE)
         uncertain = cls._transition_terminal_jobs(
             session,
             uncertain_predicate,
@@ -1068,6 +1263,8 @@ class JobStore:
             Job.deadline_at.is_not(None),
             Job.deadline_at <= timestamp,
         )
+        if exclude_api_submitted:
+            predicate = and_(predicate, NON_PILOT_SOURCE)
         regular = cls._transition_terminal_jobs(
             session,
             predicate,
@@ -1086,6 +1283,7 @@ class JobStore:
         timestamp: datetime,
         *,
         job_id: uuid.UUID | None = None,
+        exclude_api_submitted: bool = False,
     ) -> int:
         uncertain_predicate = and_(
             Job.status == JobStatus.RUNNING.value,
@@ -1095,6 +1293,8 @@ class JobStore:
             Job.lease_expires_at.is_not(None),
             Job.lease_expires_at <= timestamp,
         )
+        if exclude_api_submitted:
+            uncertain_predicate = and_(uncertain_predicate, NON_PILOT_SOURCE)
         uncertain = cls._transition_terminal_jobs(
             session,
             uncertain_predicate,
@@ -1126,6 +1326,8 @@ class JobStore:
                 ),
             ),
         )
+        if exclude_api_submitted:
+            predicate = and_(predicate, NON_PILOT_SOURCE)
         exhausted = cls._transition_terminal_jobs(
             session,
             predicate,

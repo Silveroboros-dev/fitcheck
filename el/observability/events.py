@@ -123,7 +123,7 @@ SystemVariantId = Literal[
     "fitcheck-source-interpretation/source-thesis-candidates-v1.1",
     "unknown",
 ]
-RuntimeProfileId = Literal["default", "unknown"]
+RuntimeProfileId = Literal["default", "bounded-source-v1", "unknown"]
 RuntimeContractVersion = Literal["source-interpretation-worker-v1", "unknown"]
 
 _ALLOWED_REQUESTED_MODEL_IDS: Final = frozenset(
@@ -142,7 +142,7 @@ _ALLOWED_SYSTEM_VARIANT_IDS: Final = frozenset(
         "fitcheck-source-interpretation/source-thesis-candidates-v1.1",
     }
 )
-_ALLOWED_RUNTIME_PROFILE_IDS: Final = frozenset({"default"})
+_ALLOWED_RUNTIME_PROFILE_IDS: Final = frozenset({"default", "bounded-source-v1"})
 _ALLOWED_RUNTIME_CONTRACT_VERSIONS: Final = frozenset(
     {"source-interpretation-worker-v1"}
 )
