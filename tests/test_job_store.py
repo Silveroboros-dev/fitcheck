@@ -6,9 +6,10 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import create_engine, event, func, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
-from el.domain.tables import Base, Job, JobAttempt
+from el.domain.tables import Base, Job, JobAttempt, User
 from el.jobs import (
     AttemptStatus,
     FailureKind,
@@ -70,6 +71,62 @@ def test_submit_is_actor_scoped_idempotent_and_payload_sensitive(tmp_path):
 
     with sessions() as session:
         assert session.scalar(select(func.count()).select_from(Job)) == 2
+
+
+def test_caller_owned_unrelated_insert_error_preserves_outer_work(tmp_path):
+    store, sessions = _store(tmp_path)
+    user_id = uuid.uuid4()
+    with sessions() as session:
+        session.add(User(id=user_id, email=f"{user_id}@example.invalid"))
+        with pytest.raises(IntegrityError):
+            _submit(
+                store,
+                session=session,
+                idempotency_key="missing-owner-fk",
+                owner_user_id=uuid.uuid4(),
+            )
+        # Only the Job insert failed. The caller still owns a usable transaction.
+        assert session.get(User, user_id) is not None
+        session.commit()
+
+    with sessions() as session:
+        assert session.get(User, user_id) is not None
+        assert session.scalar(select(func.count()).select_from(Job)) == 0
+
+
+@pytest.mark.parametrize("conflicting_payload", [False, True])
+def test_caller_owned_same_key_collision_recovers_exactly(tmp_path, conflicting_payload):
+    store, sessions = _store(tmp_path)
+    winner = None
+    with sessions() as session:
+        original_scalar = session.scalar
+        raced = False
+
+        def scalar_with_winner(statement, *args, **kwargs):
+            nonlocal winner, raced
+            result = original_scalar(statement, *args, **kwargs)
+            if (
+                not raced
+                and result is None
+                and statement.column_descriptions[0]["entity"] is Job
+            ):
+                raced = True
+                winner = _submit(store)
+            return result
+
+        session.scalar = scalar_with_winner
+        if conflicting_payload:
+            with pytest.raises(IdempotencyConflict):
+                _submit(store, session=session, payload={"provider": "different"})
+        else:
+            duplicate = _submit(store, session=session)
+            assert duplicate.job_id == winner.job_id
+            assert not duplicate.created
+        session.commit()
+
+    assert winner.created
+    with sessions() as session:
+        assert session.scalar(select(func.count()).select_from(Job)) == 1
 
 
 def test_unknown_payload_hash_version_fails_closed(tmp_path):

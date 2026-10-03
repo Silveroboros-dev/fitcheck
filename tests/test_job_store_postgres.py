@@ -33,6 +33,7 @@ from sqlalchemy import (
     update,
 )
 from sqlalchemy.engine import Engine, make_url
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.schema import CreateSchema, DropSchema
 
@@ -290,6 +291,110 @@ def test_concurrent_same_key_and_conflicting_submissions(
     with postgres_harness.sessions() as session:
         rows = session.scalars(select(Job)).all()
     assert len(rows) == 16
+
+
+@pytest.mark.parametrize("conflicting_payload", [False, True])
+def test_caller_owned_collision_preserves_outer_transaction(
+    postgres_harness: PostgresHarness,
+    conflicting_payload: bool,
+) -> None:
+    store = postgres_harness.store
+    key = f"caller-owned-race-{conflicting_payload}"
+    first_read = threading.Event()
+    release_loser = threading.Event()
+    loser_user_id = uuid.uuid4()
+    payload = {"provider": "fixture", "cutoff": key}
+
+    def lose_after_initial_lookup():
+        with postgres_harness.sessions() as session:
+            session.add(
+                User(id=loser_user_id, email=f"{loser_user_id}@example.invalid")
+            )
+            original_scalar = session.scalar
+            paused = False
+
+            def scalar_with_race(statement, *args, **kwargs):
+                nonlocal paused
+                result = original_scalar(statement, *args, **kwargs)
+                if (
+                    not paused
+                    and result is None
+                    and statement.column_descriptions[0]["entity"] is Job
+                ):
+                    paused = True
+                    first_read.set()
+                    assert release_loser.wait(timeout=10)
+                return result
+
+            session.scalar = scalar_with_race
+            try:
+                result = store.submit_or_get(
+                    job_type="market_universe_refresh",
+                    owner_client_type="system",
+                    owner_actor_id="postgres-gate",
+                    idempotency_key=key,
+                    payload=(
+                        {"provider": "fixture", "cutoff": "different"}
+                        if conflicting_payload
+                        else payload
+                    ),
+                    pinned_manifest={"normalization_policy_version": "market-v1"},
+                    session=session,
+                )
+            except IdempotencyConflict:
+                assert conflicting_payload
+                result = None
+            assert session.get(User, loser_user_id) is not None
+            session.commit()
+            return result
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(lose_after_initial_lookup)
+        try:
+            assert first_read.wait(timeout=10)
+            winner = _submit(store, key=key, payload=payload)
+        finally:
+            release_loser.set()
+        loser_result = future.result(timeout=10)
+
+    assert winner.created
+    if conflicting_payload:
+        assert loser_result is None
+    else:
+        assert loser_result.job_id == winner.job_id
+        assert not loser_result.created
+    with postgres_harness.sessions() as session:
+        assert session.get(User, loser_user_id) is not None
+        assert session.scalar(
+            select(func.count()).select_from(Job).where(Job.idempotency_key == key)
+        ) == 1
+
+
+def test_caller_owned_unrelated_integrity_error_keeps_outer_transaction(
+    postgres_harness: PostgresHarness,
+) -> None:
+    user_id = uuid.uuid4()
+    with postgres_harness.sessions() as session:
+        session.add(User(id=user_id, email=f"{user_id}@example.invalid"))
+        with pytest.raises(IntegrityError):
+            postgres_harness.store.submit_or_get(
+                job_type="market_universe_refresh",
+                owner_client_type="system",
+                owner_actor_id="postgres-gate",
+                idempotency_key="caller-owned-missing-fk",
+                payload={"provider": "fixture"},
+                owner_user_id=uuid.uuid4(),
+                session=session,
+            )
+        assert session.get(User, user_id) is not None
+        session.commit()
+    with postgres_harness.sessions() as session:
+        assert session.get(User, user_id) is not None
+        assert session.scalar(
+            select(func.count())
+            .select_from(Job)
+            .where(Job.idempotency_key == "caller-owned-missing-fk")
+        ) == 0
 
 
 def test_concurrent_claimers_create_only_one_attempt_per_job(

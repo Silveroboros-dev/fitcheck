@@ -87,6 +87,17 @@ class ExternalEffectDenied(RuntimeError):
     """The current attempt was safely ended before an external operation."""
 
 
+def _is_job_idempotency_collision(exc: IntegrityError) -> bool:
+    if getattr(getattr(exc.orig, "diag", None), "constraint_name", None) == "uq_job_idempotency":
+        return True
+    return (
+        getattr(exc.orig, "sqlite_errorname", None) == "SQLITE_CONSTRAINT_UNIQUE"
+        and str(exc.orig)
+        == "UNIQUE constraint failed: jobs.owner_client_type, "
+        "jobs.owner_actor_id, jobs.job_type, jobs.idempotency_key"
+    )
+
+
 @dataclass(frozen=True)
 class SubmissionResult:
     job_id: uuid.UUID
@@ -287,6 +298,10 @@ class JobStore:
 
         with (nullcontext(session) if session is not None else self._sessions()) as active:
             if session is not None:
+                # begin_nested() flushes all pending objects before opening its
+                # savepoint. Flush caller work deliberately outside the Job
+                # insert savepoint so a duplicate Job cannot roll it back.
+                active.flush()
                 existing = active.scalar(
                     select(Job).where(
                         Job.owner_client_type == owner_client_type,
@@ -348,16 +363,39 @@ class JobStore:
                 created_at=timestamp,
                 updated_at=timestamp,
             )
+            if session is not None:
+                try:
+                    with active.begin_nested():
+                        active.add(row)
+                        active.flush([row])
+                    return SubmissionResult(job_id=job_id, created=True)
+                except IntegrityError as exc:
+                    if not _is_job_idempotency_collision(exc):
+                        raise
+                    existing = active.scalar(
+                        select(Job).where(
+                            Job.owner_client_type == owner_client_type,
+                            Job.owner_actor_id == owner_actor_id,
+                            Job.job_type == job_type,
+                            Job.idempotency_key == idempotency_key,
+                        )
+                    )
+                    if existing is None:
+                        raise
+                    if (
+                        existing.payload_hash_version != PAYLOAD_HASH_VERSION
+                        or existing.payload_hash != digest
+                    ):
+                        raise IdempotencyConflict(
+                            "idempotency key reused with different input or "
+                            "execution guarantees/hash version"
+                        ) from exc
+                    return SubmissionResult(job_id=existing.id, created=False)
             active.add(row)
             try:
-                if session is None:
-                    active.commit()
-                else:
-                    active.flush()
+                active.commit()
                 return SubmissionResult(job_id=job_id, created=True)
             except IntegrityError:
-                if session is not None:
-                    raise
                 active.rollback()
                 existing = active.scalar(
                     select(Job).where(
