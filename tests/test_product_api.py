@@ -3,6 +3,7 @@
 Fixture mode over an in-memory DB: no live model calls, no credentials.
 """
 
+from collections import Counter
 import uuid
 
 import pytest
@@ -204,29 +205,103 @@ def test_fixture_mode_unknown_text_is_explicit_unavailable(client):
     assert "fixture" in r.json()["detail"]
 
 
-# --- AC-9: the surface cannot mutate verdicts or review/golden truth ----------
+# --- AC-9: reviewed registered surface; authority remains behavioral ---------
+_BUILTIN_ROUTES = {
+    (method, path)
+    for path in ("/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc")
+    for method in ("GET", "HEAD")
+}
+_UI_ROUTES = {
+    ("GET", "/"),
+    ("GET", "/assets/brand/{asset}"),
+    ("GET", "/assets/demo-fixtures/markets/{asset}"),
+}
+_PREDECESSOR_ROUTES = {
+    ("GET", "/api/health"),
+    ("POST", "/api/thesis"),
+    ("POST", "/api/thesis/{thesis_analysis_id}/blind-prior"),
+    ("POST", "/api/thesis/{thesis_analysis_id}/classify"),
+    ("POST", "/api/fit-card/{fit_card_id}/draft-preview"),
+    ("POST", "/api/fit-card/{fit_card_id}/ledger"),
+    ("POST", "/api/fit-card/{fit_card_id}/correct"),
+    ("POST", "/api/fit-card/{fit_card_id}/reject-market"),
+    ("GET", "/api/ledger"),
+    ("GET", "/api/ledger/{ledger_entry_id}"),
+}
+_V3_ROUTES = {
+    ("POST", "/api/v3/normalization-attempts"),
+    ("POST", "/api/v3/source-interpretations"),
+    ("POST", "/api/v3/source-interpretation-jobs"),
+    (
+        "GET",
+        "/api/v3/source-interpretation-jobs/by-idempotency/{idempotency_key}",
+    ),
+    ("GET", "/api/v3/source-interpretation-jobs/{job_id}"),
+    ("GET", "/api/v3/source-interpretations/{interpretation_id}"),
+    ("POST", "/api/v3/source-interpretations/{interpretation_id}/choice"),
+    (
+        "POST",
+        "/api/v3/source-thesis-candidates/{candidate_id}/normalization-attempt",
+    ),
+    ("POST", "/api/v3/normalization-attempts/{attempt_id}/accept"),
+    ("POST", "/api/v3/normalization-attempts/{attempt_id}/revise"),
+    ("POST", "/api/v3/normalization-attempts/{attempt_id}/reject"),
+    ("POST", "/api/v3/theses/{thesis_analysis_id}/market-pool"),
+    ("GET", "/api/v3/theses/{thesis_analysis_id}/accepted-state"),
+    ("GET", "/api/v3/account-state"),
+    ("GET", "/api/v3/market-pools/{market_display_set_id}"),
+    ("GET", "/api/v3/market-choices/{market_choice_id}"),
+    ("POST", "/api/v3/market-pools/{market_display_set_id}/choice"),
+    ("POST", "/api/v3/market-choices/{market_choice_id}/revisit-activation"),
+    ("GET", "/api/v3/market-choices/{market_choice_id}/revisit-activation"),
+    ("POST", "/api/v3/thesis-revisions/{revision_id}/revisit-check"),
+    ("GET", "/api/v3/thesis-revisions/{revision_id}/revisit"),
+    ("POST", "/api/v3/revisit-packets/{packet_id}/decision"),
+    ("POST", "/api/v3/market-assessments/{market_assessment_id}/feedback"),
+}
+
+
+def _assert_reviewed_route_inventory(app):
+    expected = _BUILTIN_ROUTES | _UI_ROUTES | _PREDECESSOR_ROUTES | _V3_ROUTES
+    actual = Counter()
+    for route in app.routes:
+        assert getattr(route, "methods", None), f"unexpected non-HTTP route: {route}"
+        actual.update((method, route.path) for method in route.methods)
+    assert actual == Counter(expected)
+
+
 def test_route_surface_has_no_forbidden_mutations(client):
-    paths = {route.path for route in client.app.routes if hasattr(route, "path")}
-    expected = {
-        "/",
-        "/api/health",
-        "/api/thesis",
-        "/api/thesis/{thesis_analysis_id}/blind-prior",
-        "/api/thesis/{thesis_analysis_id}/classify",
-        "/api/fit-card/{fit_card_id}/draft-preview",
-        "/api/fit-card/{fit_card_id}/ledger",
-        # correction-loop contract v0: intake-only endpoints (pending
-        # review candidates; never verdict/golden/ledger mutation).
-        "/api/fit-card/{fit_card_id}/correct",
-        "/api/fit-card/{fit_card_id}/reject-market",
-        "/api/ledger",
-        "/api/ledger/{ledger_entry_id}",
-    }
-    assert expected <= paths
-    forbidden_fragments = ("review", "golden", "export", "promote", "correct")
-    for path in paths - expected:
-        for fragment in forbidden_fragments:
-            assert fragment not in path, f"forbidden surface: {path}"
+    _assert_reviewed_route_inventory(client.app)
+
+
+@pytest.mark.parametrize(
+    "mutation", ["remove_v3", "add_api", "add_method", "duplicate_route"]
+)
+def test_route_inventory_rejects_unreviewed_surface_changes(client, mutation):
+    if mutation == "remove_v3":
+        client.app.router.routes[:] = [
+            route
+            for route in client.app.routes
+            if route.path != "/api/v3/normalization-attempts"
+        ]
+    elif mutation == "add_api":
+        client.app.add_api_route("/api/notes", lambda: {"ok": True}, methods=["POST"])
+    elif mutation == "add_method":
+        route = next(
+            route
+            for route in client.app.routes
+            if route.path == "/api/v3/normalization-attempts"
+        )
+        route.methods.add("DELETE")
+    else:
+        client.app.add_api_route(
+            "/api/v3/normalization-attempts",
+            lambda: {"ok": True},
+            methods=["POST"],
+        )
+
+    with pytest.raises(AssertionError):
+        _assert_reviewed_route_inventory(client.app)
 
 
 def test_product_module_does_not_import_review_or_promotion():

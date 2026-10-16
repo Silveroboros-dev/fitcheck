@@ -17,6 +17,11 @@ from el.domain.enums import HorizonMatch, ResolutionRisk
 from el.domain.structures import ExtractedStructure, MarketStructure, Provenance
 from el.domain.vocabulary import vocabulary_violations
 from el.fitgate.gate import merge_advisory
+from el.fitgate.generated_text import (
+    generated_check_detail,
+    generated_check_evidence,
+    generated_market_label,
+)
 from el.fitgate.m1_subject_only import (
     aggregate_thesis,
     evaluate_market,
@@ -200,6 +205,7 @@ def build_classification_plan(
 
     fit_policy = fit_policy_from_pins(
         gate_policy_version=pins.fit.gate_policy_version,
+        token_rules_version=pins.fit.token_rules_version,
         stacking_threshold=pins.fit.stacking_threshold,
         escalation_confidence_floor=pins.fit.escalation_confidence_floor,
         horizon_tolerances=dict(pins.fit.horizon_tolerances),
@@ -400,6 +406,7 @@ def _provenance(
         planned = structures_by_market[verdict.market_id]
         per_market[verdict.market_id] = {
             "gate_policy_version": verdict.gate_policy_version,
+            "token_rules_version": verdict.token_rules_version,
             "ceiling": verdict.deterministic_ceiling.value,
             "published": verdict.published.value,
             "authority": verdict.authority,
@@ -419,7 +426,7 @@ def _provenance(
                     "status": outcome.status.value,
                     "cap": outcome.cap.value if outcome.cap else None,
                     "hard": outcome.hard,
-                    "detail": outcome.detail,
+                    **generated_check_evidence(outcome),
                 }
                 for outcome in verdict.checks
             ],
@@ -479,21 +486,27 @@ def _card_text(
         caps = [outcome for outcome in reference.checks if outcome.cap is not None]
         if thesis.recommended_market_id:
             captures = (
-                f"Deterministic conditions met on {reference.market_id}: "
+                "Deterministic conditions met on "
+                f"{generated_market_label(reference.market_id)}: "
                 + ", ".join(passes)
                 + "."
             )
-            misses = "; ".join(outcome.detail for outcome in caps) or (
-                "No deterministic mismatches. Metric identity rests on lexical "
-                "overlap, not proof — read the resolution rules before recording "
-                "intent."
+            misses = "; ".join(
+                generated_check_detail(outcome) for outcome in caps
+            ) or (
+                "No deterministic mismatches. Metric identity rests on "
+                "lexical overlap, not proof — read the resolution rules "
+                "before recording intent."
             )
         else:
             captures = (
-                f"No recommended expression: best candidate {reference.market_id} "
+                "No recommended expression: best candidate "
+                f"{generated_market_label(reference.market_id)} "
                 f"reaches {reference.published.value}."
             )
-            misses = "; ".join(outcome.detail for outcome in caps) or (
+            misses = "; ".join(
+                generated_check_detail(outcome) for outcome in caps
+            ) or (
                 "Stacked condition failures left no usable expression."
             )
     _require_clean_vocabulary(captures)
@@ -504,7 +517,9 @@ def _card_text(
 def _rejection_reason(verdict: MarketFitVerdict) -> str:
     fired = [outcome for outcome in verdict.checks if outcome.cap is not None]
     reason = f"{verdict.published.value}: " + (
-        "; ".join(outcome.detail for outcome in fired) if fired else "outranked"
+        "; ".join(generated_check_detail(outcome) for outcome in fired)
+        if fired
+        else "outranked"
     )
     _require_clean_vocabulary(reason)
     return reason

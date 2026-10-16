@@ -13,6 +13,7 @@ directly on the frozen snapshot.
 
 import os
 import uuid
+from importlib.resources import files
 from pathlib import Path
 
 from sqlalchemy import select
@@ -43,13 +44,14 @@ from el.sourceinterpretation.service import SourceInterpretationService
 
 # Repo-relative default; overridable so the deploy image can place the
 # snapshot outside the test tree.
-DEFAULT_SNAPSHOT = (
-    Path(__file__).resolve().parents[2]
-    / "tests"
-    / "fixtures"
-    / "retrieval"
-    / "frozen_snapshot_phase0.json"
+DEFAULT_SNAPSHOT = files("el.product.demo_fixtures").joinpath(
+    "retrieval", "frozen_snapshot_phase0.json"
 )
+
+
+def build_gemini_source_interpretation(session_factory):
+    """Retain the shared source worker wiring without a runtime call here."""
+    return SourceInterpretationService(GeminiSourceInterpreter(), session_factory)
 
 
 def snapshot_path() -> Path:

@@ -17,7 +17,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
-from typing import Any, TypeVar
+from typing import Any, Protocol, TypeVar
 
 from sqlalchemy import Interval, and_, func, literal, or_, select, update
 from sqlalchemy.exc import IntegrityError
@@ -34,6 +34,13 @@ REAPER_BATCH_SIZE = 100
 EXTERNAL_EFFECT_STARTED_STAGE = "external_effect_started"
 NON_PILOT_SOURCE = or_(
     Job.job_type != "source_interpretation_v1",
+    Job.submitted_by_api_client_id.is_(None),
+)
+FULL31_STAGE_TYPES = frozenset({
+    "full31_normalization_v1", "full31_market_pool_v1",
+})
+NON_PILOT_STAGE = or_(
+    Job.job_type.notin_(FULL31_STAGE_TYPES),
     Job.submitted_by_api_client_id.is_(None),
 )
 
@@ -84,7 +91,21 @@ class JobNotFound(LookupError):
 
 
 class ExternalEffectDenied(RuntimeError):
-    """The current attempt was safely ended before an external operation."""
+    """An external operation was refused; the attempt may remain active."""
+
+
+class BudgetEffectGuard(Protocol):
+    """Budget admission coupled to the Job effect seal transaction.
+
+    validate must only read. record_dispatch runs after the Job effect seal
+    SQL, before commit, and must return False unless it recorded that exact
+    job/attempt. The caller may invoke the provider only after this method
+    returns True from begin_external_effect.
+    """
+
+    def validate(self, session: Session, job: Job, now: datetime) -> bool: ...
+
+    def record_dispatch(self, session: Session, job: Job, now: datetime) -> bool: ...
 
 
 def _is_job_idempotency_collision(exc: IntegrityError) -> bool:
@@ -367,7 +388,10 @@ class JobStore:
                 try:
                     with active.begin_nested():
                         active.add(row)
-                        active.flush([row])
+                        # Caller work was flushed before this savepoint. Flush
+                        # the complete Job unit of work, including ORM hook
+                        # additions, inside the insert savepoint.
+                        active.flush()
                     return SubmissionResult(job_id=job_id, created=True)
                 except IntegrityError as exc:
                     if not _is_job_idempotency_collision(exc):
@@ -602,10 +626,12 @@ class JobStore:
                 self._mark_deadline_exceeded(
                     session, timestamp, job_id=job_id,
                     exclude_api_submitted=exclude_api_submitted,
+                    exclude_full31_stage=not targeted,
                 )
                 self._mark_exhausted(
                     session, timestamp, job_id=job_id,
                     exclude_api_submitted=exclude_api_submitted,
+                    exclude_full31_stage=not targeted,
                 )
                 # Reconciliation is independent of this worker's subsequent
                 # claim CAS. Preserve terminal transitions even if contention
@@ -616,6 +642,8 @@ class JobStore:
                 query = select(Job).where(predicate, *target_scope)
                 if exclude_api_submitted:
                     query = query.where(NON_PILOT_SOURCE)
+                if not targeted:
+                    query = query.where(NON_PILOT_STAGE)
                 if allowed_types:
                     query = query.where(Job.job_type.in_(allowed_types))
                 candidate = session.scalar(
@@ -805,6 +833,7 @@ class JobStore:
         *,
         now: datetime | None = None,
         allow_effect: Callable[[Session, Job, datetime], bool] | None = None,
+        budget_guard: BudgetEffectGuard | None = None,
     ) -> bool:
         """Seal automatic retries before a non-idempotent external effect.
 
@@ -835,11 +864,25 @@ class JobStore:
                 )
                 session.commit()
                 return False
+            if job.external_effect_started_at is not None:
+                # A repeated call is never permission for a second provider
+                # operation. Preserve the original running attempt so it can
+                # still report its result or move to operator review.
+                session.commit()
+                raise ExternalEffectDenied("external effect already sealed")
             # A pilot guard may wait on the actor row. Refresh DB time after
             # that lock before judging expiry or lease authority.
             guard_allowed = (
                 allow_effect(session, job, effect_clock)
                 if allow_effect is not None else True
+            )
+            budget_pinned = (
+                isinstance(job.pinned_manifest, dict)
+                and "budget" in job.pinned_manifest
+            )
+            budget_allowed = (
+                budget_guard.validate(session, job, effect_clock)
+                if budget_pinned and budget_guard is not None else not budget_pinned
             )
             effect_clock = self._time(session, now)
             if not self._authority_is_current(job, effect_clock):
@@ -851,12 +894,34 @@ class JobStore:
                 return False
             if guard_allowed and allow_effect is not None:
                 guard_allowed = allow_effect(session, job, effect_clock)
-            marked_source_without_policy = (
-                job.job_type == "source_interpretation_v1"
+            if budget_allowed and budget_pinned and budget_guard is not None:
+                budget_allowed = budget_guard.validate(session, job, effect_clock)
+            marked_pilot_without_policy = (
+                job.job_type in ({"source_interpretation_v1"} | FULL31_STAGE_TYPES)
                 and job.submitted_by_api_client_id is not None
                 and allow_effect is None
             )
-            if marked_source_without_policy or not guard_allowed:
+            budget_pinned_without_guard = (
+                budget_pinned and budget_guard is None
+            )
+            if (
+                marked_pilot_without_policy or budget_pinned_without_guard
+                or not guard_allowed or not budget_allowed
+            ):
+                denied_code = (
+                    ("budget_effect_guard_required" if budget_pinned_without_guard else "budget_effect_denied")
+                    if budget_pinned else
+                    "source_pilot_effect_denied"
+                    if job.job_type == "source_interpretation_v1" else
+                    "full31_pilot_effect_denied"
+                )
+                denied_message = (
+                    "budget authorization is required before external effects"
+                    if budget_pinned else
+                    "source pilot authorization expired or was revoked"
+                    if job.job_type == "source_interpretation_v1" else
+                    "full31 pilot authorization expired or was revoked"
+                )
                 denied_at = self._completion_clock(session, now)
                 ended = session.execute(
                     update(Job)
@@ -864,14 +929,15 @@ class JobStore:
                         Job.id == claim.job_id,
                         Job.status == JobStatus.RUNNING.value,
                         Job.active_attempt_id == claim.attempt_id,
+                        Job.external_effect_started_at.is_(None),
                     )
                     .values(
                         status=JobStatus.FAILED.value,
                         stage="completed",
                         result=None,
                         error_kind=FailureKind.PERMANENT.value,
-                        error_code="source_pilot_effect_denied",
-                        safe_error_message="source pilot authorization expired or was revoked",
+                        error_code=denied_code,
+                        safe_error_message=denied_message,
                         active_attempt_id=None,
                         lease_owner=None,
                         lease_expires_at=None,
@@ -880,6 +946,11 @@ class JobStore:
                         updated_at=denied_at,
                     )
                 )
+                if ended.rowcount != 1:
+                    # A concurrent seal won after our earlier guard read.
+                    # Its attempt must remain available for completion.
+                    session.rollback()
+                    return False
                 attempt = session.execute(
                     update(JobAttempt)
                     .where(JobAttempt.id == claim.attempt_id,
@@ -887,22 +958,26 @@ class JobStore:
                     .values(
                         status=AttemptStatus.FAILED.value,
                         error_kind=FailureKind.PERMANENT.value,
-                        error_code="source_pilot_effect_denied",
-                        safe_error_message="source pilot authorization expired or was revoked",
+                        error_code=denied_code,
+                        safe_error_message=denied_message,
                         finished_at=denied_at,
                     )
                 )
-                if ended.rowcount != 1 or attempt.rowcount != 1:
+                if attempt.rowcount != 1:
                     session.rollback()
                     return False
                 session.commit()
-                raise ExternalEffectDenied("source pilot effect denied")
+                raise ExternalEffectDenied("pilot effect denied")
+            # Refresh again after both guards. A delayed policy/actor check
+            # must not use a stale lease clock for the effect-seal CAS.
+            effect_clock = self._time(session, now)
             transitioned = session.execute(
                 update(Job)
                 .where(
                     Job.id == claim.job_id,
                     Job.status == JobStatus.RUNNING.value,
                     Job.active_attempt_id == claim.attempt_id,
+                    Job.external_effect_started_at.is_(None),
                     Job.lease_expires_at.is_not(None),
                     Job.lease_expires_at > effect_clock,
                     self._before_deadline(effect_clock),
@@ -935,6 +1010,11 @@ class JobStore:
             if attempt.rowcount != 1:
                 session.rollback()
                 return False
+            if budget_pinned:
+                assert budget_guard is not None
+                if not budget_guard.record_dispatch(session, job, effect_clock):
+                    session.rollback()
+                    raise ExternalEffectDenied("budget dispatch seal failed")
             session.commit()
             return True
 
@@ -1222,6 +1302,7 @@ class JobStore:
         *,
         job_id: uuid.UUID | None = None,
         exclude_api_submitted: bool = False,
+        exclude_full31_stage: bool = False,
     ) -> int:
         uncertain_predicate = and_(
             Job.status == JobStatus.RUNNING.value,
@@ -1232,6 +1313,8 @@ class JobStore:
         )
         if exclude_api_submitted:
             uncertain_predicate = and_(uncertain_predicate, NON_PILOT_SOURCE)
+        if exclude_full31_stage:
+            uncertain_predicate = and_(uncertain_predicate, NON_PILOT_STAGE)
         uncertain = cls._transition_terminal_jobs(
             session,
             uncertain_predicate,
@@ -1265,6 +1348,8 @@ class JobStore:
         )
         if exclude_api_submitted:
             predicate = and_(predicate, NON_PILOT_SOURCE)
+        if exclude_full31_stage:
+            predicate = and_(predicate, NON_PILOT_STAGE)
         regular = cls._transition_terminal_jobs(
             session,
             predicate,
@@ -1284,6 +1369,7 @@ class JobStore:
         *,
         job_id: uuid.UUID | None = None,
         exclude_api_submitted: bool = False,
+        exclude_full31_stage: bool = False,
     ) -> int:
         uncertain_predicate = and_(
             Job.status == JobStatus.RUNNING.value,
@@ -1295,6 +1381,8 @@ class JobStore:
         )
         if exclude_api_submitted:
             uncertain_predicate = and_(uncertain_predicate, NON_PILOT_SOURCE)
+        if exclude_full31_stage:
+            uncertain_predicate = and_(uncertain_predicate, NON_PILOT_STAGE)
         uncertain = cls._transition_terminal_jobs(
             session,
             uncertain_predicate,
@@ -1328,6 +1416,8 @@ class JobStore:
         )
         if exclude_api_submitted:
             predicate = and_(predicate, NON_PILOT_SOURCE)
+        if exclude_full31_stage:
+            predicate = and_(predicate, NON_PILOT_STAGE)
         exhausted = cls._transition_terminal_jobs(
             session,
             predicate,
@@ -1492,6 +1582,13 @@ class JobStore:
 
     @staticmethod
     def _database_now(session: Session) -> datetime:
+        if session.get_bind().dialect.name == "sqlite":
+            # SQLite CURRENT_TIMESTAMP truncates to a whole second. Keep its
+            # own clock, but retain the milliseconds available from strftime.
+            value = session.scalar(select(func.strftime("%Y-%m-%d %H:%M:%f", "now")))
+            if not isinstance(value, str):
+                raise RuntimeError("database did not return a timestamp")
+            return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
         clock = (
             func.clock_timestamp()
             if session.get_bind().dialect.name == "postgresql"

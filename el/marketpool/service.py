@@ -370,7 +370,10 @@ class MarketPoolService:
         retrieval: RetrievalService,
         fit: FitService,
         session_factory: sessionmaker[Session],
+        *,
+        assessment_projection=None,
     ):
+        self._assessment_projection = assessment_projection
         self._retrieval = retrieval
         self._fit = fit
         self._sessions = session_factory
@@ -492,6 +495,10 @@ class MarketPoolService:
                         "per_market": payload,
                     },
                 )
+                # Optional constructor-bound local projection; ordinary fit
+                # evidence is retained before the assessment is persisted.
+                if self._assessment_projection is not None:
+                    assessment = self._assessment_projection(assessment, thesis, capture)
                 session.add(assessment)
                 assessments.append(assessment)
             session.flush()

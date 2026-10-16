@@ -1,0 +1,16 @@
+{
+  "schema_version": "fitcheck.synthetic_market_fixture.v1",
+  "fixture_kind": "project_authored_synthetic",
+  "market_id": "synthetic-broker-chain-token",
+  "title": "By end-2027, will a Robinhood Chain operating or voting asset pass both launch and public-exchange checks?",
+  "resolution_rules": "Within this fictional test case, Yes requires both of these checks to pass before December 31, 2027, 23:59 ET: (1) after the fixture version date, Robinhood or a wholly owned subsidiary designates a newly launched asset as the operating or voting token of Robinhood Chain; and (2) members of the public can exchange that asset in a functioning market. A statement of intent, roadmap, or press release does not satisfy either check. Currency-pegged assets, joke or community coins, receipts for staked assets, derivative or synthetic claims, and representations of shares or ETFs are outside the case. If either check remains unmet, the result is No.",
+  "condition_id": "synthetic-condition-broker-chain-token",
+  "outcomes": [
+    "Yes",
+    "No"
+  ],
+  "close_at_utc": "2028-01-01T04:59:00Z",
+  "liquidity_usd": 800.0,
+  "source_url": "https://example.invalid/fitcheck/markets/synthetic-broker-chain-token",
+  "fixture_versioned_utc": "2026-10-15T00:00:00Z"
+}

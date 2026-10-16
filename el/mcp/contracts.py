@@ -64,6 +64,10 @@ class Conflict(McpError):
     code: ClassVar[str] = "conflict"
 
 
+class PermissionDenied(McpError):
+    code: ClassVar[str] = "permission_denied"
+
+
 class IdempotencyConflictError(Conflict):
     code: ClassVar[str] = "idempotency_conflict"
 
@@ -280,6 +284,7 @@ class V3MarketAssessmentResult(_McpOut):
     authority: str
     snapshot_id: str
     rules_capture_id: uuid.UUID
+    frozen_demo_evidence: dict | None = None
     SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
         {"market_title", "resolution_conditions"}
     )

@@ -1,8 +1,20 @@
 from __future__ import annotations
 
+import importlib
+from pathlib import Path
+import sys
+
 import pytest
 
 from demo import cloud_run_auth
+
+
+def _standalone_adk_client():
+    source = Path(__file__).resolve().parents[1] / "clients" / "adk" / "src"
+    sys.path.insert(0, str(source))
+    module = importlib.import_module("fitcheck_adk_client.client")
+    assert Path(module.__file__).resolve().is_relative_to(source.resolve())
+    return module
 
 
 def test_remote_headers_preserve_api_key_only_default():
@@ -162,7 +174,7 @@ def test_scripted_remote_client_reports_auth_configuration_error(monkeypatch):
 
 def test_adk_remote_client_reports_auth_configuration_error(monkeypatch):
     pytest.importorskip("google.adk")
-    from demo.client_adk import _connection_params
+    client = _standalone_adk_client()
 
     monkeypatch.setenv(
         "FITCHECK_MCP_URL", "https://fitcheck-abc-uc.a.run.app/mcp"
@@ -173,12 +185,12 @@ def test_adk_remote_client_reports_auth_configuration_error(monkeypatch):
     )
 
     with pytest.raises(SystemExit, match="Remote MCP authentication error"):
-        _connection_params("fitcheck-key")
+        client._connection_params("fitcheck-key")
 
 
 def test_adk_remote_client_sends_app_key_and_google_token(monkeypatch):
     pytest.importorskip("google.adk")
-    from demo.client_adk import _connection_params
+    client = _standalone_adk_client()
 
     monkeypatch.setenv(
         "FITCHECK_MCP_URL", "https://fitcheck-abc-uc.a.run.app/mcp"
@@ -186,7 +198,7 @@ def test_adk_remote_client_sends_app_key_and_google_token(monkeypatch):
     monkeypatch.setenv("FITCHECK_CLOUD_RUN_ID_TOKEN", "google-id-token")
     monkeypatch.delenv("FITCHECK_CLOUD_RUN_AUDIENCE", raising=False)
 
-    params = _connection_params("fitcheck-key")
+    params = client._connection_params("fitcheck-key")
 
     assert params.headers == {
         "x-api-key": "fitcheck-key",

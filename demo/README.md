@@ -7,13 +7,13 @@ surface. It does not add domain logic; it wires the real `el` services behind
 ## v3.1 reference status
 
 The scripted journey below is a predecessor compatibility demo, not the v3.1
-first-user journey. The v3.1 UI uses the synchronous fixture protocol
+first-user journey. The v3.1 UI uses the asynchronous fixture-worker protocol
 documented in the repository README: source candidates, explicit human
 selection and confirmation, an assessed market pool, and market-or-`none`
-choice. Its generic MCP source-interpretation protocol is separate and uses a
-bounded fixture job worker. The offline STDIO test in the repository README
-continues from the worker result through choice, normalization, acceptance,
-pool assessment, and market-or-`none` choice. This repository
+choice. Its generic MCP source-interpretation protocol is separate and also
+uses a bounded fixture job worker. The offline STDIO test in the repository
+README continues from the worker result through choice, normalization,
+acceptance, pool assessment, and market-or-`none` choice. This repository
 does not claim a verified third-party client, production MCP deployment, or
 live provider.
 
@@ -73,28 +73,37 @@ FITCHECK_MCP_URL=http://127.0.0.1:8000/mcp FITCHECK_API_KEY=demo-key python -m d
 
 ## ADK Gemini Client
 
-Install the optional demo dependency:
+The ADK client uses a separate installable subproject because the server and
+the tested ADK release require incompatible OpenTelemetry API versions. Keep
+the server and client in different virtual environments:
 
 ```bash
-pip install -e ".[demo]"
+python3.12 -m venv .venv-server
+.venv-server/bin/python -m pip install -e .
+python3.12 -m venv .venv-adk
+.venv-adk/bin/python -m pip install -e ./clients/adk
 ```
 
-Then run the ADK client:
+For local STDIO, point the client at the server environment explicitly:
 
 ```bash
-GOOGLE_API_KEY=... GOOGLE_GENAI_USE_VERTEXAI=0 python -m demo.client_adk
+FITCHECK_SERVER_PYTHON="$PWD/.venv-server/bin/python" \
+FITCHECK_SERVER_ROOT="$PWD" \
+GOOGLE_API_KEY=... \
+.venv-adk/bin/fitcheck-adk-client
 ```
 
-By default, the ADK client consumes the local stdio fixture server. To consume
-a deployed IAM-private Streamable HTTP server directly, send the FitCheck key
-in `x-api-key` and a Google ID token in `Authorization`:
+See [`clients/adk/README.md`](../clients/adk/README.md) for the clean-venv
+contract and remote HTTP setup. To consume an IAM-private Streamable HTTP
+server directly, send the FitCheck key in `x-api-key` and a Google ID token in
+`Authorization`:
 
 ```bash
 FITCHECK_MCP_URL=https://SERVICE_URL/mcp \
 FITCHECK_API_KEY=... \
 FITCHECK_CLOUD_RUN_ID_TOKEN="$(gcloud auth print-identity-token)" \
 GOOGLE_API_KEY=... \
-python -m demo.client_adk
+.venv-adk/bin/fitcheck-adk-client
 ```
 
 `FITCHECK_CLOUD_RUN_ID_TOKEN` is short-lived. For service-account ADC or a
@@ -114,6 +123,6 @@ Direct IAM-private access is intentionally incompatible with
 `FITCHECK_API_KEY_HEADER=Authorization`; keep the application key in
 `x-api-key` so `Authorization` remains available for the Google ID token.
 
-Set `FITCHECK_PROPOSER=gemini` when you want the server itself to make Gemini
-proposer calls. In fixture mode, the ADK agent may still call Gemini, but the
-FitCheck backend remains deterministic.
+Set `FITCHECK_PROPOSER=gemini` on the server process when you want the server
+itself to make Gemini proposer calls. In fixture mode, the ADK agent may still
+call Gemini, but the FitCheck backend remains deterministic.

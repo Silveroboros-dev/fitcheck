@@ -128,8 +128,21 @@ class SourceInterpretationService:
             "response_schema_version": 1,
             "adapter_kind": self._interpreter.adapter_kind,
             "model_id": self._interpreter.model_id,
+            "runtime_profile_id": getattr(
+                self._interpreter, "runtime_profile_id", "default"
+            ),
             "has_external_effect": self._interpreter.has_external_effect,
             "runtime_contract_version": "source-interpretation-worker-v1",
+        }
+
+    def observability_generation_settings(self) -> dict[str, float | None]:
+        """Return only known generation controls; absence remains unknown."""
+
+        return {
+            "temperature": getattr(
+                self._interpreter, "observability_temperature", None
+            ),
+            "top_p": getattr(self._interpreter, "observability_top_p", None),
         }
 
     @property
@@ -205,12 +218,30 @@ class SourceInterpretationService:
         input_text: str,
         *,
         source_url: str | None,
+        reservation_identity: dict | None = None,
     ) -> SourceInterpretationComputation:
         if insider_screen(input_text):
             raise SourceCandidateValidationError(
                 "screened source cannot enter model computation"
             )
-        proposed = self._interpreter.propose_candidates(input_text)
+        reserved = getattr(
+            self._interpreter, "propose_candidates_with_reservation", None
+        )
+        if reserved is None:
+            proposed = self._interpreter.propose_candidates(input_text)
+        else:
+            if reservation_identity is None and getattr(
+                self._interpreter, "requires_job_bound_source_context", False
+            ):
+                raise SourceCandidateValidationError(
+                    "custom-answer source interpretation requires a bound job"
+                )
+            if reservation_identity is None:
+                proposed = self._interpreter.propose_candidates(input_text)
+            else:
+                proposed = reserved(
+                    input_text, reservation_identity=reservation_identity
+                )
         proposal = proposed.proposal
         validated: list[ComputedSourceCandidate] = []
         cursor = 0

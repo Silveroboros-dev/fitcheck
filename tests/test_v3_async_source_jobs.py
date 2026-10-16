@@ -17,9 +17,9 @@ from el.domain.tables import (
     SourceInterpretationRequest,
 )
 from el.product.wiring import (
-    HARBOR_CANDIDATE,
+    STABLECOIN_CANDIDATE,
     MULTI_THESIS_FIXTURE,
-    ORCHARD_CANDIDATE,
+    ROBINHOOD_CANDIDATE,
     build_services,
     local_actor,
 )
@@ -84,7 +84,7 @@ def test_fixture_source_job_queues_then_preserves_ordered_quotes_and_human_gate(
     assert [
         candidate.selected_source_quote
         for candidate in status.interpretation.candidates
-    ] == [HARBOR_CANDIDATE, ORCHARD_CANDIDATE]
+    ] == [STABLECOIN_CANDIDATE, ROBINHOOD_CANDIDATE]
     assert _count(env, SourceCandidateChoice) == 0
 
 

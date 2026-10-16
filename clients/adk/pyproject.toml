@@ -1,0 +1,28 @@
+[project]
+name = "fitcheck-adk-client"
+version = "0.1.0"
+description = "Isolated Google ADK client for the FitCheck MCP demo"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = [
+    "google-adk==2.2.0",
+    "google-auth[requests]==2.62.0",
+    "google-genai==2.20.0",
+    "mcp==1.30.0",
+    "pydantic==2.13.5",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.1.1"]
+
+[project.scripts]
+fitcheck-adk-client = "fitcheck_adk_client.client:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

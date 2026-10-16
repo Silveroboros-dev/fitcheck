@@ -16,7 +16,6 @@ venv/
 data/
 docs/
 demo/
-migrations/
 outputs/
 scripts/
 vendor/

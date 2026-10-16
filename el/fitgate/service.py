@@ -25,6 +25,7 @@ calibrated it. The escalation predicate (Program 2 seam) stays
 LOG-ONLY: deterministic, versioned, evaluated here, never by a model.
 """
 
+import hashlib
 import uuid
 from datetime import datetime, timezone
 
@@ -45,10 +46,19 @@ from el.domain.tables import (
     ThesisAnalysis,
 )
 from el.domain.vocabulary import vocabulary_violations
+from el.fitgate.generated_text import (
+    generated_check_detail,
+    generated_check_evidence,
+    generated_market_label,
+)
 from el.fitgate.gate import (
+    ADVISORY_SOURCE_QUOTES_POLICY_V2,
+    ADVISORY_VOCABULARY_POLICY_V1,
+    ADVISORY_CAP_TABLE,
     AdvisoryMerge,
     merge_advisory,
     quote_span_violations,
+    validate_advisory_vocabulary_policy,
 )
 from el.fitgate.m1_subject_only import aggregate_thesis, evaluate_market, gate_policy_version
 from el.fitgate.policy import (
@@ -65,7 +75,9 @@ from el.marketstructure.service import (
     SCHEMA_VERSION as MARKET_SCHEMA_VERSION,
     MarketStructureService,
 )
+from el.fitgate.runtime_policy import immutable_fit_policy
 from el.models.fit_adapter import FitAdvisoryProposer
+from el.fitgate.token_rules import token_rules_version
 
 EVAL_PACK_VERSION = "phase0-fit-v1"
 CONFIDENCE_SOURCE_ADVISORY = "advisory"
@@ -138,16 +150,19 @@ class FitService:
         self,
         structure_service: MarketStructureService,
         session_factory: sessionmaker[Session],
-        policy: FitPolicy = FitPolicy(),
+        policy: FitPolicy | None = None,
         advisory: FitAdvisoryProposer | None = None,
         *,
+        advisory_vocabulary_policy: str = ADVISORY_VOCABULARY_POLICY_V1,
         cap_initial: int | None = None,
         cap_expanded: int | None = None,
     ):
         self._structures = structure_service
         self._sessions = session_factory
-        self._policy = policy
+        self._policy = immutable_fit_policy(policy)
         self._advisory = advisory
+        validate_advisory_vocabulary_policy(advisory_vocabulary_policy)
+        self._advisory_vocabulary_policy = advisory_vocabulary_policy
         self._cap_initial = cap_initial
         self._cap_expanded = cap_expanded
 
@@ -195,6 +210,8 @@ class FitService:
                     market,
                     structures.snapshot_id,
                     ranks.get(market.market_id, len(ranks)),
+                    thesis_analysis_id=thesis_analysis_id,
+                    candidate_set_id=candidate_set_id,
                 )
                 judgments_by_market[market.market_id] = j
 
@@ -235,6 +252,8 @@ class FitService:
                             market,
                             structures.snapshot_id,
                             ranks.get(market.market_id, len(ranks)),
+                            thesis_analysis_id=thesis_analysis_id,
+                            candidate_set_id=candidate_set_id,
                         )
                         judgments_by_market[market.market_id] = j
 
@@ -373,7 +392,11 @@ class FitService:
                     RejectedMarketRow(
                         market_recommendation_id=recommendation.id,
                         market_id=verdict.market_id,
-                        reason=self._rejection_reason(verdict),
+                        reason=self._rejection_reason(
+                            verdict,
+                            judgments_by_market[verdict.market_id],
+                            outranked=thesis.recommended_market_id is not None,
+                        ),
                     )
                 )
 
@@ -442,6 +465,9 @@ class FitService:
         market,
         snapshot_id: str,
         rank: int,
+        *,
+        thesis_analysis_id: uuid.UUID | None = None,
+        candidate_set_id: uuid.UUID | None = None,
     ) -> _MarketJudgment:
         """Deterministic verdict, then the demotion-only advisory merge.
 
@@ -459,7 +485,37 @@ class FitService:
                                "rejected": 0},
             )
 
+        source_quotes = (
+            self._advisory_vocabulary_policy == ADVISORY_SOURCE_QUOTES_POLICY_V2
+        )
         capture = self._rules_capture(session, market.market_id, snapshot_id)
+        capture_error = self._capture_integrity_error(capture)
+        source_binding = None
+        if capture_error is None and source_quotes:
+            source_binding, capture_error = self._source_binding(
+                session,
+                capture,
+                market_id=market.market_id,
+                snapshot_id=snapshot_id,
+                thesis_analysis_id=thesis_analysis_id,
+                candidate_set_id=candidate_set_id,
+                input_text=input_text,
+            )
+        if capture_error is not None:
+            return self._fallback_judgment(
+                deterministic,
+                rank,
+                calls=0,
+                rejected=1,
+                rejected_reasons=[capture_error],
+            )
+
+        assert capture is not None
+        capture_identity = (
+            str(getattr(capture, "id", "")),
+            capture.contract_terms_hash,
+            capture.resolution_rules_hash,
+        )
         calls = rejected = 0
         rejected_reasons: list[str] = []
         for _ in range(1 + ADVISORY_RETRY_BUDGET):
@@ -482,15 +538,64 @@ class FitService:
                 rejected += 1
                 rejected_reasons.append(f"proposer error: {error}")
                 continue
+
+            # A proposer call may be slow. Re-read and re-hash the retained
+            # capture before its output can affect a verdict, so a concurrent
+            # or accidental byte change cannot pass the earlier check.
+            refreshed = self._rules_capture(
+                session, market.market_id, snapshot_id, refresh=True
+            )
+            refreshed_error = self._capture_integrity_error(refreshed)
+            if refreshed_error is None and refreshed is not None:
+                refreshed_identity = (
+                    str(getattr(refreshed, "id", "")),
+                    refreshed.contract_terms_hash,
+                    refreshed.resolution_rules_hash,
+                )
+                if refreshed_identity != capture_identity:
+                    refreshed_error = (
+                        "rules capture changed during advisory evaluation"
+                    )
+            if refreshed_error is None and source_quotes:
+                refreshed_binding, refreshed_error = self._source_binding(
+                    session,
+                    refreshed,
+                    market_id=market.market_id,
+                    snapshot_id=snapshot_id,
+                    thesis_analysis_id=thesis_analysis_id,
+                    candidate_set_id=candidate_set_id,
+                    input_text=input_text,
+                )
+                if (
+                    refreshed_error is None
+                    and refreshed_binding != source_binding
+                ):
+                    refreshed_error = (
+                        "source binding changed during advisory evaluation"
+                    )
+            if refreshed_error is not None:
+                rejected += 1
+                rejected_reasons.append(refreshed_error)
+                break
+            capture = refreshed
+            assert capture is not None
+            rules_text = (
+                f"{capture.contract_terms_text}\n{capture.resolution_rules_text}"
+            )
             spans = quote_span_violations(
                 result.advisory,
-                claim_text=_claim_corpus(claim, input_text),
-                rules_text=(
-                    f"{capture.contract_terms_text}\n"
-                    f"{capture.resolution_rules_text}"
-                    if capture
-                    else ""
+                claim_text=(
+                    input_text
+                    if source_quotes
+                    else _claim_corpus(claim, input_text)
                 ),
+                rules_text=rules_text,
+                market_source_texts=(
+                    capture.contract_terms_text,
+                    capture.resolution_rules_text,
+                ) if source_quotes else None,
+                token_rules_version=token_rules_version(self._policy),
+                exact=source_quotes,
             )
             if spans:
                 # Invented evidence -> discard the advisory (anti-mad-libs).
@@ -502,6 +607,14 @@ class FitService:
                 result.advisory,
                 market_id=market.market_id,
                 policy=self._policy,
+                vocabulary_policy_version=self._advisory_vocabulary_policy,
+                claim_text=input_text,
+                rules_text=None if source_quotes else rules_text,
+                market_source_texts=(
+                    capture.contract_terms_text,
+                    capture.resolution_rules_text,
+                ) if source_quotes else None,
+                token_rules_version=token_rules_version(self._policy),
             )
             if merge.accepted:
                 return _MarketJudgment(
@@ -509,6 +622,12 @@ class FitService:
                     rank=rank,
                     advisory_meta={
                         "status": "accepted",
+                        "vocabulary_policy_version": self._advisory_vocabulary_policy,
+                        **(
+                            {"source_binding": source_binding}
+                            if source_quotes
+                            else {}
+                        ),
                         "calls": calls,
                         "rejected": rejected,
                         "model_adapter": result.model_adapter,
@@ -521,6 +640,27 @@ class FitService:
                             else None
                         ),
                         "disagreement": merge.disagreement,
+                        "vetoed": class_rank(merge.verdict.published)
+                        < class_rank(deterministic.deterministic_ceiling),
+                        "failures": [
+                            {
+                                "condition": condition.condition,
+                                "status": condition.status,
+                                "cap": ADVISORY_CAP_TABLE[condition.condition][0].value,
+                                "hard": ADVISORY_CAP_TABLE[condition.condition][1],
+                                "claim_evidence": condition.claim_evidence,
+                                "market_evidence": condition.market_evidence,
+                            }
+                            for condition in result.advisory.condition_verdicts
+                            if condition.status == "fail"
+                        ],
+                        "evidence_validation": {
+                            "quote_span": "passed",
+                            "claim_corpus": "input_text" if source_quotes else "input_text_and_extracted_structure",
+                            "market_snapshot_id": snapshot_id,
+                            "contract_terms_hash": capture.contract_terms_hash,
+                            "resolution_rules_hash": capture.resolution_rules_hash,
+                        },
                         "what_it_captures": result.advisory.what_it_captures,
                         "what_it_misses": result.advisory.what_it_misses,
                     },
@@ -528,8 +668,94 @@ class FitService:
             rejected += 1
             rejected_reasons.extend(merge.rejected_reasons)
 
+        return self._fallback_judgment(
+            deterministic,
+            rank,
+            calls=calls,
+            rejected=rejected,
+            rejected_reasons=rejected_reasons,
+        )
+
+    @staticmethod
+    def _capture_integrity_error(
+        capture: MarketRulesCapture | None,
+    ) -> str | None:
+        if capture is None:
+            return "rules capture is unavailable"
+        for text_field, hash_field in (
+            ("contract_terms_text", "contract_terms_hash"),
+            ("resolution_rules_text", "resolution_rules_hash"),
+        ):
+            actual = hashlib.sha256(
+                getattr(capture, text_field).encode("utf-8")
+            ).hexdigest()
+            if actual != getattr(capture, hash_field):
+                return f"rules capture {text_field} hash mismatch"
+        return None
+
+    def _source_binding(
+        self,
+        session: Session,
+        capture: MarketRulesCapture,
+        *,
+        market_id: str,
+        snapshot_id: str,
+        thesis_analysis_id: uuid.UUID | None,
+        candidate_set_id: uuid.UUID | None,
+        input_text: str,
+    ) -> tuple[dict | None, str | None]:
+        """Bind an exact quote to the complete retained candidate graph."""
+        if thesis_analysis_id is None or candidate_set_id is None:
+            return (
+                None,
+                "exact source quotes require thesis and candidate-set binding",
+            )
+        candidate_set = session.get(CandidateSet, candidate_set_id)
+        if (
+            candidate_set is None
+            or candidate_set.thesis_analysis_id != thesis_analysis_id
+            or candidate_set.snapshot_id != snapshot_id
+        ):
+            return None, "exact source quote candidate-set binding is invalid"
+        analysis = session.get(ThesisAnalysis, thesis_analysis_id)
+        if analysis is None or analysis.input_text != input_text:
+            return None, "exact source quote thesis input binding is invalid"
+        member = session.scalars(
+            select(CandidateSetMember).where(
+                CandidateSetMember.candidate_set_id == candidate_set_id,
+                CandidateSetMember.market_id == market_id,
+            )
+        ).one_or_none()
+        if member is None:
+            return None, "exact source quote market is not in the candidate set"
+        if capture.market_id != market_id or capture.snapshot_id != snapshot_id:
+            return None, "exact source quote rules capture identity is invalid"
+        return {
+            "claim_input_sha256": hashlib.sha256(
+                input_text.encode("utf-8")
+            ).hexdigest(),
+            "thesis_analysis_id": str(thesis_analysis_id),
+            "candidate_set_id": str(candidate_set_id),
+            "candidate_set_member_id": str(member.id),
+            "market_id": market_id,
+            "market_snapshot_id": snapshot_id,
+            "rules_capture_id": str(capture.id),
+            "contract_terms_hash": capture.contract_terms_hash,
+            "resolution_rules_hash": capture.resolution_rules_hash,
+            "token_rules_version": token_rules_version(self._policy),
+        }, None
+
+    def _fallback_judgment(
+        self,
+        deterministic: MarketFitVerdict,
+        rank: int,
+        *,
+        calls: int,
+        rejected: int,
+        rejected_reasons: list[str],
+    ) -> _MarketJudgment:
         fallback = merge_advisory(
-            deterministic, None, market_id=market.market_id
+            deterministic, None, market_id=deterministic.market_id
         )
         fallback = fallback.model_copy(
             update={
@@ -543,6 +769,7 @@ class FitService:
             rank=rank,
             advisory_meta={
                 "status": "fallback",
+                "vocabulary_policy_version": self._advisory_vocabulary_policy,
                 "calls": calls,
                 "rejected": rejected,
                 "rejected_reasons": rejected_reasons,
@@ -659,6 +886,7 @@ class FitService:
             advisory_meta.pop("what_it_misses", None)
             per_market[v.market_id] = {
                 "gate_policy_version": v.gate_policy_version,
+                "token_rules_version": v.token_rules_version,
                 "ceiling": v.deterministic_ceiling.value,
                 "published": v.published.value,
                 "authority": v.authority,
@@ -679,7 +907,7 @@ class FitService:
                         "status": o.status.value,
                         "cap": o.cap.value if o.cap else None,
                         "hard": o.hard,
-                        "detail": o.detail,
+                        **generated_check_evidence(o),
                     }
                     for o in v.checks
                 ],
@@ -699,13 +927,16 @@ class FitService:
         reference: MarketFitVerdict | None,
         reference_judgment: "_MarketJudgment | None" = None,
     ) -> tuple[str, str]:
-        """Card captures/misses: the accepted advisory's text when the
-        card narrates a recommendation (already vocabulary-gated by the
-        merge gate), template-composed from check outcomes otherwise."""
+        """Accepted non-veto recommendation text is vocabulary-gated.
+
+        Refusals and vetoes name their recorded deterministic/advisory
+        causes through templates, including citation-verified failures.
+        """
         if (
             reference_judgment is not None
             and thesis.recommended_market_id
             and reference_judgment.advisory_meta.get("status") == "accepted"
+            and not reference_judgment.advisory_meta.get("vetoed")
         ):
             return (
                 reference_judgment.advisory_meta["what_it_captures"],
@@ -724,15 +955,18 @@ class FitService:
                 o.name for o in reference.checks if o.status.value == "pass"
             ]
             caps = [o for o in reference.checks if o.cap is not None]
+            causes = [generated_check_detail(o) for o in caps]
+            causes.extend(self._advisory_veto_details(reference_judgment))
             if thesis.recommended_market_id:
                 captures = (
-                    f"Deterministic conditions met on {reference.market_id}: "
+                    "Deterministic conditions met on "
+                    f"{generated_market_label(reference.market_id)}: "
                     + ", ".join(passes)
                     + "."
                 )
                 misses = (
-                    "; ".join(o.detail for o in caps)
-                    if caps
+                    "; ".join(causes)
+                    if causes
                     else (
                         "No deterministic mismatches. Metric identity rests "
                         "on lexical overlap, not proof — read the resolution "
@@ -742,11 +976,11 @@ class FitService:
             else:
                 captures = (
                     f"No recommended expression: best candidate "
-                    f"{reference.market_id} reaches "
+                    f"{generated_market_label(reference.market_id)} reaches "
                     f"{reference.published.value}."
                 )
-                misses = "; ".join(o.detail for o in caps) or (
-                    "Stacked condition failures left no usable expression."
+                misses = "; ".join(causes) or (
+                    "No usable expression under the recorded policy."
                 )
         for text in (captures, misses):
             violations = vocabulary_violations(text)
@@ -757,11 +991,38 @@ class FitService:
                 )
         return captures, misses
 
-    def _rejection_reason(self, verdict: MarketFitVerdict) -> str:
+    def _advisory_veto_details(
+        self, judgment: _MarketJudgment | None
+    ) -> list[str]:
+        """Narrate accepted, citation-verified vetoes from bounded fields.
+
+        The evidence remains attributable in provenance; generated prose
+        uses the declared condition/cap vocabulary, never provider prose.
+        """
+        if judgment is None or not judgment.advisory_meta.get("vetoed"):
+            return []
+        return [
+            f"Advisory veto: {failure['condition']} failed (cap {failure['cap']})"
+            for failure in judgment.advisory_meta["failures"]
+        ]
+
+    def _rejection_reason(
+        self,
+        verdict: MarketFitVerdict,
+        judgment: _MarketJudgment | None = None,
+        *,
+        outranked: bool = False,
+    ) -> str:
         fired = [o for o in verdict.checks if o.cap is not None]
+        causes = [generated_check_detail(o) for o in fired]
+        causes.extend(self._advisory_veto_details(judgment))
         reason = (
             f"{verdict.published.value}: "
-            + ("; ".join(o.detail for o in fired) if fired else "outranked")
+            + (
+                "; ".join(causes)
+                if causes
+                else "outranked" if outranked else "not a recommendable expression"
+            )
         )
         violations = vocabulary_violations(reason)
         if violations:
@@ -772,11 +1033,17 @@ class FitService:
         return reason
 
     def _rules_capture(
-        self, session: Session, market_id: str, snapshot_id: str
+        self,
+        session: Session,
+        market_id: str,
+        snapshot_id: str,
+        *,
+        refresh: bool = False,
     ) -> MarketRulesCapture | None:
-        return session.execute(
-            select(MarketRulesCapture).where(
-                MarketRulesCapture.market_id == market_id,
-                MarketRulesCapture.snapshot_id == snapshot_id,
-            )
-        ).scalar_one_or_none()
+        statement = select(MarketRulesCapture).where(
+            MarketRulesCapture.market_id == market_id,
+            MarketRulesCapture.snapshot_id == snapshot_id,
+        )
+        if refresh:
+            statement = statement.execution_options(populate_existing=True)
+        return session.execute(statement).scalar_one_or_none()

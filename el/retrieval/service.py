@@ -149,10 +149,13 @@ class RetrievalService:
         provider: MarketProvider,
         session_factory: sessionmaker[Session],
         policy: Loop2Policy = Loop2Policy(),
+        *,
+        gate_policy_version: str = GATE_POLICY_VERSION,
     ):
         self._provider = provider
         self._sessions = session_factory
         self._policy = policy
+        self._gate_policy_version = gate_policy_version
 
     @_trace_retrieval
     def retrieve_candidates(
@@ -225,7 +228,8 @@ class RetrievalService:
                         # Frozen YES probability as of this snapshot (step 6):
                         # the substrate for odds-at-entry, captured once.
                         current_probability=record.current_probability,
-                        eligibility_flags=verdict.flags,
+                        eligibility_flags=(verdict.flags if self._gate_policy_version == GATE_POLICY_VERSION
+                                           else {**verdict.flags, "policy_version": self._gate_policy_version}),
                         excluded_reason=verdict.excluded_reason,
                     )
                 )
@@ -237,7 +241,8 @@ class RetrievalService:
                         rank=rank,
                         retrieval_score=score,
                         eligible=verdict.eligible,
-                        eligibility_flags=verdict.flags,
+                        eligibility_flags=(verdict.flags if self._gate_policy_version == GATE_POLICY_VERSION
+                                           else {**verdict.flags, "policy_version": self._gate_policy_version}),
                         excluded_reason=verdict.excluded_reason,
                     )
                 )
@@ -254,6 +259,7 @@ class RetrievalService:
             candidates=candidates,
             retrieved_count=len(candidates),
             eligible_count=sum(1 for c in candidates if c.eligible),
+            gate_policy_version=self._gate_policy_version,
         )
 
     def _ensure_snapshot(self, session: Session, result) -> None:

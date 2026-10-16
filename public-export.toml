@@ -127,6 +127,10 @@ source = "el/fitgate/gate.py"
 destination = "el/fitgate/gate.py"
 
 [[include]]
+source = "el/fitgate/generated_text.py"
+destination = "el/fitgate/generated_text.py"
+
+[[include]]
 source = "el/fitgate/policy.py"
 destination = "el/fitgate/policy.py"
 
@@ -137,6 +141,18 @@ destination = "el/fitgate/m1_subject_only.py"
 [[include]]
 source = "el/fitgate/service.py"
 destination = "el/fitgate/service.py"
+
+[[include]]
+source = "el/fitgate/token_rules.py"
+destination = "el/fitgate/token_rules.py"
+
+[[include]]
+source = "el/fitgate/runtime_policy.py"
+destination = "el/fitgate/runtime_policy.py"
+
+[[include]]
+source = "el/fitgate/source_quote_boundary.py"
+destination = "el/fitgate/source_quote_boundary.py"
 
 [[include]]
 source = "el/jobs/__init__.py"
@@ -331,6 +347,10 @@ source = "tests/product_console_accepted_thesis_resume_dom.js"
 destination = "tests/product_console_accepted_thesis_resume_dom.js"
 
 [[include]]
+source = "tests/product_console_market_explanation_dom.js"
+destination = "tests/product_console_market_explanation_dom.js"
+
+[[include]]
 source = "tests/test_agent_retrieval_spike.py"
 destination = "tests/test_agent_retrieval_spike.py"
 
@@ -363,6 +383,22 @@ source = "tests/test_fitgate_checks.py"
 destination = "tests/test_fitgate_checks.py"
 
 [[include]]
+source = "tests/test_fit_text_safety.py"
+destination = "tests/test_fit_text_safety.py"
+
+[[include]]
+source = "tests/test_token_policy_service.py"
+destination = "tests/test_token_policy_service.py"
+
+[[include]]
+source = "tests/test_fit_advisory_provenance.py"
+destination = "tests/test_fit_advisory_provenance.py"
+
+[[include]]
+source = "tests/test_advisory_source_quotes_policy.py"
+destination = "tests/test_advisory_source_quotes_policy.py"
+
+[[include]]
 source = "tests/test_ledger_service.py"
 destination = "tests/test_ledger_service.py"
 
@@ -375,6 +411,10 @@ source = "tests/test_mcp_a7_guard.py"
 destination = "tests/test_mcp_a7_guard.py"
 
 [[include]]
+source = "tests/test_mcp_schema_migration_postgres.py"
+destination = "tests/test_mcp_schema_migration_postgres.py"
+
+[[include]]
 source = "tests/test_perturbation.py"
 destination = "tests/test_perturbation.py"
 
@@ -383,8 +423,16 @@ source = "tests/test_product_console_accepted_thesis_resume_dom.py"
 destination = "tests/test_product_console_accepted_thesis_resume_dom.py"
 
 [[include]]
+source = "tests/test_product_console_market_explanation_dom.py"
+destination = "tests/test_product_console_market_explanation_dom.py"
+
+[[include]]
 source = "tests/test_product_contract_doc.py"
 destination = "tests/test_product_contract_doc.py"
+
+[[include]]
+source = "tests/test_product_resume.py"
+destination = "tests/test_product_resume.py"
 
 [[include]]
 source = "tests/test_public_boundary.py"
@@ -421,6 +469,154 @@ destination = "tests/test_telemetry_disabled.py"
 [[include]]
 source = "tests/test_vocabulary.py"
 destination = "tests/test_vocabulary.py"
+
+[[overlay]]
+source = "public/el/domain/tables.py"
+destination = "el/domain/tables.py"
+
+[[include]]
+source = "el/product/api.py"
+destination = "el/product/api.py"
+
+[[include]]
+source = "el/product/app.py"
+destination = "el/product/app.py"
+
+[[overlay]]
+source = "public/el/product/wiring.py"
+destination = "el/product/wiring.py"
+
+[[include]]
+source = "el/product/static/product_console.html"
+destination = "el/product/static/product_console.html"
+
+[[overlay]]
+source = "public/el/sourceinterpretation/worker.py"
+destination = "el/sourceinterpretation/worker.py"
+
+[[include]]
+source = "el/sourceinterpretation/binding.py"
+destination = "el/sourceinterpretation/binding.py"
+
+[[include]]
+source = "el/sourceinterpretation/jobs.py"
+destination = "el/sourceinterpretation/jobs.py"
+
+[[include]]
+source = "el/sourceinterpretation/service.py"
+destination = "el/sourceinterpretation/service.py"
+
+[[include]]
+source = "docs/fitcheck-demo-ui-session-contract-v1.md"
+destination = "docs/fitcheck-demo-ui-session-contract-v1.md"
+
+[[include]]
+source = "el/product/founder_acceptance.py"
+destination = "el/product/founder_acceptance.py"
+
+[[include]]
+source = "el/product/demo_hormuz.py"
+destination = "el/product/demo_hormuz.py"
+
+[[include]]
+source = "el/product/demo_sessions.py"
+destination = "el/product/demo_sessions.py"
+
+[[include]]
+source = "el/product/demo_launcher.py"
+destination = "el/product/demo_launcher.py"
+
+[[include]]
+source = "el/product/static/brand/fitcheck-logo-on-dark.svg"
+destination = "el/product/static/brand/fitcheck-logo-on-dark.svg"
+
+[[include]]
+source = "el/product/static/brand/fitcheck-logo-dark-panel.svg"
+destination = "el/product/static/brand/fitcheck-logo-dark-panel.svg"
+
+[[include]]
+source = "el/product/demo_fixtures/__init__.py"
+destination = "el/product/demo_fixtures/__init__.py"
+
+[[include]]
+source = "el/product/demo_fixtures/hormuz_rules.json"
+destination = "el/product/demo_fixtures/hormuz_rules.json"
+
+[[include]]
+source = "el/product/demo_fixtures/hormuz_impact_copy.json"
+destination = "el/product/demo_fixtures/hormuz_impact_copy.json"
+
+[[include]]
+source = "el/revisit/__init__.py"
+destination = "el/revisit/__init__.py"
+
+[[include]]
+source = "el/revisit/comparator.py"
+destination = "el/revisit/comparator.py"
+
+[[include]]
+source = "el/revisit/service.py"
+destination = "el/revisit/service.py"
+
+[[include]]
+source = "migrations/__init__.py"
+destination = "migrations/__init__.py"
+
+[[include]]
+source = "migrations/versions/__init__.py"
+destination = "migrations/versions/__init__.py"
+
+[[include]]
+source = "migrations/versions/18e9c4a7d2b5_manual_revisit_v0.py"
+destination = "migrations/versions/18e9c4a7d2b5_manual_revisit_v0.py"
+
+[[include]]
+source = "migrations/versions/4f7c2e9a6b13_anonymous_demo_sessions.py"
+destination = "migrations/versions/4f7c2e9a6b13_anonymous_demo_sessions.py"
+
+[[include]]
+source = "tests/test_anonymous_demo.py"
+destination = "tests/test_anonymous_demo.py"
+
+[[include]]
+source = "el/product/demo_fixtures/claims/eval_001_gemini_arena.json"
+destination = "el/product/demo_fixtures/claims/eval_001_gemini_arena.json"
+
+[[include]]
+source = "el/product/demo_fixtures/claims/eval_003_openai_traction.json"
+destination = "el/product/demo_fixtures/claims/eval_003_openai_traction.json"
+
+[[include]]
+source = "el/product/demo_fixtures/claims/ma_acquire_competitor.json"
+destination = "el/product/demo_fixtures/claims/ma_acquire_competitor.json"
+
+[[include]]
+source = "el/product/demo_fixtures/claims/ma_divest_unit.json"
+destination = "el/product/demo_fixtures/claims/ma_divest_unit.json"
+
+[[include]]
+source = "el/product/demo_fixtures/markets/golden_market_structures.json"
+destination = "el/product/demo_fixtures/markets/golden_market_structures.json"
+
+[[include]]
+source = "el/product/demo_fixtures/retrieval/frozen_snapshot_phase0.json"
+destination = "el/product/demo_fixtures/retrieval/frozen_snapshot_phase0.json"
+
+[[include]]
+source = "el/mcp/schema_preflight.py"
+destination = "el/mcp/schema_preflight.py"
+
+[[include]]
+source = "el/mcp/source_pilot.py"
+destination = "el/mcp/source_pilot.py"
+
+[[overlay]]
+source = "public/el/models/vertex_canary.py"
+destination = "el/models/vertex_canary.py"
+
+[[overlay]]
+source = "public/el/retrieval/gamma_config.py"
+destination = "el/retrieval/gamma_config.py"
 
 [[overlay]]
 source = "public/.dockerignore"
@@ -463,8 +659,48 @@ source = "public/README.md"
 destination = "README.md"
 
 [[overlay]]
+source = "public/clients/adk/README.md"
+destination = "clients/adk/README.md"
+
+[[overlay]]
+source = "public/clients/adk/LICENSE"
+destination = "clients/adk/LICENSE"
+
+[[overlay]]
+source = "public/clients/adk/pyproject.toml"
+destination = "clients/adk/pyproject.toml"
+
+[[overlay]]
+source = "public/clients/adk/run_contracts.py"
+destination = "clients/adk/run_contracts.py"
+
+[[overlay]]
+source = "public/clients/adk/src/fitcheck_adk_client/__init__.py"
+destination = "clients/adk/src/fitcheck_adk_client/__init__.py"
+
+[[overlay]]
+source = "public/clients/adk/src/fitcheck_adk_client/auth.py"
+destination = "clients/adk/src/fitcheck_adk_client/auth.py"
+
+[[overlay]]
+source = "public/clients/adk/src/fitcheck_adk_client/client.py"
+destination = "clients/adk/src/fitcheck_adk_client/client.py"
+
+[[overlay]]
+source = "public/clients/adk/tests/test_client_contract.py"
+destination = "clients/adk/tests/test_client_contract.py"
+
+[[overlay]]
+source = "public/clients/adk/tests/test_runner_assurance.py"
+destination = "clients/adk/tests/test_runner_assurance.py"
+
+[[overlay]]
 source = "public/SECURITY.md"
 destination = "SECURITY.md"
+
+[[overlay]]
+source = "public/THIRD_PARTY_NOTICES.md"
+destination = "THIRD_PARTY_NOTICES.md"
 
 [[overlay]]
 source = "public/demo/README.md"
@@ -515,6 +751,10 @@ source = "public/docs/fitcheck-v3.1-ui-contract.md"
 destination = "docs/fitcheck-v3.1-ui-contract.md"
 
 [[overlay]]
+source = "public/docs/fit-gate-policy-contracts-v1.md"
+destination = "docs/fit-gate-policy-contracts-v1.md"
+
+[[overlay]]
 source = "public/docs/reviewed-reference-dataset-spec-v0.md"
 destination = "docs/reviewed-reference-dataset-spec-v0.md"
 
@@ -525,10 +765,6 @@ destination = "el/domain/contracts.py"
 [[overlay]]
 source = "public/el/domain/db.py"
 destination = "el/domain/db.py"
-
-[[overlay]]
-source = "public/el/domain/tables.py"
-destination = "el/domain/tables.py"
 
 [[overlay]]
 source = "public/el/extraction/gate_v2.py"
@@ -591,22 +827,6 @@ source = "public/el/models/source_adapter.py"
 destination = "el/models/source_adapter.py"
 
 [[overlay]]
-source = "public/el/product/api.py"
-destination = "el/product/api.py"
-
-[[overlay]]
-source = "public/el/product/app.py"
-destination = "el/product/app.py"
-
-[[overlay]]
-source = "public/el/product/static/product_console.html"
-destination = "el/product/static/product_console.html"
-
-[[overlay]]
-source = "public/el/product/wiring.py"
-destination = "el/product/wiring.py"
-
-[[overlay]]
 source = "public/el/retrieval/agent_retrieval_index.py"
 destination = "el/retrieval/agent_retrieval_index.py"
 
@@ -645,18 +865,6 @@ destination = "el/review/static/review_console.html"
 [[overlay]]
 source = "public/el/sourceinterpretation/__init__.py"
 destination = "el/sourceinterpretation/__init__.py"
-
-[[overlay]]
-source = "public/el/sourceinterpretation/jobs.py"
-destination = "el/sourceinterpretation/jobs.py"
-
-[[overlay]]
-source = "public/el/sourceinterpretation/service.py"
-destination = "el/sourceinterpretation/service.py"
-
-[[overlay]]
-source = "public/el/sourceinterpretation/worker.py"
-destination = "el/sourceinterpretation/worker.py"
 
 [[overlay]]
 source = "public/migrations/env.py"
@@ -751,6 +959,14 @@ source = "public/tests/test_extraction.py"
 destination = "tests/test_extraction.py"
 
 [[overlay]]
+source = "public/tests/test_fit_advisory_identity.py"
+destination = "tests/test_fit_advisory_identity.py"
+
+[[overlay]]
+source = "public/tests/test_fit_policy_runtime.py"
+destination = "tests/test_fit_policy_runtime.py"
+
+[[overlay]]
 source = "public/tests/test_job_store.py"
 destination = "tests/test_job_store.py"
 
@@ -831,9 +1047,65 @@ source = "public/tests/test_snapshot_worker.py"
 destination = "tests/test_snapshot_worker.py"
 
 [[overlay]]
+source = "public/tests/test_token_rules_v2.py"
+destination = "tests/test_token_rules_v2.py"
+
+[[overlay]]
 source = "public/tests/test_v3_async_source_jobs.py"
 destination = "tests/test_v3_async_source_jobs.py"
 
 [[overlay]]
 source = "public/tests/test_v3_reference_flow.py"
 destination = "tests/test_v3_reference_flow.py"
+
+[[include]]
+source = "docs/fitcheck-token-rules-v2-policy.md"
+destination = "docs/fitcheck-token-rules-v2-policy.md"
+
+[[include]]
+source = "docs/fitcheck-advisory-source-quotes-policy-v2.md"
+destination = "docs/fitcheck-advisory-source-quotes-policy-v2.md"
+
+[[include]]
+source = "el/product/demo_frozen_markets.py"
+destination = "el/product/demo_frozen_markets.py"
+
+[[include]]
+source = "docs/fitcheck-frozen-market-demo-contract-v3.md"
+destination = "docs/fitcheck-frozen-market-demo-contract-v3.md"
+
+[[include]]
+source = "el/product/demo_fixtures/markets/synthetic-market-stablecoin-total-cap.json"
+destination = "el/product/demo_fixtures/markets/synthetic-market-stablecoin-total-cap.json"
+
+[[include]]
+source = "el/product/demo_fixtures/markets/synthetic-market-stablecoin-unit-cap.json"
+destination = "el/product/demo_fixtures/markets/synthetic-market-stablecoin-unit-cap.json"
+
+[[include]]
+source = "el/product/demo_fixtures/markets/synthetic-market-treasury-ledger-payment.json"
+destination = "el/product/demo_fixtures/markets/synthetic-market-treasury-ledger-payment.json"
+
+[[include]]
+source = "el/product/demo_fixtures/markets/synthetic-market-broker-tokenized-asset.json"
+destination = "el/product/demo_fixtures/markets/synthetic-market-broker-tokenized-asset.json"
+
+[[include]]
+source = "el/product/demo_fixtures/markets/synthetic-market-broker-first-tokenized.json"
+destination = "el/product/demo_fixtures/markets/synthetic-market-broker-first-tokenized.json"
+
+[[include]]
+source = "el/product/demo_fixtures/markets/synthetic-market-broker-chain-token.json"
+destination = "el/product/demo_fixtures/markets/synthetic-market-broker-chain-token.json"
+
+[[include]]
+source = "el/product/demo_fixtures/markets/synthetic-event-stablecoin-cap.json"
+destination = "el/product/demo_fixtures/markets/synthetic-event-stablecoin-cap.json"
+
+[[include]]
+source = "el/product/demo_fixtures/markets/synthetic-event-tokenized-listing.json"
+destination = "el/product/demo_fixtures/markets/synthetic-event-tokenized-listing.json"
+
+[[include]]
+source = "tests/test_frozen_demo_markets.py"
+destination = "tests/test_frozen_demo_markets.py"

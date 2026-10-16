@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import struct
 import sys
 import zlib
@@ -319,7 +320,17 @@ def test_release_export_uses_verified_apache_license() -> None:
     else:
         by_destination = {
             name: (ROOT / name).read_bytes()
-            for name in ("LICENSE", "pyproject.toml", "Dockerfile", "DATA_CARD.md")
+            for name in (
+                "LICENSE",
+                "pyproject.toml",
+                "Dockerfile",
+                "DATA_CARD.md",
+                "THIRD_PARTY_NOTICES.md",
+                "el/product/demo_fixtures/hormuz_impact_copy.json",
+                "el/product/demo_fixtures/hormuz_rules.json",
+                "clients/adk/LICENSE",
+                "clients/adk/pyproject.toml",
+            )
         }
 
     assert "LICENSE_REQUIRED.md" not in by_destination
@@ -327,8 +338,290 @@ def test_release_export_uses_verified_apache_license() -> None:
         "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
     )
     assert b'license = "Apache-2.0"' in by_destination["pyproject.toml"]
-    assert b"COPY pyproject.toml README.md LICENSE ./" in by_destination["Dockerfile"]
+    assert by_destination["clients/adk/LICENSE"] == by_destination["LICENSE"]
+    assert b'license = "Apache-2.0"' in by_destination[
+        "clients/adk/pyproject.toml"
+    ]
+    assert b'license-files = ["LICENSE"]' in by_destination[
+        "clients/adk/pyproject.toml"
+    ]
+    assert b'license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]' in by_destination[
+        "pyproject.toml"
+    ]
+    assert (
+        b"COPY pyproject.toml README.md LICENSE THIRD_PARTY_NOTICES.md ./"
+        in by_destination["Dockerfile"]
+    )
     assert b"project-authored synthetic material" in by_destination["DATA_CARD.md"]
+
+    notice = by_destination["THIRD_PARTY_NOTICES.md"]
+    rules_bytes = by_destination["el/product/demo_fixtures/hormuz_rules.json"]
+    impact_bytes = by_destination[
+        "el/product/demo_fixtures/hormuz_impact_copy.json"
+    ]
+    assert b"el/product/demo_fixtures/hormuz_rules.json" in notice
+    for digest in (
+        b"56c45b0e41fdb0d1dd94654aff12fde49a8fc18fc71b168da148c4d84678da2f",
+        b"967727828ff22a05e4807ef3728b95349fb007ce0d332804e3af45e27163da8b",
+        b"cb371ec8e828421f47cbb688988125d12401981984ee047e317fc25d02bc0b07",
+    ):
+        assert digest in notice
+    assert hashlib.sha256(rules_bytes).hexdigest() == (
+        "56c45b0e41fdb0d1dd94654aff12fde49a8fc18fc71b168da148c4d84678da2f"
+    )
+    assert hashlib.sha256(impact_bytes).hexdigest() == (
+        "0eab36b3ecbda1268d0565210d5275e4a54a9a0973cef8d1d040e7c29b34456e"
+    )
+    rules = json.loads(rules_bytes)
+    assert hashlib.sha256(rules["old_rules"].encode()).hexdigest() == (
+        "967727828ff22a05e4807ef3728b95349fb007ce0d332804e3af45e27163da8b"
+    )
+    assert hashlib.sha256(rules["new_rules"].encode()).hexdigest() == (
+        "cb371ec8e828421f47cbb688988125d12401981984ee047e317fc25d02bc0b07"
+    )
+
+
+def test_release_docs_bound_historical_deployment_and_hormuz_exception() -> None:
+    if (ROOT / "public").is_dir():
+        _, files = public_export.prepare_export(ROOT)
+        by_destination = {
+            item.destination.as_posix(): item.content for item in files
+        }
+    else:
+        by_destination = {
+            name: (ROOT / name).read_bytes()
+            for name in (
+                "DATA_CARD.md",
+                "PUBLIC_REPO_BOUNDARY.md",
+                "docs/engineering-walkthrough.md",
+            )
+        }
+
+    data_card = by_destination["DATA_CARD.md"]
+    boundary = by_destination["PUBLIC_REPO_BOUNDARY.md"]
+    walkthrough = by_destination["docs/engineering-walkthrough.md"]
+
+    assert b"2026-10-16" in data_card
+    assert b"sole external-content exception" in data_card
+    assert b"el/product/demo_fixtures/hormuz_rules.json" in boundary
+    assert b"one owner-directed external-content exception" in boundary
+    for document in (boundary, data_card):
+        assert b"hormuz-publication-risk-exception-v1" in document
+        assert b"rights_verified=false" in document
+        assert b"third_party_permission=unproven" in document
+        assert b"owner_risk_accepted=true" in document
+    approval_digest = (
+        "f1f2031005287a70554541beb7457cb6bec39b955971b903aa6380a0087256cb"
+    )
+    assert approval_digest.encode() in boundary
+    if (ROOT / "public").is_dir():
+        approval_path = (
+            "docs/release-decisions/hormuz-publication-risk-exception-v1.json"
+        )
+        assert approval_path not in by_destination
+        assert hashlib.sha256((ROOT / approval_path).read_bytes()).hexdigest() == (
+            approval_digest
+        )
+    assert (
+        b"If release materials claim or link a live reference service" in boundary
+    )
+    assert b"gate is recorded as not applicable" in boundary
+    assert b"June 2026 predecessor FitCheck MCP" in walkthrough
+    assert b"deployment on Cloud Run" in walkthrough
+    assert (
+        b"does not provide or claim a current live reference service" in walkthrough
+    )
+    assert b"A reference service is operated separately" not in walkthrough
+
+
+def test_release_export_replaces_external_market_bodies_with_synthetic_fixtures() -> None:
+    if not (ROOT / "public").is_dir():
+        pytest.skip("source-to-candidate boundary is verified in the private checkout")
+
+    _, files = public_export.prepare_export(ROOT)
+    by_destination = {
+        item.destination.as_posix(): item.content for item in files
+    }
+    expected_fixtures = {
+        "el/product/demo_fixtures/markets/synthetic-market-stablecoin-total-cap.json",
+        "el/product/demo_fixtures/markets/synthetic-market-stablecoin-unit-cap.json",
+        "el/product/demo_fixtures/markets/synthetic-market-treasury-ledger-payment.json",
+        "el/product/demo_fixtures/markets/synthetic-market-broker-tokenized-asset.json",
+        "el/product/demo_fixtures/markets/synthetic-market-broker-first-tokenized.json",
+        "el/product/demo_fixtures/markets/synthetic-market-broker-chain-token.json",
+        "el/product/demo_fixtures/markets/synthetic-event-stablecoin-cap.json",
+        "el/product/demo_fixtures/markets/synthetic-event-tokenized-listing.json",
+    }
+    exported_fixtures = {
+        path
+        for path in by_destination
+        if path.startswith("el/product/demo_fixtures/markets/synthetic-")
+    }
+    assert exported_fixtures == expected_fixtures
+
+
+def test_public_ci_fences_offline_tests_and_smokes_built_wheels() -> None:
+    if (ROOT / "public").is_dir():
+        _, files = public_export.prepare_export(ROOT)
+        shipped_workflow = next(
+            item.content
+            for item in files
+            if item.destination.as_posix() == ".github/workflows/ci.yml"
+        )
+        workflows_with_postgres_gates = (
+            (ROOT / ".github/workflows/public-export-verify.yml").read_bytes(),
+            shipped_workflow,
+        )
+    else:
+        shipped_workflow = (ROOT / ".github/workflows/ci.yml").read_bytes()
+        workflows_with_postgres_gates = (shipped_workflow,)
+
+    for workflow in workflows_with_postgres_gates:
+        assert b"sudo unshare --net" in workflow
+        assert b"--ignore=tests/test_job_store_postgres.py" in workflow
+        assert b"--ignore=tests/test_mcp_schema_migration_postgres.py" in workflow
+        assert (
+            b"python -m pytest\n"
+            b"          tests/test_job_store_postgres.py\n"
+            b"          tests/test_mcp_schema_migration_postgres.py\n"
+            b"          -rs"
+        ) in workflow
+        assert b"resource_names == expected_market_resources" in workflow
+        assert b"retired_provider_fields.isdisjoint(body)" in workflow
+        assert b"demo_frozen_markets.public_market(market_id)" in workflow
+        assert b"demo_frozen_markets.event_association(" in workflow
+        assert b"registered_market_ids == expected_market_ids" in workflow
+        assert b".dist-info/licenses/THIRD_PARTY_NOTICES.md" in workflow
+        assert (
+            b"56c45b0e41fdb0d1dd94654aff12fde49a8fc18fc71b168da148c4d84678da2f"
+            in workflow
+        )
+        for resource_name in (
+            b"golden_market_structures.json",
+            b"synthetic-market-stablecoin-total-cap.json",
+            b"synthetic-market-stablecoin-unit-cap.json",
+            b"synthetic-market-treasury-ledger-payment.json",
+            b"synthetic-market-broker-tokenized-asset.json",
+            b"synthetic-market-broker-first-tokenized.json",
+            b"synthetic-market-broker-chain-token.json",
+            b"synthetic-event-stablecoin-cap.json",
+            b"synthetic-event-tokenized-listing.json",
+        ):
+            assert resource_name in workflow
+
+    assert b"python -m build clients/adk" in shipped_workflow
+    assert b"--require-wheel-install" in shipped_workflow
+    assert b"fitcheck-public-wheel-smoke" in shipped_workflow
+
+
+def test_fixture_projection_runs_without_private_account_adapter(tmp_path, monkeypatch):
+    """Import and exercise the actual projection, not the private checkout."""
+    if not (ROOT / "public").is_dir():
+        pytest.skip("source projection is verified in the private source checkout")
+    import os
+    import subprocess
+
+    monkeypatch.setattr(public_export, "PRIVATE_TMP_ROOT", tmp_path)
+    _, files = public_export.prepare_export(ROOT)
+    destination = tmp_path / "fixture-projection"
+    public_export.build_export(destination, files)
+    assert not (destination / "el/product/accounts.py").exists()
+    assert not (destination / "el/budget").exists()
+    code = r'''import importlib.abc
+import pathlib
+import socket
+import sys
+
+class RejectPrivateAdapter(importlib.abc.MetaPathFinder):
+    missing_name = "el.product.accounts"
+
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "el.product.accounts":
+            raise ModuleNotFoundError(
+                "private account adapter must not load in fixture projection",
+                name=self.missing_name,
+            )
+        return None
+private_adapter_rejector = RejectPrivateAdapter()
+sys.meta_path.insert(0, private_adapter_rejector)
+original_connect = socket.socket.connect
+def offline_connect(self, address):
+    if self.family in (socket.AF_INET, socket.AF_INET6):
+        raise AssertionError("projection smoke is offline")
+    return original_connect(self, address)
+socket.socket.connect = offline_connect
+
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+from el.domain.tables import Base
+from el.product.api import ProductApi
+from el.product.app import build_app
+from el.product.wiring import build_services, local_actor
+import el.product.app as projected_app
+assert pathlib.Path(projected_app.__file__).resolve().is_relative_to(pathlib.Path.cwd())
+assert "el.product.accounts" not in sys.modules
+engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
+Base.metadata.create_all(engine)
+sessions = sessionmaker(bind=engine, expire_on_commit=False)
+services = build_services(mode="fixture", session_factory=sessions)
+
+class UnavailableAccountResolver:
+    require_https = True
+    async def resolve(self, request):
+        raise AssertionError("public account resolver must never run")
+
+private_adapter_rejector.missing_name = "synthetic.transitive_dependency"
+try:
+    build_app(services, account_resolver=UnavailableAccountResolver())
+except ModuleNotFoundError as error:
+    assert error.name == "synthetic.transitive_dependency"
+else:
+    raise AssertionError("transitive import failures must remain visible")
+
+private_adapter_rejector.missing_name = "el.product.accounts"
+try:
+    build_app(services, account_resolver=UnavailableAccountResolver())
+except ValueError as error:
+    assert str(error) == "account mode is unavailable in this public distribution"
+else:
+    raise AssertionError("public account mode must fail closed")
+
+client = TestClient(build_app(ProductApi(services, local_actor(sessions))))
+assert client.get("/api/health").status_code == 200
+proposal = client.post("/api/v3/normalization-attempts", json={"input_text": "Gemini is going to be ranked #1 chatbot on LMSYS Chatbot Arena by the end of 2026."})
+assert proposal.status_code == 200, proposal.text
+p = proposal.json()
+accepted = client.post("/api/v3/normalization-attempts/" + p["normalization_attempt_id"] + "/accept", json={"expected_input_digest": p["input_digest"]})
+assert accepted.status_code == 200, accepted.text
+thesis_id = accepted.json()["thesis_analysis_id"]
+assert client.get("/api/v3/theses/" + thesis_id + "/accepted-state").status_code == 200
+pool = client.post("/api/v3/theses/" + thesis_id + "/market-pool")
+assert pool.status_code == 200, pool.text
+pool_id = pool.json()["market_display_set_id"]
+assert client.get("/api/v3/market-pools/" + pool_id).json() == pool.json()
+choice = client.post("/api/v3/market-pools/" + pool_id + "/choice", json={"selection_kind": "none"})
+assert choice.status_code == 200, choice.text
+assert client.get("/api/v3/market-choices/" + choice.json()["market_choice_id"]).json() == choice.json()
+assert "el.product.accounts" not in sys.modules
+
+import pytest
+raise SystemExit(pytest.main([
+    "-q",
+    "-p", "no:cacheprovider",
+    "tests/test_anonymous_demo.py",
+    "tests/test_product_resume.py",
+]))
+'''
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(destination)
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    result = subprocess.run(
+        [sys.executable, "-c", code], cwd=destination, env=environment,
+        text=True, capture_output=True, timeout=90,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_lockfile_is_exact_and_stale_source_fails(tmp_path: Path) -> None:

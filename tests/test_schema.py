@@ -27,8 +27,8 @@ def test_metadata_creates_on_sqlite(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path}/t.db")
     Base.metadata.create_all(engine)
     tables = set(Base.metadata.tables)
-    # The v3.1 migrations add durable source interpretation, explicit
-    # normalization, and bounded market-pool projections to the PR3 schema.
+    # The public schema includes bounded MCP usage and the visitor-owned demo
+    # plus manual-revisit graph on top of the v3.1 discovery tables.
     assert {
         "source_interpretation_requests",
         "source_interpretations",
@@ -41,8 +41,12 @@ def test_metadata_creates_on_sqlite(tmp_path):
         "market_display_sets",
         "market_display_items",
         "market_choices",
+        "mcp_usage_buckets",
+        "demo_sessions",
+        "thesis_revisions",
+        "revisit_packets",
     } <= tables
-    assert len(tables) == 34
+    assert len(tables) == 42
 
 
 def test_alembic_upgrade_matches_models(tmp_path):

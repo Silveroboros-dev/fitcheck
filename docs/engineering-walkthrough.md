@@ -2,7 +2,7 @@
 
 This walkthrough explains the engineering decisions represented in the public
 FitCheck distribution. It distinguishes inspectable implementation and tests
-from the private reference deployment and from integrations that are
+from historical private deployment records and from integrations that are
 deliberately excluded.
 
 The product-flow description below documents the predecessor reference and
@@ -172,13 +172,15 @@ demonstrates the product interaction and deterministic contracts without a
 provider account, cloud account, or model credential. It is not a production
 authentication, deployment, or multi-tenant reference.
 
-### Private operational statement
+### Historical operational context
 
-A reference service is operated separately on an IAM-private Cloud Run
-surface with Vertex AI and Cloud SQL behind a dedicated runtime identity. Its
-identifiers, deployment configuration, secrets, database, and operational
-evidence are intentionally excluded, so the public repository does not
-independently reproduce or attest that runtime.
+Historical project records document a June 2026 predecessor FitCheck MCP
+deployment on Cloud Run with Vertex AI and Cloud SQL. It was a FitCheck
+backend, not the separate Market Fit Trace Agent. This public distribution
+does not provide or claim a current live reference service, and the historical
+deployment's continued existence and current IAM state are not part of this
+release evidence. Operational identifiers, configuration, secrets, database
+state, and private evidence remain excluded.
 
 ### Not evidenced by the public artifact
 

@@ -10,7 +10,9 @@ review data, live-provider adapters, deployment state, or private history.
 2. `DATA_CARD.md` for fixture scope and limitations.
 3. `PUBLIC_REPO_BOUNDARY.md` for prohibited artifacts and release gates.
 4. `SECURITY.md` for vulnerability reporting.
-5. The selected contracts under `docs/` when changing those interfaces.
+5. `docs/fitcheck-frozen-market-demo-contract-v3.md` for the current synthetic
+   six-market journey.
+6. The selected contracts under `docs/` when changing those interfaces.
 
 ## Architecture invariants
 
@@ -28,11 +30,18 @@ review data, live-provider adapters, deployment state, or private history.
 ## Public-distribution rules
 
 - Retrieval is fixture-only. `MARKET_PROVIDER=polydata` deliberately fails closed.
-- Do not add credentials, live service identifiers, raw provider payloads,
-  governed rows, reviewer identities, free-form review notes, or local paths.
-- New fixtures must be project-authored synthetic material with documented
-  origin. Sanitized third-party material remains out of scope unless the owner
-  approves a separate rights review and boundary change.
+- Do not add credentials, live service identifiers, undeclared raw provider
+  payloads, governed rows, reviewer identities, free-form review notes, or
+  local paths.
+- New fixtures default to newly written minimal synthetic test abstractions
+  with documented origin. The six market fixtures and two event bindings in
+  the current source journey use FitCheck-owned schemas and preserve only the
+  required demo edge cases. They are not provider response bodies or provider
+  schemas; their IDs, URLs, timestamps, liquidity values, and relationships are
+  fabricated.
+  The minimal retained Hormuz rule projection remains a narrow boundary
+  exception for labelled fixture workflows; additions of external content need
+  a separate rights and boundary review.
 - Do not present fixture results as real-world accuracy or coverage evidence.
 - Keep offline tests independent of network, cloud accounts, and model credentials.
 

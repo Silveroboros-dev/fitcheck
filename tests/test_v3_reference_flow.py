@@ -12,8 +12,8 @@ from el.mcp.contracts import NotFound
 from el.product.api import ProductApi
 from el.product.app import build_app
 from el.product.wiring import (
-    HARBOR_REVISED_INPUT,
-    HARBOR_UI_REVISED_INPUT,
+    STABLECOIN_REVISED_INPUT,
+    STABLECOIN_UI_REVISED_INPUT,
     MULTI_THESIS_FIXTURE,
     HumanActor,
     build_services,
@@ -31,10 +31,10 @@ def _api(tmp_path) -> ProductApi:
 
 @pytest.mark.parametrize(
     "revised_input",
-    [HARBOR_REVISED_INPUT, HARBOR_UI_REVISED_INPUT],
+    [STABLECOIN_REVISED_INPUT, STABLECOIN_UI_REVISED_INPUT],
     ids=["legacy-double-newline", "current-ui-single-space"],
 )
-def test_public_fixture_api_completes_source_to_market_none(tmp_path, revised_input):
+def test_public_fixture_api_restores_accepted_source_without_market_claim(tmp_path, revised_input):
     api = _api(tmp_path)
     client = TestClient(build_app(api))
 
@@ -94,29 +94,9 @@ def test_public_fixture_api_completes_source_to_market_none(tmp_path, revised_in
     assert saved["restored_source"]["accepted_normalization_input"] == revised_input
     assert client.get(f"/api/v3/theses/{thesis_id}/accepted-state").json() == saved
 
-    pool = client.post(f"/api/v3/theses/{thesis_id}/market-pool")
-    assert pool.status_code == 200
-    assert pool.json()["displayed_count"] == 3
-    assert pool.json()["assessment_complete"] is True
-    assert pool.json()["accepted_thesis_summary"] == saved["accepted_thesis_summary"]
-    assert pool.json()["retrieval_scope"]["scope_kind"] == "frozen_snapshot"
-    for card in pool.json()["candidate_markets"]:
-        assert card["what_it_captures"].startswith("This contract tests ")
-        assert "Your accepted thesis:" in card["what_it_misses"]
-        assert card["resolution_conditions"]
-    announcement = next(
-        card
-        for card in pool.json()["candidate_markets"]
-        if card["market_id"] == "mkt_anthropic_ipo"
-    )
-    assert "An announcement does not establish" in announcement["what_it_misses"]
-
-    choice = client.post(
-        f"/api/v3/market-pools/{pool.json()['market_display_set_id']}/choice",
-        json={"selection_kind": "none"},
-    )
-    assert choice.status_code == 200
-    assert choice.json()["selection_kind"] == "none"
+    # This compatibility API checks accepted-source restoration only. The
+    # anonymous demo test asserts that no unrelated Phase-0 pool is displayed
+    # for this thesis while real candidate-bound markets are pending.
 
 
 def test_source_choice_is_owner_bound_and_none_never_starts_normalization(tmp_path):
@@ -168,7 +148,7 @@ def test_accepted_state_does_not_disclose_another_actors_source(tmp_path):
     revised = api.revise_normalization(
         first.normalization_attempt_id,
         expected_input_digest=first.input_digest,
-        input_text=HARBOR_REVISED_INPUT,
+        input_text=STABLECOIN_REVISED_INPUT,
     )
     accepted = api.accept_normalization(
         revised.normalization_attempt_id,

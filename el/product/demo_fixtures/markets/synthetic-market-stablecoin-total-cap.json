@@ -1,0 +1,16 @@
+{
+  "schema_version": "fitcheck.synthetic_market_fixture.v1",
+  "fixture_kind": "project_authored_synthetic",
+  "market_id": "synthetic-stablecoin-total-cap",
+  "title": "Will total stablecoin market capitalization reach $500 billion by December 31, 2026?",
+  "resolution_rules": "This project-authored synthetic market resolves Yes if the designated daily dataset records total stablecoin market capitalization at or above $500 billion on any day through December 31, 2026; otherwise it resolves No. A day's value is final when the next daily point is published.",
+  "condition_id": "synthetic-condition-stablecoin-total-cap",
+  "outcomes": [
+    "Yes",
+    "No"
+  ],
+  "close_at_utc": "2027-01-01T05:00:00Z",
+  "liquidity_usd": 2500.0,
+  "source_url": "https://example.invalid/fitcheck/markets/synthetic-stablecoin-total-cap",
+  "fixture_versioned_utc": "2026-10-15T00:00:00Z"
+}

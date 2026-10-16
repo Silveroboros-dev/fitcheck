@@ -14,8 +14,10 @@ docs/agent-guided-ui-contract-v0.md:
 """
 
 from datetime import timezone
+from functools import wraps
 from hashlib import sha256
 import json
+import os
 import uuid
 from typing import Any, ClassVar, Literal
 
@@ -37,10 +39,12 @@ from el.domain.tables import (
     CandidateSet,
     CandidateSetMember,
     FitCard,
+    Job,
     LedgerEntry,
     MarketAssessment,
     MarketDisplayItem,
     MarketDisplaySet,
+    MarketChoice,
     MarketRecommendation,
     MarketRulesCapture,
     MarketSnapshot,
@@ -55,6 +59,8 @@ from el.domain.tables import (
     ThesisAnalysis,
 )
 from el.extraction.service import NormalizationAttemptNotFound
+from el.jobs import JobNotFound
+from el.product.demo_frozen_markets import assessment_evidence, validate_frozen_display_pool
 from el.marketpool.service import MarketPoolConflict, MarketPoolNotFound
 from el.mcp.contracts import (
     BlindPriorRequired,
@@ -63,19 +69,31 @@ from el.mcp.contracts import (
     ToolRefused,
 )
 from el.mcp.vocab_guard import assert_a7_clean
+from el.product.founder_acceptance import (
+    FOUNDER_ACCEPTANCE_MANIFEST_VERSION,
+    founder_acceptance_manifest,
+    founder_acceptance_manifest_digest,
+)
 from el.product.wiring import (
     CLIENT_REF,
     MULTI_THESIS_FIXTURE,
-    HARBOR_CLARIFICATION_ANSWER,
-    HARBOR_CLARIFICATION_QUESTION,
-    ORCHARD_CLARIFICATION_ANSWER,
-    ORCHARD_CLARIFICATION_QUESTION,
+    ROBINHOOD_CLARIFICATION_ANSWER,
+    ROBINHOOD_CLARIFICATION_QUESTION,
+    STABLECOIN_CLARIFICATION_ANSWER,
+    STABLECOIN_CLARIFICATION_QUESTION,
     HumanActor,
     ProductServices,
 )
 from el.retrieval.scope import (
     CandidateSetRetrievalScope,
     persisted_candidate_set_scope,
+)
+from el.retrieval.gamma_config import GammaBindingUnavailable
+from el.revisit.service import RevisitService
+from el.sourceinterpretation.binding import (
+    DurableSourceBindingError,
+    SOURCE_INTERPRETATION_JOB_TYPE,
+    require_durable_source_binding,
 )
 from el.sourceinterpretation.service import (
     SourceCandidateChoiceConflict,
@@ -90,6 +108,73 @@ class ProposerUnavailable(Exception):
     def __init__(self, detail: str):
         self.detail = detail
         super().__init__(detail)
+
+
+def _trace_normalization(method):
+    """Emit only a bounded operational normalization outcome."""
+
+    @wraps(method)
+    def _wrapped(self, *args, **kwargs):
+        telemetry = self._s.source_interpretation_jobs.telemetry
+        span_name = (
+            "fitcheck.normalization.decision"
+            if method.__name__ in {"accept_normalization", "reject_normalization"}
+            else "fitcheck.normalization.propose"
+        )
+        with telemetry.span(span_name) as span:
+            span.set_attributes({"fitcheck.operation": "normalization"})
+            try:
+                result = method(self, *args, **kwargs)
+            except NotFound:
+                span.set_attributes({"fitcheck.outcome": "not_found"})
+                self._s.source_interpretation_jobs.events.emit(
+                    event_name="fitcheck.normalization.operation",
+                    severity="WARNING",
+                    operation="normalization",
+                    stage="operation",
+                    transport_outcome="not_applicable",
+                    effect_outcome="not_applicable",
+                    capture_outcome="not_assessed",
+                    task_outcome="not_found",
+                    traceparent=telemetry.current_traceparent(),
+                )
+                raise
+            except Exception:
+                span.set_attributes({"fitcheck.outcome": "failed"})
+                self._s.source_interpretation_jobs.events.emit(
+                    event_name="fitcheck.normalization.operation",
+                    severity="ERROR",
+                    operation="normalization",
+                    stage="operation",
+                    task_outcome="failed",
+                    traceparent=telemetry.current_traceparent(),
+                )
+                raise
+            outcome = getattr(result, "outcome", None)
+            span.set_attributes(
+                {
+                    "fitcheck.outcome": (
+                        outcome
+                        if outcome in {"refusal", "clarification"}
+                        else "succeeded"
+                    )
+                }
+            )
+            self._s.source_interpretation_jobs.events.emit(
+                event_name="fitcheck.normalization.operation",
+                severity="INFO",
+                operation="normalization",
+                stage="operation",
+                task_outcome=(
+                    outcome
+                    if outcome in {"refusal", "clarification"}
+                    else "succeeded"
+                ),
+                traceparent=telemetry.current_traceparent(),
+            )
+            return result
+
+    return _wrapped
 
 
 class _Out(BaseModel):
@@ -172,6 +257,16 @@ class AcceptedThesisStateUiOut(_Out):
     )
 
 
+class AccountStateUiOut(_Out):
+    """Bounded IDs for resuming the latest human-owned discovery journey."""
+
+    latest_source_interpretation_id: uuid.UUID | None
+    latest_source_interpretation_job_id: uuid.UUID | None
+    latest_accepted_thesis_analysis_id: uuid.UUID | None
+    latest_market_display_set_id: uuid.UUID | None
+    latest_market_choice_id: uuid.UUID | None
+
+
 class SourceThesisCandidateUiOut(_Out):
     source_thesis_candidate_id: uuid.UUID
     ordinal: int
@@ -205,6 +300,23 @@ class SourceCandidateChoiceUiOut(_Out):
     selection_kind: str
     source_thesis_candidate_id: uuid.UUID | None
     created_at: str
+
+
+class SourceInterpretationJobUiOut(_Out):
+    job_id: uuid.UUID
+    source_interpretation_request_id: uuid.UUID
+    input_digest: str | None
+    status: str
+    stage: str | None
+    created: bool | None
+    error_code: str | None
+    safe_error_message: str | None
+    interpretation: SourceInterpretationUiOut | None
+    created_at: str
+    updated_at: str
+    SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {"interpretation.candidates[].selected_source_quote"}
+    )
 
 
 class BlindPriorOut(_Out):
@@ -284,6 +396,7 @@ class MarketAssessmentUiOut(_Out):
     authority: str
     snapshot_id: str
     rules_capture_id: uuid.UUID
+    frozen_demo_evidence: dict | None = None
     SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
         {"market_title", "resolution_conditions"}
     )
@@ -368,13 +481,53 @@ class ProductApi:
         self._s = services
         self._actor = actor
         self._sessions: sessionmaker[Session] = services.session_factory
+        self._revisit = RevisitService(
+            self._sessions, user_id=actor.user_id, actor_id=actor.actor_id,
+            agent_client_id=actor.agent_client_id, mode=services.mode,
+        )
+
+    def activate_revisit(self, market_choice_id: uuid.UUID) -> dict:
+        return self._revisit.activate(market_choice_id)
+
+    def get_revisit_activation(self, market_choice_id: uuid.UUID) -> dict:
+        return self._revisit.activation_for_choice(market_choice_id)
+
+    def check_revisit(
+        self, revision_id: uuid.UUID, *, idempotency_key: str,
+        fixture_scenario: str | None = None,
+        capture_id: uuid.UUID | None = None,
+    ) -> dict:
+        return self._revisit.check(
+            revision_id, idempotency_key=idempotency_key,
+            fixture_scenario=fixture_scenario, capture_id=capture_id,
+        )
+
+    def get_revisit(self, revision_id: uuid.UUID) -> dict:
+        return self._revisit.read(revision_id)
+
+    def decide_revisit(
+        self, packet_id: uuid.UUID, *, action: str,
+        expected_revision_digest: str, expected_observation_id: uuid.UUID,
+    ) -> dict:
+        return self._revisit.decide(
+            packet_id, action=action,
+            expected_revision_digest=expected_revision_digest,
+            expected_observation_id=expected_observation_id,
+        )
 
     @property
     def mode(self) -> str:
         return self._s.mode
 
     def _guard(self, model: _Out) -> _Out:
-        assert_a7_clean(model.model_dump(mode="json"), source_paths=model.SOURCE_PATHS)
+        payload = model.model_dump(mode="json")
+        source_paths = model.SOURCE_PATHS
+        if isinstance(model, FitCardOut):
+            from el.fitgate.source_quote_boundary import verified_advisory_source_paths
+
+            with self._sessions() as session:
+                source_paths |= verified_advisory_source_paths(payload, session)
+        assert_a7_clean(payload, source_paths=source_paths)
         return model
 
     @staticmethod
@@ -444,6 +597,31 @@ class ProductApi:
         )
 
     # --- Product Discovery v3 normalization confirmation -------------------
+    def _source_interpretation_out(self, outcome) -> SourceInterpretationUiOut:
+        return SourceInterpretationUiOut(
+            source_interpretation_id=outcome.source_interpretation_id,
+            outcome=outcome.outcome,
+            input_digest=outcome.input_digest,
+            reasons=outcome.reasons,
+            prompt_policy_version=outcome.prompt_policy_version,
+            system_variant_id=outcome.system_variant_id,
+            model_adapter=outcome.model_adapter,
+            model_run_id=outcome.model_run_id,
+            candidates=[
+                SourceThesisCandidateUiOut(
+                    source_thesis_candidate_id=(
+                        candidate.source_thesis_candidate_id
+                    ),
+                    ordinal=candidate.ordinal,
+                    selected_source_quote=candidate.selected_source_quote,
+                    source_quote_digest=candidate.source_quote_digest,
+                    claim_summary=candidate.claim_summary,
+                )
+                for candidate in outcome.candidates
+            ],
+            created_at=self._iso_utc(outcome.created_at),
+        )
+
     def interpret_source(
         self, input_text: str, *, source_url: str | None = None
     ) -> SourceInterpretationUiOut:
@@ -460,33 +638,181 @@ class ProductApi:
                 "checked-in fixture sources; paste one of those or run in "
                 "gemini mode"
             )
+        return self._guard(self._source_interpretation_out(outcome))
+
+    def submit_source_interpretation(
+        self,
+        input_text: str,
+        *,
+        source_url: str | None,
+        idempotency_key: str,
+    ) -> SourceInterpretationJobUiOut:
+        submitted = self._s.source_interpretation_jobs.submit(
+            input_text,
+            source_url=source_url,
+            idempotency_key=idempotency_key,
+            owner_client_type=self._actor.client_type.value,
+            owner_actor_id=self._actor.actor_id,
+            agent_client_id=self._actor.agent_client_id,
+            owner_user_id=self._actor.user_id,
+        )
         return self._guard(
-            SourceInterpretationUiOut(
-                source_interpretation_id=outcome.source_interpretation_id,
-                outcome=outcome.outcome,
-                input_digest=outcome.input_digest,
-                reasons=outcome.reasons,
-                prompt_policy_version=outcome.prompt_policy_version,
-                system_variant_id=outcome.system_variant_id,
-                model_adapter=outcome.model_adapter,
-                model_run_id=outcome.model_run_id,
-                candidates=[
-                    SourceThesisCandidateUiOut(
-                        source_thesis_candidate_id=(
-                            candidate.source_thesis_candidate_id
-                        ),
-                        ordinal=candidate.ordinal,
-                        selected_source_quote=(
-                            candidate.selected_source_quote
-                        ),
-                        source_quote_digest=candidate.source_quote_digest,
-                        claim_summary=candidate.claim_summary,
-                    )
-                    for candidate in outcome.candidates
-                ],
-                created_at=self._iso_utc(outcome.created_at),
+            SourceInterpretationJobUiOut(
+                job_id=submitted.job_id,
+                source_interpretation_request_id=(
+                    submitted.source_interpretation_request_id
+                ),
+                input_digest=submitted.input_digest,
+                status=submitted.status,
+                stage=submitted.stage,
+                created=submitted.created,
+                error_code=None,
+                safe_error_message=None,
+                interpretation=None,
+                created_at=self._iso_utc(submitted.created_at),
+                updated_at=self._iso_utc(submitted.updated_at),
             )
         )
+
+    def get_source_interpretation_job(
+        self, job_id: uuid.UUID
+    ) -> SourceInterpretationJobUiOut:
+        try:
+            status = self._s.source_interpretation_jobs.get_owned(
+                job_id,
+                owner_client_type=self._actor.client_type.value,
+                owner_actor_id=self._actor.actor_id,
+                agent_client_id=self._actor.agent_client_id,
+            )
+        except (JobNotFound, SourceInterpretationNotFound, RuntimeError, ValueError) as exc:
+            raise NotFound("source interpretation job not found") from exc
+        if status.interpretation is not None:
+            with self._sessions() as session:
+                self._owned_source_interpretation(
+                    session, status.interpretation.source_interpretation_id
+                )
+        interpretation = (
+            self._source_interpretation_out(status.interpretation)
+            if status.interpretation is not None
+            else None
+        )
+        return self._guard(
+            SourceInterpretationJobUiOut(
+                job_id=status.job_id,
+                source_interpretation_request_id=(
+                    status.source_interpretation_request_id
+                ),
+                input_digest=status.input_digest,
+                status=status.status,
+                stage=status.stage,
+                created=None,
+                error_code=status.error_code,
+                safe_error_message=status.safe_error_message,
+                interpretation=interpretation,
+                created_at=self._iso_utc(status.created_at),
+                updated_at=self._iso_utc(status.updated_at),
+            )
+        )
+
+    def get_source_interpretation_job_by_idempotency(
+        self, idempotency_key: str
+    ) -> SourceInterpretationJobUiOut:
+        try:
+            status = self._s.source_interpretation_jobs.get_by_idempotency_owned(
+                idempotency_key,
+                owner_client_type=self._actor.client_type.value,
+                owner_actor_id=self._actor.actor_id,
+                agent_client_id=self._actor.agent_client_id,
+            )
+        except (JobNotFound, SourceInterpretationNotFound, RuntimeError, ValueError) as exc:
+            raise NotFound("source interpretation job not found") from exc
+        if status.interpretation is not None:
+            with self._sessions() as session:
+                self._owned_source_interpretation(
+                    session, status.interpretation.source_interpretation_id
+                )
+        interpretation = (
+            self._source_interpretation_out(status.interpretation)
+            if status.interpretation is not None
+            else None
+        )
+        return self._guard(
+            SourceInterpretationJobUiOut(
+                job_id=status.job_id,
+                source_interpretation_request_id=(
+                    status.source_interpretation_request_id
+                ),
+                input_digest=status.input_digest,
+                status=status.status,
+                stage=status.stage,
+                created=None,
+                error_code=status.error_code,
+                safe_error_message=status.safe_error_message,
+                interpretation=interpretation,
+                created_at=self._iso_utc(status.created_at),
+                updated_at=self._iso_utc(status.updated_at),
+            )
+        )
+
+    def _owned_source_interpretation(
+        self, session: Session, interpretation_id: uuid.UUID
+    ) -> SourceInterpretation:
+        missing = NotFound("source interpretation not found")
+        row = session.get(SourceInterpretation, interpretation_id)
+        if (
+            self._actor.client_type != ClientType.HUMAN_UI
+            or row is None
+            or row.client_type != ClientType.HUMAN_UI.value
+            or row.agent_client_id != self._actor.agent_client_id
+        ):
+            raise missing
+        candidates = session.scalars(
+            select(SourceThesisCandidate).where(
+                SourceThesisCandidate.source_interpretation_id == row.id
+            )
+        ).all()
+        if (
+            (row.input_text is None and candidates)
+            or (row.input_text is not None and
+                row.input_digest != sha256(row.input_text.encode("utf-8")).hexdigest())
+            or any(
+                row.input_text is None
+                or candidate.selected_source_quote not in row.input_text
+                or candidate.source_quote_digest != sha256(
+                    candidate.selected_source_quote.encode("utf-8")
+                ).hexdigest()
+                for candidate in candidates
+            )
+        ):
+            raise missing
+        try:
+            require_durable_source_binding(
+                session,
+                row,
+                owner_client_type=ClientType.HUMAN_UI.value,
+                owner_actor_id=self._actor.actor_id,
+                owner_user_id=self._actor.user_id,
+                agent_client_id=self._actor.agent_client_id,
+            )
+        except DurableSourceBindingError:
+            raise missing
+        return row
+
+    def get_source_interpretation(
+        self, interpretation_id: uuid.UUID
+    ) -> SourceInterpretationUiOut:
+        """Read a persisted source proposal; never interpret it again."""
+        with self._sessions() as session:
+            self._owned_source_interpretation(session, interpretation_id)
+        try:
+            outcome = self._s.source_interpretation.get_owned(
+                interpretation_id,
+                client_type=ClientType.HUMAN_UI.value,
+                agent_client_id=self._actor.agent_client_id,
+            )
+        except SourceInterpretationNotFound as exc:
+            raise NotFound("source interpretation not found") from exc
+        return self._guard(self._source_interpretation_out(outcome))
 
     def choose_source_candidate(
         self,
@@ -520,6 +846,7 @@ class ProductApi:
             )
         )
 
+    @_trace_normalization
     def propose_selected_normalization(
         self, source_thesis_candidate_id: uuid.UUID
     ) -> NormalizationAttemptUiOut:
@@ -550,6 +877,7 @@ class ProductApi:
             )
         return self._attempt_out(outcome)
 
+    @_trace_normalization
     def propose_normalization(
         self, input_text: str, *, source_url: str | None = None
     ) -> NormalizationAttemptUiOut:
@@ -570,6 +898,7 @@ class ProductApi:
             )
         return self._attempt_out(outcome)
 
+    @_trace_normalization
     def accept_normalization(
         self,
         attempt_id: uuid.UUID,
@@ -591,27 +920,38 @@ class ProductApi:
     def get_accepted_thesis_state(
         self, thesis_analysis_id: uuid.UUID
     ) -> AcceptedThesisStateUiOut:
-        """Read an owned acceptance and its verified historical source chain."""
+        """Return one existing local-human acceptance without changing state.
 
-        missing = NotFound("accepted thesis state not found")
+        Thesis ownership alone is insufficient: a resume view must be backed by
+        the exact durable ``accept`` decision and its candidate attempt.  All
+        negative cases intentionally collapse to ``NotFound`` so a guessed id
+        cannot disclose another actor's thesis or whether it was accepted.
+        """
+
         if self._actor.client_type != ClientType.HUMAN_UI:
-            raise missing
+            raise NotFound("accepted thesis state not found")
         with self._sessions() as session:
             thesis = session.get(ThesisAnalysis, thesis_analysis_id)
             if (
                 thesis is None
                 or thesis.client_type != ClientType.HUMAN_UI.value
                 or thesis.agent_client_id != self._actor.agent_client_id
+                or (isinstance(thesis.extracted_structure, dict) and
+                    thesis.extracted_structure.get("reconstructed")
+                    == "public-demo-hormuz-reconstruction-v1")
             ):
-                raise missing
+                raise NotFound("accepted thesis state not found")
             decision = session.scalar(
                 select(NormalizationDecision).where(
                     NormalizationDecision.thesis_analysis_id == thesis_analysis_id,
                     NormalizationDecision.action == "accept",
                 )
             )
-            if decision is None or decision.actor_id != self._actor.actor_id:
-                raise missing
+            if (
+                decision is None
+                or decision.actor_id != self._actor.actor_id
+            ):
+                raise NotFound("accepted thesis state not found")
             attempt = session.get(NormalizationAttempt, decision.attempt_id)
             if (
                 attempt is None
@@ -620,8 +960,8 @@ class ProductApi:
                 or attempt.agent_client_id != self._actor.agent_client_id
                 or attempt.input_text != thesis.input_text
             ):
-                raise missing
-            source = self._restored_source_for_acceptance(
+                raise NotFound("accepted thesis state not found")
+            restored_source = self._restored_source_for_acceptance(
                 session, thesis.id, decision.id, attempt
             )
             return self._guard(
@@ -631,9 +971,140 @@ class ProductApi:
                     normalization_decision_id=decision.id,
                     accepted_at=self._iso_utc(decision.created_at),
                     acceptance_origin=ClientType.HUMAN_UI.value,
-                    restored_source=source,
+                    restored_source=restored_source,
                 )
             )
+
+    def get_account_state(self) -> AccountStateUiOut:
+        """Discover only the latest owned IDs; this performs no proposal work."""
+        if self._actor.client_type != ClientType.HUMAN_UI:
+            raise NotFound("account state not found")
+        with self._sessions() as session:
+            source_ids = session.scalars(
+                select(SourceInterpretation.id)
+                .where(
+                    SourceInterpretation.client_type == ClientType.HUMAN_UI.value,
+                    SourceInterpretation.agent_client_id == self._actor.agent_client_id,
+                )
+                .order_by(
+                    SourceInterpretation.created_at.desc(),
+                    SourceInterpretation.id.desc(),
+                )
+                .limit(20)
+            ).all()
+            latest_source_id = None
+            for source_id in source_ids:
+                try:
+                    self._owned_source_interpretation(session, source_id)
+                except NotFound:
+                    continue
+                latest_source_id = source_id
+                break
+            job_ids = session.scalars(
+                select(Job.id)
+                .where(
+                    Job.job_type == SOURCE_INTERPRETATION_JOB_TYPE,
+                    Job.owner_client_type == ClientType.HUMAN_UI.value,
+                    Job.owner_actor_id == self._actor.actor_id,
+                    Job.owner_user_id == self._actor.user_id,
+                )
+                .order_by(Job.created_at.desc(), Job.id.desc())
+                .limit(20)
+            ).all()
+            thesis_ids = session.scalars(
+                select(ThesisAnalysis.id)
+                .join(
+                    NormalizationDecision,
+                    NormalizationDecision.thesis_analysis_id == ThesisAnalysis.id,
+                )
+                .join(
+                    NormalizationAttempt,
+                    NormalizationAttempt.id == NormalizationDecision.attempt_id,
+                )
+                .where(
+                    ThesisAnalysis.client_type == ClientType.HUMAN_UI.value,
+                    ThesisAnalysis.agent_client_id == self._actor.agent_client_id,
+                    NormalizationDecision.action == "accept",
+                    NormalizationDecision.actor_id == self._actor.actor_id,
+                    NormalizationAttempt.client_type == ClientType.HUMAN_UI.value,
+                    NormalizationAttempt.agent_client_id == self._actor.agent_client_id,
+                )
+                .order_by(
+                    NormalizationDecision.created_at.desc(),
+                    NormalizationDecision.id.desc(),
+                )
+                .limit(20)
+            ).all()
+        latest_job_id = None
+        for job_id in job_ids:
+            try:
+                status = self.get_source_interpretation_job(job_id)
+            except (NotFound, RuntimeError):
+                continue
+            with self._sessions() as session:
+                request = session.get(
+                    SourceInterpretationRequest,
+                    status.source_interpretation_request_id,
+                )
+                if (
+                    request is None
+                    or request.owner_client_type != ClientType.HUMAN_UI.value
+                    or request.owner_actor_id != self._actor.actor_id
+                    or request.agent_client_id != self._actor.agent_client_id
+                    or request.input_digest != status.input_digest
+                ):
+                    continue
+            latest_job_id = job_id
+            break
+        latest_thesis_id = None
+        for thesis_id in thesis_ids:
+            try:
+                self.get_accepted_thesis_state(thesis_id)
+            except NotFound:
+                continue
+            latest_thesis_id = thesis_id
+            break
+        latest_pool_id = None
+        latest_choice_id = None
+        if latest_thesis_id is not None:
+            with self._sessions() as session:
+                pool_ids = session.scalars(
+                    select(MarketDisplaySet.id)
+                    .where(MarketDisplaySet.thesis_analysis_id == latest_thesis_id)
+                    .order_by(
+                        MarketDisplaySet.created_at.desc(),
+                        MarketDisplaySet.id.desc(),
+                    )
+                    .limit(20)
+                ).all()
+            for pool_id in pool_ids:
+                try:
+                    self.get_market_pool(pool_id)
+                except (NotFound, MarketPoolConflict):
+                    continue
+                latest_pool_id = pool_id
+                break
+            if latest_pool_id is not None:
+                with self._sessions() as session:
+                    choice_id = session.scalar(
+                        select(MarketChoice.id).where(
+                            MarketChoice.market_display_set_id == latest_pool_id
+                        )
+                    )
+                if choice_id is not None:
+                    try:
+                        self.get_market_choice(choice_id)
+                    except (NotFound, MarketPoolConflict):
+                        pass
+                    else:
+                        latest_choice_id = choice_id
+        return self._guard(AccountStateUiOut(
+            latest_source_interpretation_id=latest_source_id,
+            latest_source_interpretation_job_id=latest_job_id,
+            latest_accepted_thesis_analysis_id=latest_thesis_id,
+            latest_market_display_set_id=latest_pool_id,
+            latest_market_choice_id=latest_choice_id,
+        ))
 
     def _restored_source_for_acceptance(
         self,
@@ -642,7 +1113,12 @@ class ProductApi:
         decision_id: uuid.UUID,
         accepted_attempt: NormalizationAttempt,
     ) -> RestoredSourceUiOut | None:
-        """Follow accepted edits to the selected source, failing closed on drift."""
+        """Follow immutable edits to the human-chosen source, if one exists.
+
+        A legacy direct normalization has no source lineage and returns None.
+        A partial or mismatched lineage fails closed rather than pairing a
+        different person's source with an accepted thesis.
+        """
 
         missing = NotFound("accepted thesis state not found")
         attempt = accepted_attempt
@@ -686,9 +1162,12 @@ class ProductApi:
         else:
             raise missing
 
-        interpretation = session.get(
-            SourceInterpretation, attempt.source_interpretation_id
-        )
+        try:
+            interpretation = self._owned_source_interpretation(
+                session, attempt.source_interpretation_id
+            )
+        except NotFound as exc:
+            raise missing from exc
         candidate = session.get(
             SourceThesisCandidate, attempt.source_thesis_candidate_id
         )
@@ -728,24 +1207,12 @@ class ProductApi:
             != sha256(quote.encode("utf-8")).hexdigest()
         ):
             raise missing
-        request_id = interpretation.source_interpretation_request_id
-        if request_id is not None:
-            request = session.get(SourceInterpretationRequest, request_id)
-            if (
-                request is None
-                or request.owner_client_type != ClientType.HUMAN_UI.value
-                or request.owner_actor_id != self._actor.actor_id
-                or request.agent_client_id != self._actor.agent_client_id
-                or request.input_text != source_text
-                or request.input_digest != interpretation.input_digest
-                or request.source_url != interpretation.source_url
-            ):
-                raise missing
-
         return RestoredSourceUiOut(
             thesis_analysis_id=thesis_id,
             normalization_decision_id=decision_id,
-            source_interpretation_request_id=request_id,
+            source_interpretation_request_id=(
+                interpretation.source_interpretation_request_id
+            ),
             source_interpretation_id=interpretation.id,
             source_thesis_candidate_id=candidate.id,
             source_candidate_choice_id=choice.id,
@@ -755,6 +1222,7 @@ class ProductApi:
             source_url=interpretation.source_url,
         )
 
+    @_trace_normalization
     def reject_normalization(
         self,
         attempt_id: uuid.UUID,
@@ -775,6 +1243,7 @@ class ProductApi:
             self._normalization_not_found(exc)
         return self._decision_out(outcome)
 
+    @_trace_normalization
     def revise_normalization(
         self,
         attempt_id: uuid.UUID,
@@ -816,6 +1285,8 @@ class ProductApi:
             )
         except MarketPoolNotFound as exc:
             raise NotFound("confirmed thesis not found") from exc
+        except GammaBindingUnavailable as exc:
+            raise ProposerUnavailable(str(exc)) from exc
         return self._market_pool_out(outcome.market_display_set_id)
 
     def _market_pool_out(
@@ -827,16 +1298,26 @@ class ProductApi:
             )
             if display_set is None:
                 raise NotFound("market pool not found")
+            thesis = session.get(ThesisAnalysis, display_set.thesis_analysis_id)
+            if (
+                thesis is None
+                or thesis.client_type != self._actor.client_type.value
+                or thesis.agent_client_id != self._actor.agent_client_id
+            ):
+                raise NotFound("market pool not found")
             snapshot = session.get(MarketSnapshot, display_set.snapshot_id)
             if snapshot is None:
                 raise MarketPoolConflict("market pool snapshot is missing")
-            thesis = session.get(ThesisAnalysis, display_set.thesis_analysis_id)
-            if thesis is None:
-                raise MarketPoolConflict("market pool accepted thesis is missing")
-            candidate_set = session.get(CandidateSet, display_set.candidate_set_id)
+            fit_card = session.get(FitCard, display_set.fit_card_id)
+            if fit_card is None or fit_card.thesis_analysis_id != thesis.id:
+                raise MarketPoolConflict("market pool fit-card binding is invalid")
+            candidate_set = session.get(
+                CandidateSet, display_set.candidate_set_id
+            )
             if (
                 candidate_set is None
-                or candidate_set.thesis_analysis_id != display_set.thesis_analysis_id
+                or candidate_set.thesis_analysis_id
+                != display_set.thesis_analysis_id
                 or candidate_set.snapshot_id != display_set.snapshot_id
             ):
                 raise MarketPoolConflict("market pool candidate-set binding is invalid")
@@ -870,6 +1351,9 @@ class ProductApi:
                 capture = session.get(
                     MarketRulesCapture, assessment.rules_capture_id
                 )
+                member = session.get(
+                    CandidateSetMember, assessment.candidate_set_member_id
+                )
                 if (
                     assessment.thesis_analysis_id
                     != display_set.thesis_analysis_id
@@ -880,6 +1364,9 @@ class ProductApi:
                     or capture is None
                     or capture.market_id != assessment.market_id
                     or capture.snapshot_id != assessment.snapshot_id
+                    or member is None
+                    or member.candidate_set_id != display_set.candidate_set_id
+                    or member.market_id != assessment.market_id
                 ):
                     raise MarketPoolConflict(
                         "cross-bound market assessment cannot be rendered"
@@ -904,12 +1391,14 @@ class ProductApi:
                         authority=assessment.authority,
                         snapshot_id=assessment.snapshot_id,
                         rules_capture_id=assessment.rules_capture_id,
+                        frozen_demo_evidence=assessment_evidence(assessment, thesis, capture, fit_card),
                     )
                 )
             if [card.display_rank for card in cards] != list(
                 range(1, len(cards) + 1)
             ):
                 raise MarketPoolConflict("display ranks are not contiguous")
+            validate_frozen_display_pool(display_set, thesis, cards)
             return self._guard(
                 MarketPoolUiOut(
                     market_display_set_id=display_set.id,
@@ -931,6 +1420,48 @@ class ProductApi:
                 )
             )
 
+    def get_market_pool(self, market_display_set_id: uuid.UUID) -> MarketPoolUiOut:
+        """Read the original persisted projection after its human acceptance."""
+        with self._sessions() as session:
+            display_set = session.get(MarketDisplaySet, market_display_set_id)
+            if display_set is None:
+                raise NotFound("market pool not found")
+            thesis_id = display_set.thesis_analysis_id
+        self.get_accepted_thesis_state(thesis_id)
+        return self._market_pool_out(market_display_set_id)
+
+    def get_market_choice(self, market_choice_id: uuid.UUID) -> MarketChoiceUiOut:
+        """Read an actor's original explicit market or none decision."""
+        with self._sessions() as session:
+            choice = session.get(MarketChoice, market_choice_id)
+            if (
+                choice is None
+                or choice.client_type != ClientType.HUMAN_UI.value
+                or choice.actor_id != self._actor.actor_id
+            ):
+                raise NotFound("market choice not found")
+            pool_id = choice.market_display_set_id
+            selection_kind = choice.selection_kind
+            assessment_id = choice.market_assessment_id
+            created_at = choice.created_at
+        pool = self.get_market_pool(pool_id)
+        displayed_ids = {
+            item.market_assessment_id for item in pool.candidate_markets
+        }
+        if (
+            (selection_kind == "market" and assessment_id not in displayed_ids)
+            or (selection_kind == "none" and assessment_id is not None)
+            or selection_kind not in {"market", "none"}
+        ):
+            raise MarketPoolConflict("market choice binding is invalid")
+        return self._guard(MarketChoiceUiOut(
+            market_choice_id=market_choice_id,
+            market_display_set_id=pool_id,
+            selection_kind=selection_kind,
+            market_assessment_id=assessment_id,
+            created_at=self._iso_utc(created_at),
+        ))
+
     def choose_market(
         self,
         market_display_set_id: uuid.UUID,
@@ -940,6 +1471,18 @@ class ProductApi:
         reason: str | None = None,
     ) -> MarketChoiceUiOut:
         try:
+            with self._sessions() as session:
+                display_set = session.get(MarketDisplaySet, market_display_set_id)
+                frozen = (display_set is not None
+                          and display_set.snapshot_id.startswith("frozen-demo-"))
+                if frozen:
+                    self._s.market_pool._owned_display_set(
+                        session, market_display_set_id,
+                        client_type=self._actor.client_type.value,
+                        agent_client_id=self._actor.agent_client_id,
+                    )
+            if frozen:
+                self._market_pool_out(market_display_set_id)
             outcome = self._s.market_pool.choose(
                 market_display_set_id,
                 selection_kind=selection_kind,
@@ -1379,9 +1922,41 @@ class ProductApi:
             return self._guard(result)
 
     def stats(self) -> dict[str, Any]:
+        founder_acceptance_enabled = (
+            self._s.mode == "fixture"
+            and os.environ.get("FITCHECK_FOUNDER_ACCEPTANCE") == "1"
+        )
         with self._sessions() as s:
             return {
                 "mode": self._s.mode,
+                "founder_acceptance": (
+                    {
+                        "enabled": True,
+                        "evidence_scope": "fixture_ux_and_authority_only",
+                        "human_acceptance": "pending",
+                        "git_head": os.environ.get(
+                            "FITCHECK_ACCEPTANCE_GIT_HEAD", "unbound"
+                        ),
+                        "worktree_digest": os.environ.get(
+                            "FITCHECK_ACCEPTANCE_WORKTREE_DIGEST", "unbound"
+                        ),
+                        "session_url": os.environ.get(
+                            "FITCHECK_ACCEPTANCE_URL", "unbound"
+                        ),
+                        "database_path": os.environ.get(
+                            "FITCHECK_ACCEPTANCE_DATABASE_PATH", "unbound"
+                        ),
+                        "manifest_version": (
+                            FOUNDER_ACCEPTANCE_MANIFEST_VERSION
+                        ),
+                        "manifest_digest": (
+                            founder_acceptance_manifest_digest()
+                        ),
+                        "cases": founder_acceptance_manifest(),
+                    }
+                    if founder_acceptance_enabled
+                    else {"enabled": False}
+                ),
                 "fixture_source_examples": (
                     [MULTI_THESIS_FIXTURE]
                     if self._s.mode == "fixture"
@@ -1390,12 +1965,12 @@ class ProductApi:
                 "fixture_clarification_examples": (
                     [
                         {
-                            "question": HARBOR_CLARIFICATION_QUESTION,
-                            "answer": HARBOR_CLARIFICATION_ANSWER,
+                            "question": STABLECOIN_CLARIFICATION_QUESTION,
+                            "answer": STABLECOIN_CLARIFICATION_ANSWER,
                         },
                         {
-                            "question": ORCHARD_CLARIFICATION_QUESTION,
-                            "answer": ORCHARD_CLARIFICATION_ANSWER,
+                            "question": ROBINHOOD_CLARIFICATION_QUESTION,
+                            "answer": ROBINHOOD_CLARIFICATION_ANSWER,
                         },
                     ]
                     if self._s.mode == "fixture"

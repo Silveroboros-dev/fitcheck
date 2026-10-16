@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from el.domain.contracts import ThesisAnalysisIn
 from el.domain.tables import (
     CandidateSet,
+    FitCard,
     MarketAssessment,
     MarketDisplayItem,
     MarketDisplaySet,
@@ -31,6 +32,7 @@ from el.extraction.service import (
     NormalizationAttemptNotFound,
 )
 from el.jobs import IdempotencyConflict, JobNotFound
+from el.product.demo_frozen_markets import assessment_evidence, validate_frozen_display_pool
 from el.marketpool.service import (
     MarketPoolConflict,
     MarketPoolNotFound,
@@ -508,6 +510,7 @@ class McpV3Tools:
                             authority=assessment.authority,
                             snapshot_id=assessment.snapshot_id,
                             rules_capture_id=assessment.rules_capture_id,
+                            frozen_demo_evidence=assessment_evidence(assessment, thesis, capture, session.get(FitCard, assessment.fit_card_id)),
                         )
                     )
                 if [card.display_rank for card in cards] != list(
@@ -520,6 +523,7 @@ class McpV3Tools:
                     raise MarketPoolConflict(
                         "displayed market identities are not unique"
                     )
+                validate_frozen_display_pool(display_set, thesis, cards)
                 projected_complete, projected_outcome, projected_reasons = (
                     project_pool_outcome(
                         [card.pair_class for card in cards],
@@ -569,6 +573,12 @@ class McpV3Tools:
         reason: str | None = None,
     ) -> V3MarketChoiceResult:
         try:
+            with self._sessions() as session:
+                display_set = session.get(MarketDisplaySet, market_display_set_id)
+                frozen = (display_set is not None
+                          and display_set.snapshot_id.startswith("frozen-demo-"))
+            if frozen:
+                self._market_pool_out(principal, market_display_set_id)
             outcome = self._market_pool.choose(
                 market_display_set_id,
                 selection_kind=selection_kind,

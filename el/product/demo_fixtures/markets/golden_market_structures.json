@@ -1,0 +1,292 @@
+{
+  "name": "synthetic_market_structures_v1",
+  "provenance": "Wholly authored public fixture structures paired with the synthetic frozen snapshot; not governed review data or evaluation evidence.",
+  "structures": [
+    {
+      "schema_version": 1,
+      "market_id": "mkt_gemini_lmsys_1",
+      "snapshot_id": "phase0-frozen-20260522",
+      "event_stage": "measured",
+      "metric": {
+        "what": "rank #1 (or tied) on the English LMSYS Chatbot Arena leaderboard",
+        "measured_by": "LMSYS Chatbot Arena leaderboard",
+        "objective": true
+      },
+      "horizon": {
+        "resolution_date": "2026-12-31",
+        "timezone": "America/New_York"
+      },
+      "entities": [
+        {
+          "name": "Google Gemini",
+          "role": "subject"
+        },
+        {
+          "name": "LMSYS Chatbot Arena",
+          "role": "venue"
+        }
+      ],
+      "threshold": "rank #1 or tied for #1",
+      "direction": null,
+      "resolution_source_class": "leaderboard",
+      "extraction_policy_version": 2
+    },
+    {
+      "schema_version": 1,
+      "market_id": "mkt_gpt5_release_1",
+      "snapshot_id": "phase0-frozen-20260522",
+      "event_stage": "announced",
+      "metric": {
+        "what": "official announcement of a frontier model named GPT-5 or designated direct successor to GPT-4/GPT-4o",
+        "measured_by": "OpenAI official announcement",
+        "objective": true
+      },
+      "horizon": {
+        "resolution_date": "2026-12-31",
+        "timezone": "America/New_York"
+      },
+      "entities": [
+        {
+          "name": "OpenAI",
+          "role": "subject"
+        },
+        {
+          "name": "GPT-5",
+          "role": "object"
+        }
+      ],
+      "threshold": null,
+      "direction": null,
+      "resolution_source_class": "official",
+      "extraction_policy_version": 2
+    },
+    {
+      "schema_version": 1,
+      "market_id": "mkt_msft_stock_high",
+      "snapshot_id": "phase0-frozen-20260522",
+      "event_stage": "measured",
+      "metric": {
+        "what": "MSFT closing price above $500 on any NASDAQ trading day in 2026",
+        "measured_by": "NASDAQ official closing price",
+        "objective": true
+      },
+      "horizon": {
+        "resolution_date": "2026-12-31",
+        "timezone": "America/New_York"
+      },
+      "entities": [
+        {
+          "name": "Microsoft",
+          "role": "subject"
+        },
+        {
+          "name": "NASDAQ",
+          "role": "venue"
+        }
+      ],
+      "threshold": "above $500",
+      "direction": "above",
+      "resolution_source_class": "official",
+      "extraction_policy_version": 2
+    },
+    {
+      "schema_version": 1,
+      "market_id": "mkt_chatgpt_mau_decline",
+      "snapshot_id": "phase0-frozen-20260522",
+      "event_stage": "measured",
+      "metric": {
+        "what": "ChatGPT monthly active users below the December 2025 baseline in any month of 2026",
+        "measured_by": "Similarweb or a mutually agreed analyst report",
+        "objective": false
+      },
+      "horizon": {
+        "resolution_date": "2026-12-31",
+        "timezone": "UTC"
+      },
+      "entities": [
+        {
+          "name": "ChatGPT",
+          "role": "subject"
+        },
+        {
+          "name": "Similarweb",
+          "role": "source"
+        }
+      ],
+      "threshold": "below December 2025 baseline",
+      "direction": "below",
+      "resolution_source_class": "press",
+      "extraction_policy_version": 2
+    },
+    {
+      "schema_version": 1,
+      "market_id": "mkt_anthropic_ipo",
+      "snapshot_id": "phase0-frozen-20260522",
+      "event_stage": "announced",
+      "metric": {
+        "what": "IPO completion OR Form S-1 filed with the SEC for a major-exchange listing",
+        "measured_by": "SEC filings and exchange listings",
+        "objective": true
+      },
+      "horizon": {
+        "resolution_date": "2026-12-31",
+        "timezone": "America/New_York"
+      },
+      "entities": [
+        {
+          "name": "Anthropic",
+          "role": "subject"
+        },
+        {
+          "name": "SEC",
+          "role": "source"
+        }
+      ],
+      "threshold": null,
+      "direction": null,
+      "resolution_source_class": "filing",
+      "extraction_policy_version": 2
+    },
+    {
+      "schema_version": 1,
+      "market_id": "mkt_us_ai_act_law",
+      "snapshot_id": "phase0-frozen-20260522",
+      "event_stage": "adopted",
+      "metric": {
+        "what": "federal bill with binding safety compliance audits or licensing for AI frontier models signed into law in 2026",
+        "measured_by": "US Congress passage and presidential signature",
+        "objective": true
+      },
+      "horizon": {
+        "resolution_date": "2026-12-31",
+        "timezone": "America/New_York"
+      },
+      "entities": [
+        {
+          "name": "US Congress",
+          "role": "subject"
+        },
+        {
+          "name": "AI frontier models",
+          "role": "object"
+        }
+      ],
+      "threshold": null,
+      "direction": null,
+      "resolution_source_class": "official",
+      "extraction_policy_version": 2
+    },
+    {
+      "schema_version": 1,
+      "market_id": "mkt_apple_siri_llm",
+      "snapshot_id": "phase0-frozen-20260522",
+      "event_stage": "shipped",
+      "metric": {
+        "what": "iOS version shipped with redesigned Siri executing general conversational queries on-device via a local Apple LLM",
+        "measured_by": "Apple official release",
+        "objective": false
+      },
+      "horizon": {
+        "resolution_date": "2026-12-31",
+        "timezone": "UTC"
+      },
+      "entities": [
+        {
+          "name": "Apple",
+          "role": "subject"
+        },
+        {
+          "name": "Siri",
+          "role": "object"
+        }
+      ],
+      "threshold": null,
+      "direction": null,
+      "resolution_source_class": "official",
+      "extraction_policy_version": 2
+    },
+    {
+      "schema_version": 1,
+      "market_id": "mkt_nvidia_revenue_drop",
+      "snapshot_id": "phase0-frozen-20260522",
+      "event_stage": "measured",
+      "metric": {
+        "what": "year-over-year percentage decline in reported quarterly revenue in any fiscal quarter of 2026",
+        "measured_by": "Nvidia quarterly earnings reports",
+        "objective": true
+      },
+      "horizon": {
+        "resolution_date": "2026-12-31",
+        "timezone": "UTC"
+      },
+      "entities": [
+        {
+          "name": "Nvidia",
+          "role": "subject"
+        }
+      ],
+      "threshold": null,
+      "direction": "decline",
+      "resolution_source_class": "official",
+      "extraction_policy_version": 2
+    },
+    {
+      "schema_version": 1,
+      "market_id": "mkt_waymo_robotaxi_cities",
+      "snapshot_id": "phase0-frozen-20260522",
+      "event_stage": "adopted",
+      "metric": {
+        "what": "commercial driverless paid passenger service open to the general public in at least 5 distinct US cities",
+        "measured_by": "Waymo official commercial operations",
+        "objective": true
+      },
+      "horizon": {
+        "resolution_date": "2026-12-31",
+        "timezone": "UTC"
+      },
+      "entities": [
+        {
+          "name": "Waymo",
+          "role": "subject"
+        }
+      ],
+      "threshold": "at least 5 US cities",
+      "direction": null,
+      "resolution_source_class": "official",
+      "extraction_policy_version": 2
+    },
+    {
+      "schema_version": 1,
+      "market_id": "mkt_agentic_payments_volume",
+      "snapshot_id": "phase0-frozen-20260522",
+      "event_stage": "launched",
+      "metric": {
+        "what": "official launch of a product line or API specifically marketed for autonomous AI agent identity wallet payments by a payments firm valued over $10B",
+        "measured_by": "official product launch by Stripe, Adyen, PayPal, or comparable",
+        "objective": false
+      },
+      "horizon": {
+        "resolution_date": "2026-12-31",
+        "timezone": "UTC"
+      },
+      "entities": [
+        {
+          "name": "Stripe",
+          "role": "subject"
+        },
+        {
+          "name": "Adyen",
+          "role": "object"
+        },
+        {
+          "name": "PayPal",
+          "role": "object"
+        }
+      ],
+      "threshold": "payments firm valuation > $10B",
+      "direction": null,
+      "resolution_source_class": "official",
+      "extraction_policy_version": 2
+    }
+  ]
+}

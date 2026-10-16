@@ -24,6 +24,7 @@ from el.domain.structures import (
     Metric,
 )
 from el.fitgate.aliases import ALIAS_RULES_VERSION
+from el.fitgate.checks import TOKEN_RULES_VERSION
 
 COMPOSITE_COVERAGE_VERSION = "composite-v2-candidate"
 
@@ -116,6 +117,7 @@ def evaluate_composite_coverage(
     m1_direction_guard: bool = True,
     m1_subject_only_residual_guard: bool = False,
     horizon_tolerances: dict | None = None,
+    token_rules_version: str = TOKEN_RULES_VERSION,
 ) -> CompositeCoverageResult:
     """Return whether explicit sidecar data proves full composite coverage."""
     if policy is None:
@@ -149,6 +151,7 @@ def evaluate_composite_coverage(
         m1_direction_guard=m1_direction_guard,
         m1_subject_only_residual_guard=m1_subject_only_residual_guard,
         horizon_tolerances=horizon_tolerances,
+        token_rules_version=token_rules_version,
     )
     if matched is None:
         return CompositeCoverageResult(
@@ -208,6 +211,7 @@ def _match_all_legs(
     m1_direction_guard: bool,
     m1_subject_only_residual_guard: bool,
     horizon_tolerances: dict | None,
+    token_rules_version: str,
 ) -> list[tuple[str, str]] | None:
     if len(market.legs) < len(claim.legs):
         return None
@@ -224,6 +228,7 @@ def _match_all_legs(
                 m1_direction_guard=m1_direction_guard,
                 m1_subject_only_residual_guard=m1_subject_only_residual_guard,
                 horizon_tolerances=horizon_tolerances,
+                token_rules_version=token_rules_version,
             )
             if not ok:
                 return None
@@ -237,6 +242,7 @@ def _match_all_legs(
         m1_direction_guard=m1_direction_guard,
         m1_subject_only_residual_guard=m1_subject_only_residual_guard,
         horizon_tolerances=horizon_tolerances,
+        token_rules_version=token_rules_version,
         used=set(),
         index=0,
         pairs=[],
@@ -251,6 +257,7 @@ def _search_leg_matching(
     m1_direction_guard: bool,
     m1_subject_only_residual_guard: bool,
     horizon_tolerances: dict | None,
+    token_rules_version: str,
     used: set[int],
     index: int,
     pairs: list[tuple[str, str]],
@@ -268,6 +275,7 @@ def _search_leg_matching(
             m1_direction_guard=m1_direction_guard,
             m1_subject_only_residual_guard=m1_subject_only_residual_guard,
             horizon_tolerances=horizon_tolerances,
+            token_rules_version=token_rules_version,
         )
         if not ok:
             continue
@@ -278,6 +286,7 @@ def _search_leg_matching(
             m1_direction_guard=m1_direction_guard,
             m1_subject_only_residual_guard=m1_subject_only_residual_guard,
             horizon_tolerances=horizon_tolerances,
+            token_rules_version=token_rules_version,
             used=used | {market_index},
             index=index + 1,
             pairs=pairs + [(claim_leg.leg_id, market_leg.leg_id)],
@@ -295,15 +304,15 @@ def _leg_matches(
     m1_direction_guard: bool,
     m1_subject_only_residual_guard: bool,
     horizon_tolerances: dict | None,
+    token_rules_version: str,
 ) -> tuple[bool, list[str]]:
     from el.fitgate.checks import (
         check_event_stage_match,
         check_horizon_tolerance,
-        check_metric_lexical_floor,
         check_objectivity_conflict,
         check_outcome_polarity,
-        check_subject_lexical_floor,
     )
+    from el.fitgate.token_rules import check_metric_lexical_floor, check_subject_lexical_floor
 
     claim = _claim_from_leg(claim_leg)
     market = _market_from_leg(market_leg)
@@ -316,14 +325,14 @@ def _leg_matches(
         from el.fitgate.m1_subject_only import check_subject_only_metric_lexical_floor
 
         metric = check_subject_only_metric_lexical_floor(
-            claim, market, alias_rules_version, m1_direction_guard
+            claim, market, alias_rules_version, m1_direction_guard, token_rules_version
         )
     else:
         metric = check_metric_lexical_floor(
-            claim, market, alias_rules_version, m1_direction_guard
+            claim, market, alias_rules_version, m1_direction_guard, token_rules_version
         )
     outcomes = [
-        check_subject_lexical_floor(claim, market),
+        check_subject_lexical_floor(claim, market, token_rules_version),
         check_event_stage_match(claim, market),
         metric,
         horizon,
