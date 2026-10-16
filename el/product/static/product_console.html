@@ -2721,7 +2721,7 @@ function renderRevisitActivation(out) {
   $("revisit-baseline-date").textContent = out.baseline.snapshot_as_of;
   $("revisit-baseline-source").textContent =
     "Frozen baseline evidence · " + out.binding.baseline_snapshot_id;
-  const fixture = productMode === "fixture";
+  const fixture = productMode === "fixture" && !anonymousDemo;
   const savedSelect = $("revisit-saved-capture");
   savedSelect.innerHTML = "";
   const placeholder = document.createElement("option");
@@ -2737,13 +2737,16 @@ function renderRevisitActivation(out) {
     savedSelect.append(option);
   });
   savedSelect.value = "";
+  $("revisit-fixture-scenario").value = "";
   $("revisit-fixture-controls").hidden = !fixture;
   $("revisit-saved-controls").hidden = captures.length === 0;
   $("revisit-check-mode").textContent = fixture
     ? "Choose a registered saved capture or a Synthetic saved-evidence replay case. Neither starts a live provider call."
     : captures.length
       ? "Choose a registered saved capture. This check uses retained evidence and does not start a live provider call."
-      : "Saved-observation check unavailable here: no registered later capture is exposed to this console.";
+      : anonymousDemo
+        ? "This demo has no later saved capture for this contract. Choose the retained-rules journey above to compare its registered capture."
+        : "Saved-observation check unavailable here: no registered later capture is exposed to this console.";
   $("run-revisit-check").disabled = true;
 }
 
@@ -3358,9 +3361,12 @@ function updateRevisitCheckSelection() {
   clearRevisitResult();
   err("revisit-error", null);
   $("revisit-check-pending").hidden = true;
+  const scenario = productMode === "fixture" && !anonymousDemo
+    ? $("revisit-fixture-scenario").value : null;
+  const captureId = $("revisit-saved-capture").value;
   $("run-revisit-check").disabled = !chain.revisitBinding ||
-    (!$("revisit-fixture-scenario").value &&
-      !$("revisit-saved-capture").value);
+    (!scenario && !chain.revisitRegisteredCaptures.some(
+      (capture) => capture.capture_id === captureId));
 }
 
 $("revisit-fixture-scenario").addEventListener("change", () => {
@@ -3376,7 +3382,7 @@ $("revisit-saved-capture").addEventListener("change", () => {
 $("run-revisit-check").onclick = async () => {
   const binding = chain.revisitBinding;
   if (!binding || $("run-revisit-check").disabled) return;
-  const scenario = productMode === "fixture"
+  const scenario = productMode === "fixture" && !anonymousDemo
     ? $("revisit-fixture-scenario").value : null;
   const captureId = $("revisit-saved-capture").value || null;
   if (!!scenario === !!captureId || (captureId &&

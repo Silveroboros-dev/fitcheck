@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from el.domain.tables import (
@@ -45,6 +46,28 @@ def _utc(value: datetime) -> str:
     if value.tzinfo is None:
         value = value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc).isoformat()
+
+
+def _is_revisit_insert_collision(exc: IntegrityError) -> bool:
+    constraints = {
+        "uq_revisit_request_key",
+        "uq_revisit_observation_capture",
+        "uq_revisit_capture_digest",
+    }
+    if (getattr(exc.orig, "sqlstate", None) == "23505"
+        and getattr(getattr(exc.orig, "diag", None), "constraint_name", None) in constraints):
+        return True
+    return (
+        getattr(exc.orig, "sqlite_errorname", None) == "SQLITE_CONSTRAINT_UNIQUE"
+        and str(exc.orig) in {
+            "UNIQUE constraint failed: revisit_requests.user_id, "
+            "revisit_requests.revision_id, revisit_requests.idempotency_key",
+            "UNIQUE constraint failed: monitoring_observations.revision_id, "
+            "monitoring_observations.capture_id",
+            "UNIQUE constraint failed: revisit_captures.revision_id, "
+            "revisit_captures.capture_digest",
+        }
+    )
 
 
 class RevisitService:
@@ -395,6 +418,24 @@ class RevisitService:
     def check(
         self, revision_id: uuid.UUID, *, idempotency_key: str,
         fixture_scenario: str | None = None, capture_id: uuid.UUID | None = None,
+    ) -> dict:
+        # A peer can commit after any empty lookup. Each of the three immutable
+        # insert keys can lose once; a fresh transaction then sees its winner.
+        # Closing the failed session also discards any losing packet/observation.
+        for attempt in range(4):
+            try:
+                return self._check_once(
+                    revision_id, idempotency_key=idempotency_key,
+                    fixture_scenario=fixture_scenario, capture_id=capture_id,
+                )
+            except IntegrityError as exc:
+                if attempt == 3 or not _is_revisit_insert_collision(exc):
+                    raise
+        raise AssertionError("unreachable revisit retry state")
+
+    def _check_once(
+        self, revision_id: uuid.UUID, *, idempotency_key: str,
+        fixture_scenario: str | None, capture_id: uuid.UUID | None,
     ) -> dict:
         if not idempotency_key or len(idempotency_key) > 160:
             raise RevisitUnavailable("idempotency key is required")

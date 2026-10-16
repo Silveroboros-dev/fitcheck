@@ -566,7 +566,7 @@
     },
     {
       "path": "el/product/static/product_console.html",
-      "sha256": "3324ce395795a6e9f1931282ab8f907a3120a9def7d77911e6fda472c852d95d"
+      "sha256": "64b39de71c1c2d0cb029613b98a24e5e5ab623cfb6b975f640122d7784bc8f79"
     },
     {
       "path": "el/product/wiring.py",
@@ -674,7 +674,7 @@
     },
     {
       "path": "el/revisit/service.py",
-      "sha256": "c708479038180e9fc61a1028df87d55f2145984320561bcc05ef8b93120950ef"
+      "sha256": "96f60aedee76a424c0c8330c75a8980958e7b19f17e7866c282bbbccf4347dd8"
     },
     {
       "path": "el/sourceinterpretation/__init__.py",
@@ -794,7 +794,7 @@
     },
     {
       "path": "public-export.toml",
-      "sha256": "5041f5867d2d536c9d04fbe9f6b545208e8447231b9e83fd90f73c0c9de26de7"
+      "sha256": "93a52fd74a2c90811e0b143c33539a8ca88064743a9072f5abc5935b75d87c07"
     },
     {
       "path": "pyproject.toml",
@@ -843,6 +843,10 @@
     {
       "path": "tests/product_console_accepted_thesis_resume_dom.js",
       "sha256": "7bb1609bd08fd9407db92ee2543d242747f215fb1f47b4137b29de4aeaa2bd6a"
+    },
+    {
+      "path": "tests/product_console_manual_revisit_dom.js",
+      "sha256": "4b19175ff253f20e67f51a25d86341afa72b00462b28a0d59913617d0e7cd87e"
     },
     {
       "path": "tests/product_console_market_explanation_dom.js",
@@ -942,7 +946,7 @@
     },
     {
       "path": "tests/test_job_store_postgres.py",
-      "sha256": "19077df6264cc07a9a48775061d29266420089a8bc71e40ea05db876e43ffd95"
+      "sha256": "df3358c3eb79f8e80b2779b157c0bca6d41bfee2f0db8f0d5c15e79e586b4ddd"
     },
     {
       "path": "tests/test_ledger_service.py",
@@ -1009,6 +1013,10 @@
       "sha256": "f76eb780ea5d123d2d8eb29a28a27b123e57f3865cf5bab2355f78ff5000a594"
     },
     {
+      "path": "tests/test_product_console_manual_revisit_dom.py",
+      "sha256": "d0fe5803cdc427f28ee0d3eafa8a51987a1756a14b6730a6ff0925745ed29676"
+    },
+    {
       "path": "tests/test_product_console_market_explanation_dom.py",
       "sha256": "b19e831d0048702d9a74c141234cc32505722a3722b7365909f70bcc552805a5"
     },
@@ -1063,6 +1071,10 @@
     {
       "path": "tests/test_review_queue.py",
       "sha256": "3f1178e10de789473b431928b4224813157cb0bbed8133e4782acfdded835f44"
+    },
+    {
+      "path": "tests/test_revisit_idempotency.py",
+      "sha256": "bb514357b01f7fa7fe3749fdccdb499b0237d3a1a8a3a4054f05e3086a439324"
     },
     {
       "path": "tests/test_schema.py",

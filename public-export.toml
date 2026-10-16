@@ -351,6 +351,10 @@ source = "tests/product_console_market_explanation_dom.js"
 destination = "tests/product_console_market_explanation_dom.js"
 
 [[include]]
+source = "tests/product_console_manual_revisit_dom.js"
+destination = "tests/product_console_manual_revisit_dom.js"
+
+[[include]]
 source = "tests/test_agent_retrieval_spike.py"
 destination = "tests/test_agent_retrieval_spike.py"
 
@@ -427,6 +431,10 @@ source = "tests/test_product_console_market_explanation_dom.py"
 destination = "tests/test_product_console_market_explanation_dom.py"
 
 [[include]]
+source = "tests/test_product_console_manual_revisit_dom.py"
+destination = "tests/test_product_console_manual_revisit_dom.py"
+
+[[include]]
 source = "tests/test_product_contract_doc.py"
 destination = "tests/test_product_contract_doc.py"
 
@@ -445,6 +453,10 @@ destination = "tests/test_public_export.py"
 [[include]]
 source = "tests/test_recall_eval.py"
 destination = "tests/test_recall_eval.py"
+
+[[include]]
+source = "tests/test_revisit_idempotency.py"
+destination = "tests/test_revisit_idempotency.py"
 
 [[include]]
 source = "tests/test_review_candidates.py"
