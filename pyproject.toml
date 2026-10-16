@@ -1,10 +1,10 @@
 [project]
 name = "fitcheck"
-version = "0.1.0"
+version = "0.2.0"
 description = "FitCheck by Epistemic Ledger — expression-risk layer for prediction markets"
 requires-python = ">=3.12"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 dependencies = [
     "pydantic>=2.7",
     "sqlalchemy>=2.0",
@@ -23,18 +23,35 @@ telemetry = [
     "opentelemetry-sdk==1.44.0",
     "opentelemetry-exporter-otlp-proto-http==1.44.0",
 ]
-demo = ["google-adk>=2.2", "google-auth[requests]>=2.14"]
 
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
+[project.scripts]
+fitcheck-demo = "el.product.demo_launcher:main"
+
 [tool.setuptools.packages.find]
-include = ["el*", "demo*"]
+include = ["el*", "demo*", "migrations*"]
 
 [tool.setuptools.package-data]
-"el.product" = ["static/*.html"]
+"el.product" = ["static/*.html", "static/brand/*.svg"]
+"el.product.demo_fixtures" = [
+    "*.json",
+    "claims/*.json",
+    "markets/golden_market_structures.json",
+    "markets/synthetic-market-stablecoin-total-cap.json",
+    "markets/synthetic-market-stablecoin-unit-cap.json",
+    "markets/synthetic-market-treasury-ledger-payment.json",
+    "markets/synthetic-market-broker-tokenized-asset.json",
+    "markets/synthetic-market-broker-first-tokenized.json",
+    "markets/synthetic-market-broker-chain-token.json",
+    "markets/synthetic-event-stablecoin-cap.json",
+    "markets/synthetic-event-tokenized-listing.json",
+    "retrieval/*.json",
+]
 "el.review" = ["static/*.html"]
+"migrations" = ["script.py.mako"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,0 +1,16 @@
+{
+  "schema_version": "fitcheck.synthetic_market_fixture.v1",
+  "fixture_kind": "project_authored_synthetic",
+  "market_id": "synthetic-broker-tokenized-asset",
+  "title": "Will Robinhood offer a qualifying tokenized U.S. stock or ETF to U.S. customers by December 31, 2026?",
+  "resolution_rules": "This project-authored synthetic market resolves Yes if a U.S. Robinhood brokerage customer in at least one state can purchase a token representing a U.S. exchange-listed stock or ETF by December 31, 2026, 23:59 ET. Announcements, waitlists, tests, and unbacked price trackers do not qualify. Otherwise it resolves No.",
+  "condition_id": "synthetic-condition-broker-tokenized-asset",
+  "outcomes": [
+    "Yes",
+    "No"
+  ],
+  "close_at_utc": "2027-01-01T04:59:00Z",
+  "liquidity_usd": 1600.0,
+  "source_url": "https://example.invalid/fitcheck/markets/synthetic-broker-tokenized-asset",
+  "fixture_versioned_utc": "2026-10-15T00:00:00Z"
+}

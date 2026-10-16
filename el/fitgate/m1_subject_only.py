@@ -1,9 +1,9 @@
 """Explicit Loop 4 overlay for the owner-adopted M1 successor.
 
 ``policy`` and ``checks`` are frozen verifier runtime files.  This module
-keeps their loop3-v1 bytes and semantics intact, then replaces only the M1
-outcome (and the composite-v2 X2 outcome when that sidecar is enabled) for
-the named successor identity.
+keeps their loop3-v1 bytes and semantics intact, then replaces outcomes for
+the named successor identity. The independently selected token-v2 candidate
+also replaces E1 and propagates its token rules through composite leg checks.
 """
 
 from dataclasses import dataclass, field
@@ -16,21 +16,28 @@ from el.fitgate.checks import (
     CheckKind,
     CheckOutcome,
     CheckStatus,
-    check_metric_lexical_floor,
     metrics_alias_equivalent,
-    tok_v1,
+    TOKEN_RULES_VERSION,
 )
 from el.fitgate.policy import (
     FIT_GATE_POLICY_VERSION,
-    FitPolicy,
     MarketFitVerdict,
     ThesisFit,
     aggregate_thesis as _aggregate_thesis_v1,
     compute_ceiling,
     evaluate_market as _evaluate_market_v1,
 )
+from el.fitgate.runtime_policy import FitPolicy, immutable_fit_policy
+from el.fitgate.token_rules import (
+    TOKEN_RULES_SUCCESSOR_VERSION,
+    check_metric_lexical_floor,
+    check_subject_lexical_floor,
+    content_tokens,
+    token_rules_version,
+)
 
 M1_SUBJECT_ONLY_POLICY_VERSION = "loop3-m1-subject-only-v4"
+TOKEN_V2_FIT_POLICY_VERSION = "loop3-m1-subject-only-tok-v2"
 
 
 @dataclass(frozen=True)
@@ -40,6 +47,18 @@ class M1SubjectOnlyFitPolicy(FitPolicy):
     gate_policy_version: str = field(
         default=M1_SUBJECT_ONLY_POLICY_VERSION, init=False
     )
+
+
+@dataclass(frozen=True)
+class TokenV2FitPolicy(M1SubjectOnlyFitPolicy):
+    """Explicit candidate successor; ordinary discovery remains on tok-v1."""
+
+    gate_policy_version: str = field(default=TOKEN_V2_FIT_POLICY_VERSION, init=False)
+    token_rules_version: str = field(default=TOKEN_RULES_SUCCESSOR_VERSION, init=False)
+
+
+def stopword_corrected_fit_policy() -> TokenV2FitPolicy:
+    return TokenV2FitPolicy()
 
 
 def ordinary_discovery_fit_policy() -> M1SubjectOnlyFitPolicy:
@@ -53,7 +72,17 @@ def gate_policy_version(policy: FitPolicy) -> str:
 
 
 def is_m1_subject_only_policy(policy: FitPolicy) -> bool:
-    return gate_policy_version(policy) == M1_SUBJECT_ONLY_POLICY_VERSION
+    return gate_policy_version(policy) in {
+        M1_SUBJECT_ONLY_POLICY_VERSION, TOKEN_V2_FIT_POLICY_VERSION
+    }
+
+
+def _bound_token_version(identity: str) -> str:
+    if identity in {FIT_GATE_POLICY_VERSION, M1_SUBJECT_ONLY_POLICY_VERSION}:
+        return TOKEN_RULES_VERSION
+    if identity == TOKEN_V2_FIT_POLICY_VERSION:
+        return TOKEN_RULES_SUCCESSOR_VERSION
+    raise ValueError(f"unsupported fit-gate policy version: {identity}")
 
 
 def fit_policy_from_pins(
@@ -64,8 +93,11 @@ def fit_policy_from_pins(
     horizon_tolerances: dict,
     alias_rules_version: str,
     m1_direction_guard: bool,
+    token_rules_version: str = TOKEN_RULES_VERSION,
 ) -> FitPolicy:
     """Rebuild a v1 pin without adding a successor-only serialized field."""
+    if token_rules_version != _bound_token_version(gate_policy_version):
+        raise ValueError("token rules differ from the named fit-gate policy")
     kwargs = dict(
         stacking_threshold=stacking_threshold,
         escalation_confidence_floor=escalation_confidence_floor,
@@ -77,6 +109,8 @@ def fit_policy_from_pins(
         return FitPolicy(**kwargs)
     if gate_policy_version == M1_SUBJECT_ONLY_POLICY_VERSION:
         return M1SubjectOnlyFitPolicy(**kwargs)
+    if gate_policy_version == TOKEN_V2_FIT_POLICY_VERSION:
+        return TokenV2FitPolicy(**kwargs)
     raise ValueError(f"unsupported fit-gate policy version: {gate_policy_version}")
 
 
@@ -85,10 +119,11 @@ def check_subject_only_metric_lexical_floor(
     market: MarketStructure,
     alias_version: str = ALIAS_RULES_EMPTY,
     direction_guard: bool = True,
+    token_version: str = TOKEN_RULES_VERSION,
 ) -> CheckOutcome:
     """Apply M1-v4 only after the frozen predecessor floor cleared."""
     baseline = check_metric_lexical_floor(
-        claim, market, alias_version, direction_guard
+        claim, market, alias_version, direction_guard, token_version
     )
     if baseline.status is not CheckStatus.INCONCLUSIVE:
         return baseline
@@ -101,17 +136,19 @@ def check_subject_only_metric_lexical_floor(
     ):
         return baseline
 
-    claim_tokens = tok_v1(claim.metric.what)
-    market_tokens = tok_v1(market.metric.what) | tok_v1(market.threshold)
+    claim_tokens = content_tokens(claim.metric.what, token_version)
+    market_tokens = content_tokens(market.metric.what, token_version) | content_tokens(
+        market.threshold, token_version
+    )
     overlap = claim_tokens & market_tokens
     substantive_overlap = (
         overlap - CHANGE_DIRECTION_TOKENS if direction_guard else overlap
     )
     subject_tokens = set().union(
-        *(set(tok_v1(entity.name)) for entity in claim.entities if entity.role == "subject")
+        *(set(content_tokens(entity.name, token_version)) for entity in claim.entities if entity.role == "subject")
     )
     entity_tokens = set().union(
-        *(set(tok_v1(entity.name)) for entity in market.entities)
+        *(set(content_tokens(entity.name, token_version)) for entity in market.entities)
     )
     bridge = substantive_overlap & subject_tokens & entity_tokens
     if not bridge or substantive_overlap != bridge:
@@ -165,6 +202,7 @@ def _subject_only_composite_single_leg(
         m1_direction_guard=policy.m1_direction_guard,
         m1_subject_only_residual_guard=True,
         horizon_tolerances=policy.horizon_tolerances,
+        token_rules_version=token_rules_version(policy),
     )
     if result.status == "full_cover":
         return CheckOutcome(
@@ -200,18 +238,26 @@ def _subject_only_composite_single_leg(
 def evaluate_market(
     claim: ExtractedStructure,
     market: MarketStructure,
-    policy: FitPolicy = FitPolicy(),
+    policy: FitPolicy | None = None,
 ) -> MarketFitVerdict:
     """Dispatch v1 unchanged, or overlay successor outcomes by check identity."""
+    policy = immutable_fit_policy(policy)
+    version = token_rules_version(policy)
+    if version != _bound_token_version(gate_policy_version(policy)):
+        raise ValueError("token rules differ from the named fit-gate policy")
     baseline = _evaluate_market_v1(claim, market, policy)
     if not is_m1_subject_only_policy(policy):
         return baseline
 
     replacements = {
         "M1": check_subject_only_metric_lexical_floor(
-            claim, market, policy.alias_rules_version, policy.m1_direction_guard
+            claim, market, policy.alias_rules_version, policy.m1_direction_guard, version
         )
     }
+    if version != TOKEN_RULES_VERSION:
+        replacements["E1"] = check_subject_lexical_floor(claim, market, version)
+        # P1's recognized direction vocabulary contains no affected raw
+        # stopword, so its frozen direction annotation is identical under v2.
     if policy.composite_coverage is not None and claim.mechanism.is_composite:
         replacements["X2"] = _subject_only_composite_single_leg(
             claim, market, policy
@@ -226,7 +272,8 @@ def evaluate_market(
             "hard_fail_count": hard_fails,
             "deterministic_ceiling": ceiling,
             "published": ceiling,
-            "gate_policy_version": M1_SUBJECT_ONLY_POLICY_VERSION,
+            "gate_policy_version": gate_policy_version(policy),
+            "token_rules_version": version,
         }
     )
 
@@ -239,11 +286,19 @@ def aggregate_thesis(
     """Aggregate one named policy identity and reject mixed pools."""
     expected = gate_policy_version(policy) if policy is not None else None
     identities = {verdict.gate_policy_version for verdict, _ in verdicts}
+    token_identities = {verdict.token_rules_version for verdict, _ in verdicts}
     if len(identities) > 1:
         raise ValueError("mixed fit policies cannot be aggregated")
+    if len(token_identities) > 1:
+        raise ValueError("mixed token rules cannot be aggregated")
+    for verdict, _ in verdicts:
+        if verdict.token_rules_version != _bound_token_version(verdict.gate_policy_version):
+            raise ValueError("verdict token rules differ from its named fit-gate policy")
     observed = next(iter(identities), None)
     if expected is not None and observed is not None and observed != expected:
         raise ValueError("verdict policy identity differs from aggregation policy")
+    if policy is not None and token_rules_version(policy) != _bound_token_version(expected):
+        raise ValueError("token rules differ from the named fit-gate policy")
     identity = expected or observed or FIT_GATE_POLICY_VERSION
     return _aggregate_thesis_v1(verdicts).model_copy(
         update={"gate_policy_version": identity}

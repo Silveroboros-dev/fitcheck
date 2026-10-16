@@ -47,9 +47,9 @@ from el.domain.tables import (
     RejectedMarketRow,
     ThesisAnalysis,
 )
-from el.fitgate.checks import TOKEN_RULES_VERSION
 from el.fitgate.m1_subject_only import gate_policy_version, ordinary_discovery_fit_policy
 from el.fitgate.policy import FitPolicy
+from el.fitgate.token_rules import token_rules_version
 from el.jobs import FailureKind, FencedWriteSession, JobClaim, JobStatus, JobStore
 from el.marketstructure.gate import GATE_POLICY_VERSION as STRUCTURE_GATE_VERSION
 from el.marketstructure.service import SCHEMA_VERSION as MARKET_SCHEMA_VERSION
@@ -179,7 +179,7 @@ class ClassificationRuntimeConfig:
     def fit_pins(self) -> FitPins:
         return FitPins(
             gate_policy_version=gate_policy_version(self.fit_policy),
-            token_rules_version=TOKEN_RULES_VERSION,
+            token_rules_version=token_rules_version(self.fit_policy),
             alias_rules_version=self.fit_policy.alias_rules_version,
             stacking_threshold=self.fit_policy.stacking_threshold,
             escalation_confidence_floor=(

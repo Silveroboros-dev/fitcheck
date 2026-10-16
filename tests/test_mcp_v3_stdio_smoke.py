@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from el.mcp.server import V3_TOOL_NAMES
-from el.product.wiring import HARBOR_REVISED_INPUT, MULTI_THESIS_FIXTURE
+from el.product.wiring import STABLECOIN_REVISED_INPUT, MULTI_THESIS_FIXTURE
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -140,7 +140,7 @@ def test_fixture_stdio_submit_worker_poll_uses_real_mcp_transport(tmp_path):
             {
                 "normalization_attempt_id": initial["normalization_attempt_id"],
                 "expected_input_digest": initial["input_digest"],
-                "input_text": HARBOR_REVISED_INPUT,
+                "input_text": STABLECOIN_REVISED_INPUT,
             },
         )
     )

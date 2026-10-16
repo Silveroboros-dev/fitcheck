@@ -20,7 +20,7 @@ from el.domain.tables import (
 from el.mcp.contracts import NotFound
 from el.mcp.wiring import build_fixture_v3_tools, seed_principal
 from el.product.wiring import (
-    HARBOR_REVISED_INPUT,
+    STABLECOIN_REVISED_INPUT,
     MULTI_THESIS_FIXTURE,
     build_services,
 )
@@ -110,7 +110,7 @@ def test_two_mcp_principals_cannot_cross_v31_source_or_market_boundaries():
         owner,
         normalization_attempt_id=initial.normalization_attempt_id,
         expected_input_digest=initial.input_digest,
-        input_text=HARBOR_REVISED_INPUT,
+        input_text=STABLECOIN_REVISED_INPUT,
     )
 
     before = {table: _count(sessions, table) for table in protected}
@@ -119,7 +119,7 @@ def test_two_mcp_principals_cannot_cross_v31_source_or_market_boundaries():
             foreign,
             normalization_attempt_id=revised.normalization_attempt_id,
             expected_input_digest=revised.input_digest,
-            input_text=HARBOR_REVISED_INPUT,
+            input_text=STABLECOIN_REVISED_INPUT,
         )
     with pytest.raises(NotFound):
         tools.accept_normalization(

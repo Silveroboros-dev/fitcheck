@@ -31,12 +31,10 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E"); }
 
   header { padding:26px 30px 22px; border-bottom:1px solid var(--line);
-           display:flex; justify-content:space-between; align-items:baseline;
+           display:flex; justify-content:space-between; align-items:center;
            background:linear-gradient(rgba(233,228,216,.02), transparent); }
-  header h1 { margin:0; font:400 15px/1 var(--sans); letter-spacing:.42em;
-              text-transform:uppercase; color:var(--ink); }
-  header h1::after { content:""; display:inline-block; width:8px; height:8px;
-              margin-left:14px; border:1px solid var(--brass); vertical-align:1px; }
+  header h1 { margin:0; min-width:0; }
+  header h1 img { display:block; max-width:100%; height:auto; }
   header .sub { color:var(--mut); font-size:12.5px; letter-spacing:.02em; }
   header .sub .tag { margin-left:10px; }
 
@@ -110,6 +108,96 @@
     70%, 100% { box-shadow:0 0 0 7px rgba(210,171,110,0); }
   }
 
+  .acceptance-catalog { background:linear-gradient(120deg,
+                        rgba(179,144,90,.09), rgba(22,23,26,.96) 66%); }
+  .acceptance-controls { display:grid; grid-template-columns:minmax(240px, 1fr) auto;
+                         gap:12px; align-items:center; }
+  .acceptance-controls select { width:100%; }
+  .acceptance-mission { margin-top:14px; padding:14px 16px;
+                        border-left:2px solid var(--brass); background:var(--panel-2); }
+  .acceptance-mission h3 { margin:0 0 7px; color:var(--brass-bright);
+                           font:400 12px/1.4 var(--sans); letter-spacing:.16em;
+                           text-transform:uppercase; }
+  .acceptance-intake-context { margin:11px 0 0; padding:9px 12px;
+                               border-left:2px solid var(--brass);
+                               background:rgba(179,144,90,.06);
+                               color:var(--ink-dim); font:13px/1.55 var(--sans); }
+  .acceptance-binding { margin-top:12px; overflow-wrap:anywhere;
+                        font:11px/1.65 var(--mono); color:var(--faint); }
+  .restored-source-text { white-space:pre-wrap; overflow-wrap:anywhere;
+                          max-height:260px; overflow-y:auto;
+                          padding:12px 14px; border:1px solid var(--line);
+                          background:var(--well); color:var(--ink); }
+  .restored-source-detail { margin-top:10px; white-space:pre-wrap;
+                            overflow-wrap:anywhere; color:var(--ink-dim); }
+  .revisit-panel { width:92%; margin-left:auto; }
+  .revisit-context { display:grid; grid-template-columns:minmax(130px, 180px) 1fr;
+                     gap:8px 16px; margin:16px 0; }
+  .revisit-context dt { color:var(--faint); font:11px/1.6 var(--mono);
+                        text-transform:uppercase; }
+  .revisit-context dd { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .revisit-context dd.id { font:11px/1.6 var(--mono); color:var(--mut); }
+  #saved-revisit-source { max-height:260px; overflow:auto; }
+  #saved-revisit-market-rules { max-height:260px; overflow:auto;
+                               padding:12px 14px; white-space:pre-wrap;
+                               overflow-wrap:anywhere; background:var(--well);
+                               font:12px/1.5 var(--mono); }
+  .saved-revisit-binding { white-space:pre-wrap; overflow-wrap:anywhere;
+                           font:11px/1.6 var(--mono); color:var(--mut); }
+  #revisit-source, #revisit-thesis { max-height:200px; overflow:auto; }
+  .revisit-change { padding:12px 14px; margin-top:10px;
+                    border-left:2px solid var(--brass); background:var(--panel-2); }
+  .revisit-change h3 { margin:0 0 6px; font:12px/1.4 var(--sans);
+                       color:var(--brass-bright); }
+  .revisit-rule-diff { margin:9px 0; font:12px/1.55 var(--mono); }
+  .revisit-diff-line { display:grid; grid-template-columns:88px minmax(0, 1fr);
+                       gap:8px; padding:4px 9px; white-space:pre-wrap;
+                       overflow-wrap:anywhere; }
+  .revisit-diff-line > span:first-child { font-weight:700; }
+  .revisit-diff-changed { font-weight:700; text-decoration:underline;
+                           text-underline-offset:2px; }
+  .revisit-diff-add { background:rgba(69, 135, 91, .22);
+                      border-left:3px solid #6fac7d; }
+  .revisit-diff-remove { background:rgba(170, 77, 72, .21);
+                         border-left:3px solid #d47b73; }
+  .revisit-diff-same { color:var(--ink-dim); border-left:3px solid transparent; }
+  .revisit-diff-context { margin:4px 0; color:var(--ink-dim); }
+  .revisit-diff-context summary { cursor:pointer; padding:4px 9px; }
+  .revisit-rule-hashes { margin-top:10px; color:var(--ink-dim);
+                         font:11px/1.5 var(--mono); overflow-wrap:anywhere; }
+  .revisit-impact { margin-top:16px; padding:15px 18px;
+                    border-left:2px solid var(--brass);
+                    background:var(--panel-2); }
+  .revisit-impact h4 { margin:0 0 8px; color:var(--brass-bright);
+                       font:15px/1.4 var(--sans); }
+  .revisit-impact .revisit-context { margin:10px 0; }
+  .revisit-full-add { background:rgba(69, 135, 91, .28); }
+  .revisit-full-remove { background:rgba(170, 77, 72, .28); }
+  .revisit-before-after { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .revisit-before-after > div { min-width:0; white-space:pre-wrap;
+                               overflow-wrap:anywhere; }
+  .revisit-rules { margin-top:12px; }
+  .revisit-rules pre { margin:8px 0 0; padding:12px 14px; max-height:260px;
+                       overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere;
+                       background:var(--well); font:12px/1.5 var(--mono); }
+  .revisit-disposition { margin-top:18px; padding-top:14px;
+                         border-top:1px solid var(--line); }
+  .revisit-choice-set { border:1px solid var(--line); padding:10px 14px 14px; }
+  .revisit-choice-set legend { padding:0 6px; color:var(--ink);
+                               font:16px/1.4 var(--serif); }
+  #revisit-revision-draft { margin-top:14px; padding:14px 16px;
+                            border:1px solid var(--line); background:var(--well); }
+  #revisit-revision-draft h4 { margin:0 0 8px; font:15px/1.4 var(--sans);
+                               color:var(--brass-bright); }
+  #revisit-draft-text { min-height:110px; }
+  .revisit-resume-link { color:var(--brass-bright); font:12px/1.5 var(--sans);
+                         overflow-wrap:anywhere; }
+  @media (max-width:680px) {
+    .revisit-panel { width:100%; }
+    .revisit-context { grid-template-columns:1fr; }
+    .revisit-before-after { grid-template-columns:1fr; }
+  }
+
   .proposal { margin-top:18px; padding:18px 20px; border:1px solid var(--brass-dim);
               background:linear-gradient(120deg, rgba(179,144,90,.08), transparent 70%); }
   .proposal h3 { margin:0 0 10px; font:400 11.5px/1.4 var(--sans);
@@ -125,17 +213,28 @@
                    padding:15px 17px; border:1px solid var(--line);
                    background:var(--panel-2); }
   .source-option:has(input:checked) { border-color:var(--brass); }
+  .source-option.source-option-active { border-color:var(--brass);
+                   background:linear-gradient(120deg, rgba(179,144,90,.14), var(--panel-2));
+                   box-shadow:inset 3px 0 0 var(--brass); }
+  .source-option.source-option-retained { padding:11px 13px; opacity:.72;
+                   border-color:var(--line-soft); background:transparent; }
+  .source-option.source-option-retained input { visibility:hidden; }
+  .source-option.source-option-retained h3 { font-size:15px; color:var(--ink-dim); }
+  .source-option.source-option-retained .source-quote { display:none; }
   .source-option input { margin-top:5px; accent-color:var(--brass); }
   .source-option h3 { margin:0; font:400 18px/1.4 var(--serif); }
   .source-quote { margin-top:8px; color:var(--mut); font:13px/1.55 var(--serif);
                   border-left:1px solid var(--line); padding-left:11px; }
   .source-state { margin-top:8px; font:11px/1.5 var(--mono); color:var(--faint); }
-  .restored-source-text { white-space:pre-wrap; overflow-wrap:anywhere;
-                          max-height:260px; overflow-y:auto;
-                          padding:12px 14px; border:1px solid var(--line);
-                          background:var(--well); color:var(--ink); }
-  .restored-source-detail { margin-top:10px; white-space:pre-wrap;
-                            overflow-wrap:anywhere; color:var(--ink-dim); }
+  .retained-source-candidates { margin-top:12px; border-color:var(--line-soft); }
+  .retained-source-candidates summary { color:var(--mut); font:11px/1.5 var(--mono);
+                                        letter-spacing:.04em; }
+  .retained-source-grid { margin:0; padding:0 12px 12px; gap:8px; }
+  .normalization-source-binding { margin:0 0 12px; padding:9px 12px;
+                                  border-left:2px solid var(--brass);
+                                  background:rgba(179,144,90,.06);
+                                  color:var(--brass-bright);
+                                  font:11px/1.55 var(--mono); }
 
   .kv { display:grid; grid-template-columns:190px 1fr; gap:7px 18px; font-size:14px; }
   .kv dt { color:var(--faint); font-size:11.5px; letter-spacing:.14em;
@@ -190,22 +289,35 @@
 
   .evidence { font:11.5px/1.7 var(--mono); color:var(--faint);
               border-top:1px solid var(--line-soft); margin-top:18px; padding-top:12px; }
+  #pool-thesis { color:var(--ink); font:16px/1.55 var(--serif);
+                 border-top:0; margin-top:18px; padding:15px 17px;
+                 background:var(--panel-2); border-left:2px solid var(--brass); }
 
   /* v3 market pool — several independent pair judgments, never one copied verdict */
   .pool-summary { margin:18px 0 0; padding:14px 16px; border-left:2px solid var(--brass);
                   background:rgba(179,144,90,.055); color:var(--ink-dim); }
   .pool-summary.incomplete { border-left-color:var(--bone); }
-  .market-grid { display:grid; gap:16px; margin-top:18px; }
-  .market-option { display:grid; grid-template-columns:auto 1fr; gap:14px;
+  #pool, .market-grid { min-width:0; max-width:100%; }
+  #pool-thesis, #pool-evidence { overflow-wrap:anywhere; }
+  .market-grid { display:grid; grid-template-columns:minmax(0,1fr);
+                 gap:16px; margin-top:18px; }
+  .market-option { display:grid; grid-template-columns:auto minmax(0,1fr); gap:14px;
                    padding:18px 20px; border:1px solid var(--line);
                    background:var(--panel-2); }
+  .market-option > div, .market-option .capmiss > div { min-width:0; }
+  .market-option h3, .market-option .market-meta, .market-option .capmiss .body,
+  .market-option .resolution { overflow-wrap:anywhere; }
+  .market-option .resolution p { white-space:pre-wrap; }
   .market-option:has(input:checked) { border-color:var(--brass); }
   .market-option input { margin-top:5px; accent-color:var(--brass); }
-  .market-option h3 { margin:0; font:400 19px/1.4 var(--serif); }
+  .market-option > div > h3 { margin:0; font:400 19px/1.4 var(--serif); }
   .market-rank { color:var(--brass); margin-right:9px; }
   .market-meta { margin-top:7px; font:11px/1.6 var(--mono); color:var(--faint); }
   .market-option .capmiss { margin:14px 0 0; }
   .resolution { margin-top:12px; color:var(--mut); font:13px/1.55 var(--serif); }
+  .resolution > summary::before { content:"+"; }
+  .resolution[open] > summary::before { content:"−"; }
+  .resolution > summary:focus-visible { outline:2px solid var(--brass); outline-offset:2px; }
   .choice-none { padding:12px 16px; border:1px dashed var(--line); }
   .feedback { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
 
@@ -247,29 +359,68 @@
     button, section, .step, li.entry { transition:none; }
   }
   @media (max-width:760px) {
+    header { flex-direction:column; align-items:flex-start; gap:10px; }
     section, #s5 { padding-left:28px; width:auto; }
     section::before { position:static; display:block; margin-bottom:8px; }
+    .acceptance-controls { grid-template-columns:1fr; }
+    .kv { grid-template-columns:1fr; }
     .capmiss { grid-template-columns:1fr; }
     .capmiss .captures { border-right:none; border-bottom:1px solid var(--line); }
+  }
+  @media (max-width:480px) {
+    .market-option { gap:10px; padding:14px 12px; }
+    .market-option .capmiss > div { padding:14px 12px 15px; }
   }
 </style>
 </head>
 <body>
 <header>
-  <h1>FitCheck</h1>
+  <h1><img src="/assets/brand/fitcheck-logo-on-dark.svg" alt="FitCheck" width="248" height="58"></h1>
   <div class="sub">event-risk legibility — the model proposes, you decide, gates guard
     <span id="mode" class="tag"></span></div>
 </header>
 <main>
 
+<section id="demo-journeys" data-plate="D" hidden>
+  <h2>Choose a demo journey <span class="tag">frozen fixture · independent cases</span></h2>
+  <p class="notice">Each journey starts a fresh private visitor session. These are separate examples, not a continuous history.</p>
+  <div class="row">
+    <button id="demo-source" class="secondary">Stablecoin / Robinhood source discovery</button>
+    <button id="demo-hormuz" class="secondary">Hormuz changed-rules review</button>
+  </div>
+  <div id="demo-journey-state" class="status" role="status" aria-live="polite"></div>
+</section>
+
+<section id="acceptance-catalog" class="acceptance-catalog" data-plate="A" hidden>
+  <h2>Founder acceptance <span class="tag">synthetic fixture rehearsal</span></h2>
+  <p class="notice" style="margin:0 0 14px">This guided catalog tests the UX and
+    human-authority workflow of one exact local build. It does not measure live
+    Gemini or retrieval quality. Every human decision starts unanswered.</p>
+  <div class="acceptance-controls">
+    <select id="acceptance-case" aria-label="Founder acceptance fixture case">
+      <option value="">Choose a fixture case…</option>
+    </select>
+    <button id="load-acceptance-case" class="secondary" disabled>Load source for branch</button>
+  </div>
+  <div id="acceptance-mission" class="acceptance-mission" hidden>
+    <h3 id="acceptance-case-title"></h3>
+    <div id="acceptance-case-mission"></div>
+    <div id="acceptance-intake-context" class="acceptance-intake-context"></div>
+    <div id="acceptance-case-coverage" class="status"></div>
+    <div class="ack">Founder case disposition: pending</div>
+  </div>
+  <div id="acceptance-build" class="acceptance-binding"></div>
+</section>
+
 <section id="s1" data-plate="01" aria-busy="false">
-  <h2>Source intake <span class="tag">raw input, not yet a chosen thesis</span></h2>
+  <h2><span id="s1-heading">Source intake</span> <span class="tag" id="s1-tag">raw input, not yet a chosen thesis</span></h2>
+  <div id="s1-fresh-controls">
   <textarea id="input_text" placeholder="Paste a messy thesis, post, or source text…"></textarea>
   <p id="restored-source-note" class="notice" hidden>The field above starts a new source journey.
     Historical source context for the accepted thesis is shown read-only below.</p>
   <div class="row">
     <button id="run">Find thesis candidates</button>
-    <button id="load-fixture" class="secondary" hidden>Load synthetic two-thesis fixture</button>
+    <button id="load-fixture" class="secondary" hidden>Load stablecoin + Robinhood fixture</button>
     <span class="status">
       <span class="step pending" id="st-extract">extract</span>
       <span class="step pending" id="st-retrieve">retrieve</span>
@@ -286,6 +437,10 @@
     <p class="notice">Choose the thesis you want to test first. Source order is
       not a ranking; unselected candidates remain evidence, not rejected theses.</p>
     <div id="source-grid" class="source-grid" role="radiogroup" aria-label="Thesis candidate choice"></div>
+    <details id="retained-source-candidates" class="retained-source-candidates" hidden>
+      <summary id="retained-source-summary">Other source candidates — retained, not normalized in this run</summary>
+      <div id="retained-source-grid" class="source-grid retained-source-grid"></div>
+    </details>
     <label class="choice-none row">
       <input type="radio" name="source-choice" id="source-choose-none" value="none">
       None of these is the thesis I want to test
@@ -301,6 +456,7 @@
   </div>
   <div id="attempt-review" class="proposal" hidden>
     <h3 id="proposal-heading">Normalization candidate</h3>
+    <div id="normalization-source-binding" class="normalization-source-binding" hidden></div>
     <p id="proposal-summary" class="proposal-summary"></p>
     <p id="proposal-question" class="proposal-question" hidden></p>
     <div id="proposal-reasons" class="notice" hidden></div>
@@ -355,12 +511,27 @@
       <dd id="restored-acceptance" hidden></dd>
     </dl>
   </div>
+  </div>
+  <div id="saved-revisit-source-panel" class="proposal" hidden>
+    <h3>Saved source and thesis · read-only context</h3>
+    <p class="notice">Historical follow-up context only. Reopening recorded no new source choice, thesis acceptance, or market selection.</p>
+    <dl class="revisit-context">
+      <dt>Saved source context / replay provenance</dt><dd id="saved-revisit-source"></dd>
+      <dt>Original source availability</dt><dd>Full original source is unavailable in this saved follow-up.</dd>
+      <dt>Saved thesis wording</dt><dd id="saved-revisit-thesis"></dd>
+    </dl>
+    <details><summary>Evidence details</summary>
+      <pre id="saved-revisit-source-binding" class="saved-revisit-binding"></pre>
+    </details>
+    <div class="row"><button id="start-new-source" class="secondary">Start a new source journey</button></div>
+  </div>
   <div class="error" id="s1-err" hidden></div>
 </section>
 
 <section id="s2" class="stale" data-plate="02" hidden>
-  <h2>Blind prior <span class="tag">before market odds</span></h2>
-  <p class="notice" style="margin:0 0 6px">Record your probability before any market — before market odds are shown. This is write-once for this thesis.</p>
+  <h2>Blind prior <span class="tag">before market context</span></h2>
+  <p class="notice" style="margin:0 0 6px">Record your probability before any market
+     odds are shown. This is write-once for this thesis.</p>
   <div class="row">
     <label>P(thesis true) <input id="prior-p" type="number" min="0" max="1" step="0.01" style="width:90px"></label>
     <select id="prior-conf">
@@ -376,14 +547,17 @@
   <div class="error" id="s2-err" hidden></div>
 </section>
 
-<section id="s3" class="stale" data-plate="03">
-  <h2>Market expressions <span class="tag">up to three independent assessments</span></h2>
+<section id="s3" class="stale" data-plate="02">
+  <h2><span id="s3-heading">Market expressions</span> <span class="tag" id="s3-tag">up to three independent assessments</span></h2>
+  <div id="s3-discovery-controls">
   <p class="notice" style="margin:0">See what each contract can and cannot test,
     then make your own choice. Retrieval rank is evidence, not a verdict.</p>
   <div class="row"><button id="find-markets">Find market expressions</button></div>
+  <p id="demo-market-pending" class="notice" hidden>Frozen candidate-bound evidence is unavailable for this thesis. No market pool or no-clean conclusion is available.</p>
   <div id="pool" hidden>
+    <div class="evidence" id="pool-thesis"></div>
     <div id="pool-summary" class="pool-summary"></div>
-    <p id="pool-thesis" class="notice"></p>
+    <div class="evidence" id="pool-evidence"></div>
     <div id="market-grid" class="market-grid" role="radiogroup" aria-label="Market expression choice"></div>
     <label class="choice-none row">
       <input type="radio" name="market-choice" id="choose-none" value="none">
@@ -410,7 +584,24 @@
       <div id="feedback-ack" class="ack" hidden></div>
       <div id="feedback-err" class="error" hidden></div>
     </div>
-    <div class="evidence" id="pool-evidence"></div>
+  </div>
+  </div>
+  <div id="saved-revisit-market-panel" class="proposal" hidden>
+    <h3>Saved selected contract · frozen baseline evidence</h3>
+    <p class="notice">Only this selected contract and its saved baseline are available here. The earlier market pool and expression-quality assessment are unavailable in this saved follow-up; no class or rank is restored.</p>
+    <dl class="revisit-context">
+      <dt>Contract</dt><dd id="saved-revisit-market-title"></dd>
+      <dt>Market ID</dt><dd id="saved-revisit-market-id" class="id"></dd>
+      <dt>Baseline as of</dt><dd id="saved-revisit-market-date"></dd>
+    </dl>
+    <details><summary>Full baseline resolution rules</summary><pre id="saved-revisit-market-rules"></pre></details>
+    <details><summary>Evidence details</summary>
+      <dl class="revisit-context">
+        <dt>Baseline evidence</dt><dd id="saved-revisit-market-source"></dd>
+        <dt>Rules SHA-256</dt><dd id="saved-revisit-market-rules-hash" class="id"></dd>
+        <dt>Saved binding</dt><dd><pre id="saved-revisit-market-binding" class="saved-revisit-binding"></pre></dd>
+      </dl>
+    </details>
   </div>
 
   <!-- Legacy single-card journey remains routable for compatibility, but is
@@ -433,12 +624,12 @@
     </dl>
     <div class="capmiss">
       <div class="captures">
-        <h3>What this market captures</h3>
+        <h3>What this contract tests</h3>
         <span class="lens">what the resolution rules can actually see</span>
         <div class="body" id="captures"></div>
       </div>
       <div class="misses">
-        <h3>What it misses</h3>
+        <h3>Comparison with your thesis</h3>
         <span class="lens">the gap where a false-strong temptation hides</span>
         <div class="body" id="misses"></div>
       </div>
@@ -478,6 +669,98 @@
     <div class="evidence" id="evidence"></div>
   </div></div>
   <div class="error" id="s3-err" hidden></div>
+</section>
+
+<section id="revisit-followup" class="revisit-panel" data-plate="03" hidden>
+  <h2>Optional follow-up <span class="tag">one selected contract</span></h2>
+  <p id="revisit-intro" class="notice">Keep a baseline for a manual comparison of saved market evidence.
+    Activation is a separate human decision; your accepted thesis and market choice stay as recorded.</p>
+  <div id="revisit-eligibility" class="status"></div>
+  <button id="activate-revisit" disabled>Activate manual revisit</button>
+  <div id="revisit-activation-pending" class="pending-feedback" role="status" hidden>Saving the selected contract baseline…</div>
+  <div id="revisit-activation-ack" class="ack" hidden></div>
+  <div id="revisit-active" hidden>
+    <p><a id="revisit-resume-link" class="revisit-resume-link" hidden>Open this saved follow-up later</a></p>
+    <dl class="revisit-context">
+      <dt>Saved source context</dt><dd id="revisit-source"></dd>
+      <dt>Accepted thesis</dt><dd id="revisit-thesis"></dd>
+      <dt>Selected contract</dt><dd id="revisit-market"></dd>
+      <dt>Original capture</dt><dd id="revisit-baseline-date"></dd>
+      <dt>Evidence source</dt><dd id="revisit-baseline-source"></dd>
+    </dl>
+    <div id="revisit-check-mode" class="notice"></div>
+    <div id="revisit-fixture-controls" hidden>
+      <label for="revisit-fixture-scenario">Synthetic saved-evidence replay case</label>
+      <select id="revisit-fixture-scenario">
+        <option value="">Choose a registered fixture…</option>
+        <option value="unchanged">Unchanged captured rules</option>
+        <option value="rules_added">Added resolution rule</option>
+        <option value="unavailable">Capture unavailable</option>
+      </select>
+    </div>
+    <div id="revisit-saved-controls" hidden>
+      <label for="revisit-saved-capture">Registered saved observation</label>
+      <select id="revisit-saved-capture">
+        <option value="">Choose a saved capture…</option>
+      </select>
+    </div>
+    <div class="row"><button id="run-revisit-check" class="secondary" disabled>Check saved observation</button></div>
+    <div class="row"><button id="refresh-revisit" class="secondary">Refresh saved revisit</button></div>
+    <div id="revisit-check-pending" class="pending-feedback" role="status" hidden>Comparing registered saved evidence…</div>
+  </div>
+  <div id="revisit-result" hidden>
+    <h3 id="revisit-result-heading"></h3>
+    <div id="revisit-result-explanation" class="notice"></div>
+    <dl class="revisit-context">
+      <dt>Later capture</dt><dd id="revisit-later-date"></dd>
+      <dt>Evidence source</dt><dd id="revisit-later-source"></dd>
+      <dt>Unknown fields</dt><dd id="revisit-unknowns"></dd>
+    </dl>
+    <div id="revisit-request-capture" class="status" hidden></div>
+    <div id="revisit-changes"></div>
+    <section id="revisit-rules-impact" class="revisit-impact" aria-labelledby="revisit-impact-heading" hidden>
+      <h4 id="revisit-impact-heading"></h4>
+      <p id="revisit-impact-provenance" class="tag" hidden></p>
+      <dl class="revisit-context">
+        <dt>Resolution</dt><dd id="revisit-impact-resolution"></dd>
+        <dt>Fit with thesis</dt><dd id="revisit-impact-fit"></dd>
+      </dl>
+      <p id="revisit-impact-caveat" class="notice"></p>
+    </section>
+    <details id="revisit-before-rules" class="revisit-rules">
+      <summary>Full original resolution rules</summary><pre id="revisit-before-rules-text"></pre>
+    </details>
+    <details id="revisit-after-rules" class="revisit-rules">
+      <summary>Full later resolution rules</summary><pre id="revisit-after-rules-text"></pre>
+    </details>
+    <div id="revisit-disposition" class="revisit-disposition" hidden>
+      <p class="notice">This evidence proposes review; it does not change the saved thesis or contract choice. Dismiss or reaffirm records a decision; a revision draft is a separate local step.</p>
+      <fieldset id="revisit-choice-set" class="revisit-choice-set">
+        <legend>What would you like to do?</legend>
+        <div role="radiogroup" aria-label="Record a revisit decision">
+          <label class="row"><input type="radio" name="revisit-decision" value="dismiss">Dismiss this review — no reaffirmation</label>
+          <label class="row"><input type="radio" name="revisit-decision" value="reaffirm">Reviewed — keep the thesis unchanged</label>
+        </div>
+        <div class="row"><button id="open-revisit-draft" class="secondary">Revise thesis…</button>
+          <span class="tag">opens a local draft</span></div>
+      </fieldset>
+      <div class="row"><button id="submit-revisit-decision" disabled>Record revisit decision</button>
+        <span id="revisit-decision-state" class="tag">unanswered</span></div>
+      <div id="revisit-revision-draft" hidden>
+        <h4>Thesis revision draft</h4>
+        <p class="notice">Draft only. Your current thesis remains unchanged until a revised version is accepted. Acceptance and rerun are the next step.</p>
+        <dl class="revisit-context">
+          <dt>Current frozen thesis</dt><dd id="revisit-draft-current"></dd>
+        </dl>
+        <label for="revisit-draft-text">Draft revised thesis wording</label>
+        <textarea id="revisit-draft-text"></textarea>
+        <p class="notice">Compare your draft with the changed resolution rules above. This draft is kept only on this page.</p>
+        <div class="row"><button id="cancel-revisit-draft" class="secondary">Cancel draft</button></div>
+      </div>
+    </div>
+    <div id="revisit-decision-ack" class="ack" hidden></div>
+  </div>
+  <div id="revisit-error" class="error" role="alert" hidden></div>
 </section>
 
 <section id="s4" class="stale" data-plate="04" hidden>
@@ -527,6 +810,9 @@
 // A response whose ids do not match the current chain is dropped (contract
 // §Stale-state clearing rules).
 const chain = {
+  sourceJobId: null,
+  sourceRequestId: null,
+  sourceJobInputDigest: null,
   sourceInterpretationId: null,
   sourceInputDigest: null,
   selectedSourceCandidateId: null,
@@ -534,43 +820,270 @@ const chain = {
   normalizationInputText: null,
   normalizationAttemptId: null,
   normalizationDigest: null,
+  normalizationTerminal: null,
+  marketTerminal: null,
+  marketRequest: null,
+  marketRequestSequence: 0,
   thesisId: null,
   fitCardId: null,
   marketDisplaySetId: null,
   marketSnapshotId: null,
+  marketSnapshotAsOf: null,
   marketCandidateSetId: null,
+  marketCards: [],
+  marketChoiceId: null,
   selectedAssessmentId: null,
+  selectedMarket: null,
   selectionKind: null,
+  normalizationDecisionId: null,
+  sourceCandidateChoiceId: null,
+  revisitBinding: null,
+  revisitBaseline: null,
+  revisitResumed: false,
+  revisitRegisteredCaptures: [],
+  revisitObservationId: null,
+  revisitPacketId: null,
+  revisitPacketDigest: null,
+  revisitCheckRequest: null,
+  revisitRequestSequence: 0,
   feedbackAssessmentId: null,
+  acceptanceCaseId: null,
+  acceptanceSourceDigest: null,
   requestToken: 0
 };
+const SOURCE_JOB_STORAGE_KEY = "fitcheck.v3.sourceInterpretationJob.v1";
+const ACCEPTANCE_CASE_STORAGE_KEY = "fitcheck.founderAcceptanceCase.v1";
+const RESUME_THESIS_ID_PARAM = "resume_thesis_id";
+const RESUME_REVISIT_REVISION_ID_PARAM = "resume_revisit_revision_id";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SYNTHETIC_MARKET_FIXTURE_ASSETS = new Set([
+  "synthetic-market-stablecoin-total-cap.json",
+  "synthetic-market-stablecoin-unit-cap.json",
+  "synthetic-market-treasury-ledger-payment.json",
+  "synthetic-market-broker-tokenized-asset.json",
+  "synthetic-market-broker-first-tokenized.json",
+  "synthetic-market-broker-chain-token.json",
+]);
+const BOOTSTRAP_RESUME_TOKEN = chain.requestToken;
 let fixtureSourceExample = null;
 let fixtureClarificationExamples = [];
+let founderAcceptance = null;
+let founderAcceptanceCases = [];
+let activeAcceptanceCase = null;
 let productMode = null;
-const RESUME_THESIS_ID_PARAM = "resume_thesis_id";
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const BOOTSTRAP_RESUME_TOKEN = chain.requestToken;
+let anonymousDemo = false;
+let demoSessionRef = null;
+let boundedSourceTerminal = null;
 
 const $ = (id) => document.getElementById(id);
 const stale = (id, on) => $(id).classList.toggle("stale", on);
 const err = (id, msg) => { const el = $(id); el.hidden = !msg; el.textContent = msg || ""; };
 const step = (id, state) => { $(id).className = "step " + state; };
 
+function clearRevisitDraft() {
+  const draft = $("revisit-revision-draft");
+  draft.hidden = true;
+  draft.dataset.binding = "";
+  draft.dataset.observationId = "";
+  draft.dataset.packetId = "";
+  draft.dataset.packetDigest = "";
+  $("revisit-draft-current").textContent = "";
+  $("revisit-draft-text").value = "";
+  $("open-revisit-draft").disabled = false;
+  document.querySelectorAll('input[name="revisit-decision"]').forEach((input) => {
+    input.disabled = false;
+  });
+}
+
+function clearRevisitResult() {
+  clearRevisitDraft();
+  chain.revisitObservationId = null;
+  chain.revisitPacketId = null;
+  chain.revisitPacketDigest = null;
+  $("revisit-result").hidden = true;
+  $("revisit-result-heading").textContent = "";
+  $("revisit-result-explanation").textContent = "";
+  $("revisit-later-date").textContent = "";
+  $("revisit-later-source").textContent = "";
+  $("revisit-unknowns").textContent = "";
+  $("revisit-request-capture").hidden = true;
+  $("revisit-request-capture").textContent = "";
+  $("revisit-rules-impact").hidden = true;
+  $("revisit-impact-heading").textContent = "";
+  $("revisit-impact-provenance").hidden = true;
+  $("revisit-impact-provenance").textContent = "";
+  $("revisit-impact-resolution").textContent = "";
+  $("revisit-impact-fit").textContent = "";
+  $("revisit-impact-caveat").textContent = "";
+  $("revisit-changes").innerHTML = "";
+  $("revisit-before-rules-text").textContent = "";
+  $("revisit-after-rules-text").textContent = "";
+  $("revisit-before-rules").open = false;
+  $("revisit-after-rules").open = false;
+  $("revisit-disposition").hidden = true;
+  $("open-revisit-draft").disabled = true;
+  $("revisit-decision-state").textContent = "unanswered";
+  $("submit-revisit-decision").disabled = true;
+  $("revisit-decision-ack").hidden = true;
+  $("revisit-decision-ack").textContent = "";
+  document.querySelectorAll('input[name="revisit-decision"]').forEach((input) => {
+    input.checked = false;
+    input.disabled = false;
+  });
+}
+
+function clearRevisitFollowup() {
+  clearSavedRevisitUpstream();
+  chain.revisitRequestSequence += 1;
+  chain.revisitBinding = null;
+  chain.revisitBaseline = null;
+  chain.revisitResumed = false;
+  chain.revisitRegisteredCaptures = [];
+  chain.revisitCheckRequest = null;
+  clearRevisitResult();
+  $("revisit-followup").hidden = true;
+  $("revisit-eligibility").textContent = "";
+  $("activate-revisit").hidden = false;
+  $("activate-revisit").disabled = true;
+  $("activate-revisit").textContent = "Activate manual revisit";
+  $("revisit-activation-pending").hidden = true;
+  $("revisit-activation-ack").hidden = true;
+  $("revisit-activation-ack").textContent = "";
+  $("revisit-active").hidden = true;
+  $("revisit-resume-link").hidden = true;
+  $("revisit-resume-link").removeAttribute("href");
+  $("revisit-source").textContent = "";
+  $("revisit-thesis").textContent = "";
+  $("revisit-market").textContent = "";
+  $("revisit-baseline-date").textContent = "";
+  $("revisit-baseline-source").textContent = "";
+  $("revisit-check-mode").textContent = "";
+  $("revisit-fixture-controls").hidden = true;
+  $("revisit-fixture-scenario").value = "";
+  $("revisit-saved-controls").hidden = true;
+  $("revisit-saved-capture").innerHTML = '<option value="">Choose a saved capture…</option>';
+  $("revisit-saved-capture").value = "";
+  $("run-revisit-check").disabled = true;
+  $("refresh-revisit").disabled = true;
+  $("revisit-check-pending").hidden = true;
+  err("revisit-error", null);
+}
+
+function clearSavedRevisitUpstream() {
+  const wasVisible = !$("saved-revisit-source-panel").hidden ||
+    !$("saved-revisit-market-panel").hidden;
+  $("saved-revisit-source-panel").hidden = true;
+  $("saved-revisit-market-panel").hidden = true;
+  $("s1-fresh-controls").hidden = false;
+  $("s3-discovery-controls").hidden = false;
+  $("s1-heading").textContent = "Source intake";
+  $("s1-tag").textContent = "raw input, not yet a chosen thesis";
+  $("s3-heading").textContent = "Market expressions";
+  $("s3-tag").textContent = "up to three independent assessments";
+  $("revisit-intro").textContent =
+    "Keep a baseline for a manual comparison of saved market evidence. " +
+    "Activation is a separate human decision; your accepted thesis and market choice stay as recorded.";
+  for (const id of [
+    "saved-revisit-source", "saved-revisit-thesis",
+    "saved-revisit-source-binding", "saved-revisit-market-title",
+    "saved-revisit-market-id", "saved-revisit-market-date",
+    "saved-revisit-market-source", "saved-revisit-market-rules-hash",
+    "saved-revisit-market-binding", "saved-revisit-market-rules"
+  ]) $(id).textContent = "";
+  $("saved-revisit-source-panel").dataset.binding = "";
+  $("saved-revisit-market-panel").dataset.binding = "";
+  if (wasVisible) {
+    $("run").disabled = false;
+    $("find-markets").disabled = false;
+    stale("s3", true);
+  }
+}
+
+function renderSavedRevisitUpstream(activation) {
+  const { binding, baseline } = activation;
+  const identity = JSON.stringify(binding, null, 2);
+  $("saved-revisit-source").textContent =
+    !baseline.source_excerpt || !baseline.source_excerpt.trim()
+    ? "No saved source context or excerpt was retained with this follow-up."
+    : baseline.source_excerpt;
+  $("saved-revisit-thesis").textContent = baseline.accepted_thesis;
+  $("saved-revisit-source-binding").textContent = identity;
+  $("saved-revisit-market-title").textContent = baseline.title;
+  $("saved-revisit-market-id").textContent = binding.market_id;
+  $("saved-revisit-market-date").textContent = baseline.snapshot_as_of;
+  $("saved-revisit-market-source").textContent =
+    "Frozen baseline evidence · " + binding.baseline_snapshot_id;
+  $("saved-revisit-market-rules-hash").textContent = baseline.rules_hash;
+  $("saved-revisit-market-binding").textContent = identity;
+  $("saved-revisit-market-rules").textContent = baseline.rules;
+  $("saved-revisit-source-panel").dataset.binding = JSON.stringify(binding);
+  $("saved-revisit-market-panel").dataset.binding = JSON.stringify(binding);
+  $("s1-heading").textContent = "Saved source and thesis";
+  $("s1-tag").textContent = "read-only context";
+  $("s3-heading").textContent = "Saved selected contract";
+  $("s3-tag").textContent = "frozen baseline rules";
+  $("revisit-intro").textContent =
+    "Compare retained contract evidence with its frozen baseline. " +
+    "Reopening preserves the saved records.";
+  $("s1-fresh-controls").hidden = true;
+  $("s3-discovery-controls").hidden = true;
+  $("run").disabled = true;
+  $("find-markets").disabled = true;
+  $("saved-revisit-source-panel").hidden = false;
+  $("saved-revisit-market-panel").hidden = false;
+  stale("s3", false);
+}
+
+$("start-new-source").onclick = () => {
+  if (anonymousDemo) {
+    $("demo-source").click();
+    return;
+  }
+  $("input_text").value = "";
+  clearAcceptanceCase();
+  resetDownstream();
+  $("input_text").focus();
+};
+
 function resetDownstream() {
   // A new/changed thesis clears ALL downstream state (AC-4).
+  if (typeof window !== "undefined" && window.history?.replaceState) {
+    const resumeParams = new URLSearchParams(window.location.search);
+    if (resumeParams.has(RESUME_REVISIT_REVISION_ID_PARAM)) {
+      resumeParams.delete(RESUME_REVISIT_REVISION_ID_PARAM);
+      const suffix = resumeParams.toString();
+      window.history.replaceState(window.history.state, "",
+        (window.location.pathname || "/") + (suffix ? "?" + suffix : "") +
+        (window.location.hash === "#revisit-followup" ? "" :
+          (window.location.hash || "")));
+    }
+  }
   chain.requestToken += 1;
+  chain.sourceJobId = null; chain.sourceRequestId = null;
+  chain.sourceJobInputDigest = null;
+  localStorage.removeItem(SOURCE_JOB_STORAGE_KEY);
   chain.sourceInterpretationId = null; chain.sourceInputDigest = null;
   chain.selectedSourceCandidateId = null; chain.sourceChoiceKind = null;
   chain.normalizationInputText = null;
   chain.normalizationAttemptId = null; chain.normalizationDigest = null;
+  chain.normalizationTerminal = null;
+  chain.marketTerminal = null;
+  chain.marketRequest = null;
   chain.thesisId = null; chain.fitCardId = null;
   chain.marketDisplaySetId = null; chain.marketSnapshotId = null;
-  chain.marketCandidateSetId = null; chain.selectedAssessmentId = null;
+  chain.marketSnapshotAsOf = null;
+  chain.marketCandidateSetId = null; chain.marketCards = [];
+  chain.marketChoiceId = null; chain.selectedAssessmentId = null;
+  chain.selectedMarket = null;
   chain.selectionKind = null; chain.feedbackAssessmentId = null;
+  chain.normalizationDecisionId = null;
+  chain.sourceCandidateChoiceId = null;
+  clearRevisitFollowup();
   setSourcePending(false);
   setSourceChoicePending(null);
   ["s2","s3","s4"].forEach((s) => stale(s, true));
-  $("source-review").hidden = true; $("source-grid").innerHTML = "";
+  $("source-review").hidden = true;
+  clearSourceCandidatePresentation();
   $("source-choose-none").checked = false;
   $("source-choose-none").disabled = false;
   $("submit-source-choice").disabled = true;
@@ -578,6 +1091,10 @@ function resetDownstream() {
   $("source-choice-state").textContent = "unanswered";
   $("source-choice-ack").hidden = true;
   $("attempt-review").hidden = true;
+  $("attempt-review").removeAttribute("data-source-interpretation-id");
+  $("attempt-review").removeAttribute("data-source-candidate-id");
+  $("normalization-source-binding").hidden = true;
+  $("normalization-source-binding").textContent = "";
   $("proposal-actions").hidden = false;
   $("clarification-form").hidden = true;
   $("clarification-answer").value = "";
@@ -592,7 +1109,12 @@ function resetDownstream() {
   $("clarification-mode-note").hidden = true;
   $("clarification-mode-note").textContent = "";
   $("revision-form").hidden = true;
+  $("submit-revision").disabled = false;
+  $("cancel-revision").disabled = false;
   $("s1-out").hidden = true;
+  $("restored-acceptance-label").hidden = true;
+  $("restored-acceptance").hidden = true;
+  $("restored-acceptance").textContent = "";
   $("restored-source-note").hidden = true;
   $("restored-source-label").hidden = true;
   $("restored-source").hidden = true;
@@ -603,16 +1125,16 @@ function resetDownstream() {
   $("restored-source-normalization-input").textContent = "";
   $("restored-source-url").hidden = true;
   $("restored-source-url").textContent = "";
-  $("restored-acceptance-label").hidden = true;
-  $("restored-acceptance").hidden = true;
-  $("restored-acceptance").textContent = "";
   $("card").hidden = true; $("draft").hidden = true; $("noclean").hidden = true;
   $("pool").hidden = true; $("market-grid").innerHTML = "";
-  $("pool-thesis").textContent = "";
+  $("pool-thesis").textContent = ""; $("pool-evidence").textContent = "";
   $("choose-none").checked = false; $("choose-none").disabled = false;
   $("submit-choice").disabled = true;
   $("choice-state").textContent = "unanswered";
   $("choice-ack").hidden = true; $("choice-ack").textContent = "";
+  $("find-markets").disabled = false;
+  $("find-markets").textContent = "Find market expressions";
+  $("demo-market-pending").hidden = true;
   $("assessment-feedback").hidden = true;
   $("feedback-kind").value = ""; $("feedback-note").value = "";
   $("feedback-ack").hidden = true; $("feedback-ack").textContent = "";
@@ -635,18 +1157,225 @@ function resetDownstream() {
 
 async function api(path, opts) {
   const res = await fetch(path, Object.assign({
+    cache: "no-store",
     headers: { "Content-Type": "application/json" } }, opts));
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw Object.assign(new Error(body.detail || body.error || res.status), body, { httpStatus: res.status });
   return body;
 }
 
-$("input_text").addEventListener("input", resetDownstream);
+function isTerminalProviderError(error) {
+  return error?.error === "provider_operation_terminal" &&
+    error?.retryable === false;
+}
+
+function terminalBindingIsCurrent(binding) {
+  return binding.requestToken === chain.requestToken &&
+    binding.sourceInterpretationId === chain.sourceInterpretationId &&
+    binding.sourceCandidateId === chain.selectedSourceCandidateId &&
+    binding.predecessorAttemptId === chain.normalizationAttemptId &&
+    binding.predecessorDigest === chain.normalizationDigest;
+}
+
+function hasCurrentNormalizationTerminal() {
+  return chain.normalizationTerminal !== null &&
+    terminalBindingIsCurrent(chain.normalizationTerminal);
+}
+
+function terminalProviderMessage() {
+  return "The bounded model operation ended without a usable proposal. " +
+    "This journey is incomplete and no thesis meaning was accepted. " +
+    "The exhausted model stage will not retry automatically.";
+}
+
+function applyTerminalProviderState(error, binding) {
+  if (!isTerminalProviderError(error) || !terminalBindingIsCurrent(binding)) {
+    return false;
+  }
+  chain.normalizationTerminal = binding;
+  setSourceChoicePending(null);
+  if (binding.predecessorAttemptId === null) {
+    $("submit-source-choice").disabled = true;
+    $("submit-source-choice").textContent = "Normalization unavailable";
+    $("source-choice-state").textContent =
+      "choice recorded · model operation terminal";
+    $("source-choice-ack").hidden = false;
+    $("source-choice-ack").textContent =
+      "Your thesis choice remains recorded. No normalization attempt or thesis acceptance was created.";
+  } else {
+    // Keep real human choices available.  This terminal provider state is not
+    // a reject, none, or decision on the existing predecessor.
+    setClarificationPending(false);
+    $("load-clarification-fixture").disabled = true;
+    $("open-revision").disabled = true;
+    $("submit-revision").disabled = true;
+  }
+  err("s1-err", terminalProviderMessage());
+  return true;
+}
+
+function marketRequestIsCurrent(binding) {
+  return binding.requestToken === chain.requestToken &&
+    binding.thesisId === chain.thesisId &&
+    chain.marketRequest !== null &&
+    binding.attemptId === chain.marketRequest.attemptId;
+}
+
+function beginMarketRequest() {
+  const binding = {
+    requestToken: chain.requestToken,
+    thesisId: chain.thesisId,
+    attemptId: ++chain.marketRequestSequence
+  };
+  chain.marketRequest = binding;
+  $("find-markets").disabled = true;
+  $("find-markets").textContent = "Finding market expressions…";
+  return binding;
+}
+
+function releaseMarketRequest(binding) {
+  if (!marketRequestIsCurrent(binding)) return false;
+  chain.marketRequest = null;
+  $("find-markets").disabled = false;
+  $("find-markets").textContent = "Find market expressions";
+  return true;
+}
+
+function marketTerminalProviderMessage() {
+  return "Market comparison stopped after a bounded model operation. " +
+    "Your accepted thesis remains available, but no market comparison was displayed. " +
+    "Find is unavailable for this accepted thesis in this run.";
+}
+
+function applyTerminalMarketState(error, binding) {
+  if (!isTerminalProviderError(error) || !marketRequestIsCurrent(binding)) {
+    return false;
+  }
+  chain.marketTerminal = binding;
+  chain.marketRequest = null;
+  clearPoolProjection();
+  $("find-markets").disabled = true;
+  $("find-markets").textContent = "Market comparison unavailable";
+  err("s3-err", marketTerminalProviderMessage());
+  step("st-fit", "failed");
+  return true;
+}
+
+function hasBoundedSourceTerminal() {
+  return productMode === "vertex-canary" && boundedSourceTerminal !== null;
+}
+
+function showBoundedSourceTerminal() {
+  if (!hasBoundedSourceTerminal()) return;
+  setSourcePending("needs_operator");
+  step("st-extract", "failed");
+  err("s1-err", "The source model operation needs operator review. " +
+    "No thesis candidate or accepted meaning was created. The source text remains visible, " +
+    "but this bounded run cannot start another source model operation.");
+}
+
+function acceptancePrefix() {
+  return activeAcceptanceCase
+    ? "fixture case " + activeAcceptanceCase.case_id + " · " : "";
+}
+
+function showAcceptanceCase(selected) {
+  activeAcceptanceCase = selected;
+  chain.acceptanceCaseId = selected?.case_id || null;
+  chain.acceptanceSourceDigest = selected?.source_digest || null;
+  $("acceptance-mission").hidden = !selected;
+  $("acceptance-case-title").textContent = selected
+    ? selected.case_id + " · " + selected.title : "";
+  $("acceptance-case-mission").textContent = selected?.mission || "";
+  $("acceptance-intake-context").textContent = selected?.intake_context || "";
+  $("acceptance-case-coverage").textContent = selected
+    ? "source " + selected.source_digest + " · declared path · " +
+      selected.declared_coverage.join(" · ") : "";
+  if (selected) {
+    sessionStorage.setItem(ACCEPTANCE_CASE_STORAGE_KEY, JSON.stringify({
+      case_id: selected.case_id,
+      source_digest: selected.source_digest
+    }));
+  } else {
+    sessionStorage.removeItem(ACCEPTANCE_CASE_STORAGE_KEY);
+  }
+}
+
+function clearAcceptanceCase() {
+  showAcceptanceCase(null);
+  $("acceptance-case").value = "";
+  $("load-acceptance-case").disabled = true;
+}
+
+function validateAcceptanceDigest(inputDigest) {
+  if (!activeAcceptanceCase) return;
+  const privacyCase = activeAcceptanceCase.declared_coverage.includes(
+    "privacy_refusal");
+  const valid = privacyCase
+    ? inputDigest === null
+    : inputDigest === activeAcceptanceCase.source_digest;
+  if (!valid) {
+    throw new Error(
+      "fixture case/source identity mismatch — nothing was rendered");
+  }
+}
+
+function restoreAcceptanceCase() {
+  if (!founderAcceptance?.enabled) return;
+  let stored = null;
+  try {
+    stored = JSON.parse(
+      sessionStorage.getItem(ACCEPTANCE_CASE_STORAGE_KEY));
+  } catch (_) {
+    sessionStorage.removeItem(ACCEPTANCE_CASE_STORAGE_KEY);
+  }
+  const selected = founderAcceptanceCases.find((item) =>
+    item.case_id === stored?.case_id &&
+    item.source_digest === stored?.source_digest);
+  if (!selected) return;
+  $("acceptance-case").value = selected.case_id;
+  $("load-acceptance-case").disabled = false;
+  $("input_text").value = selected.source_text;
+  showAcceptanceCase(selected);
+}
+
+function sourceInputChanged() {
+  clearAcceptanceCase();
+  resetDownstream();
+  // A source edit clears stale presentation.  It is not fresh authority to
+  // spend another bounded canary source slot in this browser run.
+  showBoundedSourceTerminal();
+}
+
+$("input_text").addEventListener("input", sourceInputChanged);
 
 $("load-fixture").onclick = () => {
+  if (hasBoundedSourceTerminal()) {
+    showBoundedSourceTerminal();
+    return;
+  }
   if (!fixtureSourceExample) return;
+  clearAcceptanceCase();
   resetDownstream();
   $("input_text").value = fixtureSourceExample;
+  $("input_text").focus();
+};
+
+$("acceptance-case").addEventListener("change", () => {
+  $("load-acceptance-case").disabled = !$("acceptance-case").value;
+});
+
+$("load-acceptance-case").onclick = () => {
+  if (hasBoundedSourceTerminal()) {
+    showBoundedSourceTerminal();
+    return;
+  }
+  const selected = founderAcceptanceCases.find(
+    (item) => item.case_id === $("acceptance-case").value);
+  if (!selected) return;
+  resetDownstream();
+  $("input_text").value = selected.source_text;
+  showAcceptanceCase(selected);
   $("input_text").focus();
 };
 
@@ -660,15 +1389,35 @@ function selectSourceChoice(kind, candidateId, quote) {
     : "candidate selected";
 }
 
-function setSourcePending(isPending) {
+function setSourcePending(state) {
+  const needsOperator = state === "needs_operator";
+  const isPending = Boolean(state) && !needsOperator;
   $("s1").setAttribute("aria-busy", String(isPending));
-  $("source-pending").hidden = !isPending;
-  $("run").disabled = isPending;
-  $("run").textContent = isPending
-    ? "Reading source…"
+  $("source-pending").hidden = !state;
+  $("run").disabled = isPending || needsOperator;
+  $("run").textContent = needsOperator
+    ? "Source run needs review"
+    : isPending
+    ? (state === "queued" || state === "retry_wait"
+      ? "Queued for worker…"
+      : "Reading source…")
     : "Find thesis candidates";
-  $("input_text").disabled = isPending;
-  $("load-fixture").disabled = isPending;
+  // The source stays editable while the worker runs. Editing it fires
+  // resetDownstream(), revokes the UI binding, and drops any late result.
+  $("load-fixture").disabled = isPending || needsOperator;
+  if (state === "queued") {
+    $("source-pending").textContent =
+      "Source accepted. Waiting for the separate interpretation worker…";
+  } else if (state === "retry_wait") {
+    $("source-pending").textContent =
+      "The fixture job is waiting for its bounded retry; no model call is running.";
+  } else if (state === "running") {
+    $("source-pending").textContent =
+      "Worker claimed the source. Identifying distinct thesis candidates…";
+  } else if (needsOperator) {
+    $("source-pending").textContent =
+      "The bounded source model operation needs operator review; it will not retry automatically.";
+  }
 }
 
 function setSourceChoicePending(phase) {
@@ -691,9 +1440,92 @@ function setSourceChoicePending(phase) {
   }
 }
 
-function sourceCandidateCard(candidate) {
+function allSourceCandidateCards() {
+  return Array.from($("source-review").querySelectorAll(".source-option"));
+}
+
+function clearSourceCandidatePresentation() {
+  $("source-grid").innerHTML = "";
+  $("retained-source-grid").innerHTML = "";
+  $("retained-source-candidates").hidden = true;
+  $("retained-source-candidates").open = false;
+  $("retained-source-summary").textContent =
+    "Other source candidates — retained, not normalized in this run";
+  $("source-review").removeAttribute("data-selection-kind");
+  $("source-review").removeAttribute("data-selected-source-candidate-id");
+}
+
+function bindSourceCandidatePresentation(kind, candidateId) {
+  const cards = allSourceCandidateCards();
+  const active = kind === "candidate"
+    ? cards.find((card) => card.dataset.sourceCandidateId === candidateId)
+    : null;
+  if (kind === "candidate" &&
+      (!active || active.dataset.sourceInterpretationId !==
+        chain.sourceInterpretationId)) {
+    throw new Error(
+      "selected source candidate binding mismatch — nothing was rendered");
+  }
+  const activeGrid = $("source-grid");
+  const retainedGrid = $("retained-source-grid");
+  cards.forEach((card) => {
+    const isActive = card === active;
+    card.classList.toggle("source-option-active", isActive);
+    card.classList.toggle("source-option-retained", !isActive);
+    if (isActive) {
+      card.setAttribute("aria-current", "true");
+      card.querySelector(".source-state").textContent =
+        "selected thesis · normalization source for this run";
+      activeGrid.append(card);
+    } else {
+      card.removeAttribute("aria-current");
+      card.querySelector(".source-state").textContent = kind === "none"
+        ? "retained source candidate · none normalized in this run"
+        : "retained source candidate · not normalized in this run";
+      retainedGrid.append(card);
+    }
+  });
+  $("retained-source-summary").textContent = kind === "none"
+    ? "Source candidates retained — none normalized in this run"
+    : "Other source candidates — retained, not normalized in this run";
+  $("retained-source-candidates").hidden = retainedGrid.children.length === 0;
+  $("retained-source-candidates").open = false;
+  $("source-review").dataset.selectionKind = kind;
+  if (active) {
+    $("source-review").dataset.selectedSourceCandidateId = candidateId;
+  } else {
+    $("source-review").removeAttribute("data-selected-source-candidate-id");
+  }
+}
+
+function renderNormalizationSourceBinding() {
+  const binding = $("normalization-source-binding");
+  const active = allSourceCandidateCards().find((card) =>
+    card.dataset.sourceCandidateId === chain.selectedSourceCandidateId);
+  if (!active || active.dataset.sourceInterpretationId !==
+      chain.sourceInterpretationId) {
+    binding.hidden = true;
+    binding.textContent = "";
+    $("attempt-review").removeAttribute("data-source-interpretation-id");
+    $("attempt-review").removeAttribute("data-source-candidate-id");
+    return;
+  }
+  $("attempt-review").dataset.sourceInterpretationId =
+    chain.sourceInterpretationId;
+  $("attempt-review").dataset.sourceCandidateId =
+    chain.selectedSourceCandidateId;
+  binding.textContent = "Normalization of selected thesis · 0" +
+    active.dataset.ordinal + " · " + active.dataset.claimSummary;
+  binding.hidden = false;
+}
+
+function sourceCandidateCard(candidate, sourceInterpretationId) {
   const shell = document.createElement("label");
   shell.className = "source-option";
+  shell.dataset.sourceInterpretationId = sourceInterpretationId;
+  shell.dataset.sourceCandidateId = candidate.source_thesis_candidate_id;
+  shell.dataset.ordinal = String(candidate.ordinal);
+  shell.dataset.claimSummary = candidate.claim_summary;
   const radio = document.createElement("input");
   radio.type = "radio"; radio.name = "source-choice";
   radio.value = candidate.source_thesis_candidate_id;
@@ -718,9 +1550,13 @@ function renderSourceInterpretation(out) {
   chain.sourceInterpretationId = out.source_interpretation_id;
   chain.sourceInputDigest = out.input_digest;
   $("source-review").hidden = false;
-  const grid = $("source-grid"); grid.innerHTML = "";
-  out.candidates.forEach((candidate) => grid.append(sourceCandidateCard(candidate)));
+  clearSourceCandidatePresentation();
+  const grid = $("source-grid");
+  out.candidates.forEach((candidate) => grid.append(
+    sourceCandidateCard(candidate, out.source_interpretation_id)));
   $("source-meta").textContent =
+    acceptancePrefix() +
+    (chain.sourceJobId ? "job " + chain.sourceJobId + " · " : "") +
     "interpretation " + out.source_interpretation_id + " · variant " +
     out.system_variant_id + (out.model_adapter
       ? " · proposer " + out.model_adapter + " · run " + out.model_run_id
@@ -738,10 +1574,14 @@ function renderSourceInterpretation(out) {
 }
 
 function renderAttempt(out) {
+  // Only a newly rendered, identity-checked attempt can clear a terminal
+  // presentation. A late error cannot clear or lock this newer attempt.
+  chain.normalizationTerminal = null;
   chain.normalizationAttemptId = out.normalization_attempt_id;
   chain.normalizationDigest = out.input_digest;
   setClarificationPending(false);
   $("attempt-review").hidden = false;
+  renderNormalizationSourceBinding();
   $("proposal-actions").hidden = false;
   $("revision-form").hidden = true;
   $("proposal-question").hidden = true;
@@ -793,39 +1633,214 @@ function renderAttempt(out) {
     $("proposal-reasons").textContent = out.reasons.join(" · ");
   }
   $("proposal-meta").textContent =
-    "attempt " + out.normalization_attempt_id + " · variant " + out.system_variant_id +
+    acceptancePrefix() + "attempt " + out.normalization_attempt_id +
+    " · variant " + out.system_variant_id +
     (out.model_adapter ? " · proposer " + out.model_adapter + " · run " + out.model_run_id :
       " · no model call");
   $("accept-proposal").hidden = out.outcome !== "candidate";
   $("accept-proposal").disabled = out.outcome !== "candidate";
   $("open-revision").disabled = !out.input_digest;
+  $("submit-revision").disabled = false;
+  $("cancel-revision").disabled = false;
   step("st-extract", out.outcome === "refusal" ? "failed" : "done");
 }
 
+const wait = (milliseconds) => new Promise((resolve) =>
+  setTimeout(resolve, milliseconds));
+
+function readSourceJobState() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(SOURCE_JOB_STORAGE_KEY));
+    if (anonymousDemo && stored && stored.session_ref !== demoSessionRef) {
+      localStorage.removeItem(SOURCE_JOB_STORAGE_KEY);
+      return null;
+    }
+    return stored;
+  } catch (_) {
+    localStorage.removeItem(SOURCE_JOB_STORAGE_KEY);
+    return null;
+  }
+}
+
+function rememberSourceIntent(idempotencyKey) {
+  localStorage.setItem(SOURCE_JOB_STORAGE_KEY, JSON.stringify({
+    idempotency_key: idempotencyKey,
+    session_ref: demoSessionRef,
+    submitted_at: new Date().toISOString()
+  }));
+}
+
+function rememberSourceJob(out, idempotencyKey) {
+  localStorage.setItem(SOURCE_JOB_STORAGE_KEY, JSON.stringify({
+    idempotency_key: idempotencyKey,
+    session_ref: demoSessionRef,
+    job_id: out.job_id,
+    source_interpretation_request_id: out.source_interpretation_request_id,
+    input_digest: out.input_digest,
+    submitted_at: out.created_at
+  }));
+}
+
+function bindSourceJob(out) {
+  chain.sourceJobId = out.job_id;
+  chain.sourceRequestId = out.source_interpretation_request_id;
+  chain.sourceJobInputDigest = out.input_digest;
+}
+
+function validateSourceJobBinding(out) {
+  if (out.job_id !== chain.sourceJobId ||
+      out.source_interpretation_request_id !== chain.sourceRequestId ||
+      out.input_digest !== chain.sourceJobInputDigest) {
+    throw new Error("source job identity mismatch — nothing was rendered");
+  }
+  validateAcceptanceDigest(out.input_digest);
+}
+
+async function pollSourceJob(jobId, tokenAtCall) {
+  let statusFailures = 0;
+  while (tokenAtCall === chain.requestToken && jobId === chain.sourceJobId) {
+    try {
+      const out = await api(`/api/v3/source-interpretation-jobs/${jobId}`);
+      if (tokenAtCall !== chain.requestToken || jobId !== chain.sourceJobId) return;
+      validateSourceJobBinding(out);
+      statusFailures = 0;
+      if (["queued", "running", "retry_wait"].includes(out.status)) {
+        setSourcePending(out.status);
+        await wait(400);
+        continue;
+      }
+      localStorage.removeItem(SOURCE_JOB_STORAGE_KEY);
+      setSourcePending(null);
+      if (out.status === "succeeded") {
+        if (!out.interpretation) {
+          throw new Error("completed source job has no bound interpretation");
+        }
+        if (out.interpretation.input_digest !== chain.sourceJobInputDigest) {
+          throw new Error("source result digest mismatch — nothing was rendered");
+        }
+        if (out.interpretation.outcome === "candidates" &&
+            (out.interpretation.candidates.length < 1 ||
+             out.interpretation.candidates.length > 3)) {
+          throw new Error("candidate evidence shape mismatch — nothing was rendered");
+        }
+        renderSourceInterpretation(out.interpretation);
+        return;
+      }
+      if (out.status === "needs_operator" &&
+          out.error_code === "source_model_attempt_uncertain" &&
+          productMode === "vertex-canary") {
+        boundedSourceTerminal = {
+          jobId: out.job_id,
+          inputDigest: out.input_digest
+        };
+        showBoundedSourceTerminal();
+        return;
+      }
+      step("st-extract", "failed");
+      err("s1-err", out.safe_error_message ||
+        "source interpretation ended without a candidate result");
+      return;
+    } catch (e) {
+      if (tokenAtCall !== chain.requestToken || jobId !== chain.sourceJobId) return;
+      statusFailures += 1;
+      if (statusFailures < 3 && !e.httpStatus) {
+        $("source-pending").textContent =
+          "Job status is temporarily unavailable. Retrying the same job…";
+        await wait(600);
+        continue;
+      }
+      setSourcePending(null);
+      step("st-extract", "failed");
+      if (e.httpStatus === 404) {
+        localStorage.removeItem(SOURCE_JOB_STORAGE_KEY);
+      }
+      err("s1-err", e.httpStatus === 404
+        ? "The pending source job is no longer available. Submit the source again."
+        : (e.detail || e.message));
+      return;
+    }
+  }
+}
+
 $("run").onclick = async () => {
+  if (hasBoundedSourceTerminal()) {
+    showBoundedSourceTerminal();
+    return;
+  }
+  const saved = readSourceJobState();
+  const boundJob = saved?.job_id ? saved : null;
+  const idempotencyKey = saved?.idempotency_key || crypto.randomUUID();
   resetDownstream();
   const tokenAtCall = chain.requestToken;
-  setSourcePending(true);
+  setSourcePending("queued");
+  if (boundJob) {
+    bindSourceJob(boundJob);
+    rememberSourceJob(boundJob, idempotencyKey);
+    await pollSourceJob(boundJob.job_id, tokenAtCall);
+    return;
+  }
+  // Persist the submission intent before transport. If the server commits but
+  // the response is lost, the next click or reload reuses this exact key.
+  rememberSourceIntent(idempotencyKey);
   try {
-    const out = await api("/api/v3/source-interpretations", { method: "POST",
-      body: JSON.stringify({ input_text: $("input_text").value }) });
+    const out = await api("/api/v3/source-interpretation-jobs", { method: "POST",
+      body: JSON.stringify({
+        input_text: $("input_text").value,
+        idempotency_key: idempotencyKey
+      }) });
     if (tokenAtCall !== chain.requestToken) return; // source changed — drop
-    if (out.outcome === "candidates" &&
-        (out.candidates.length < 1 || out.candidates.length > 3)) {
-      throw new Error("candidate evidence shape mismatch — nothing was rendered");
+    if (!["queued", "running", "retry_wait", "succeeded"].includes(out.status)) {
+      throw new Error("source job did not enter a valid submitted state");
     }
-    setSourcePending(false);
-    renderSourceInterpretation(out);
+    bindSourceJob(out);
+    rememberSourceJob(out, idempotencyKey);
+    setSourcePending(out.status === "succeeded" ? "running" : out.status);
+    await pollSourceJob(out.job_id, tokenAtCall);
   } catch (e) {
     if (tokenAtCall !== chain.requestToken) return;
     setSourcePending(false);
     step("st-extract", "failed");
+    if (e.error === "idempotency_conflict") {
+      localStorage.removeItem(SOURCE_JOB_STORAGE_KEY);
+    }
     const reasons = e.reasons ? "\n· " + e.reasons.join("\n· ") : "";
     err("s1-err", (e.httpStatus === 503 ?
       (e.detail || "model service unavailable") :
       "source interpretation failed — no analysis was created") + reasons);
   }
 };
+
+async function resumePendingSourceJob() {
+  const saved = readSourceJobState();
+  if (!saved?.idempotency_key) return;
+  chain.requestToken += 1;
+  const tokenAtCall = chain.requestToken;
+  setSourcePending("queued");
+  if (!saved.job_id || !saved.source_interpretation_request_id) {
+    $("source-pending").textContent =
+      "Resolving a previous submission whose response was interrupted…";
+    try {
+      const resolved = await api(
+        "/api/v3/source-interpretation-jobs/by-idempotency/" +
+        encodeURIComponent(saved.idempotency_key));
+      if (tokenAtCall !== chain.requestToken) return;
+      bindSourceJob(resolved);
+      rememberSourceJob(resolved, saved.idempotency_key);
+      await pollSourceJob(resolved.job_id, tokenAtCall);
+    } catch (e) {
+      if (tokenAtCall !== chain.requestToken) return;
+      setSourcePending(null);
+      err("s1-err", e.httpStatus === 404
+        ? "The previous submit was not committed. Retry to reuse the same request key."
+        : "The previous submit could not be resolved. Retry to reuse the same request key.");
+    }
+    return;
+  }
+  bindSourceJob(saved);
+  $("source-pending").textContent =
+    "Restoring the pending source job from durable storage…";
+  await pollSourceJob(saved.job_id, tokenAtCall);
+}
 
 $("source-choose-none").addEventListener("change", () =>
   selectSourceChoice("none", null, null));
@@ -853,21 +1868,16 @@ $("submit-source-choice").onclick = async () => {
         choice.source_thesis_candidate_id !== candidateAtCall) {
       throw new Error("source choice identity mismatch — nothing was advanced");
     }
+    chain.sourceCandidateChoiceId = choice.source_candidate_choice_id;
     choiceRecorded = true;
     $("source-choice-state").textContent = "decision recorded";
-    document.querySelectorAll(".source-option").forEach((option) => {
-      const input = option.querySelector('input[name="source-choice"]');
-      const state = option.querySelector(".source-state");
-      state.textContent = input.value === candidateAtCall
-        ? "human-selected focus · awaiting normalization decision"
-        : "available source candidate · not selected";
-    });
+    bindSourceCandidatePresentation(choice.selection_kind, candidateAtCall);
     if (choice.selection_kind === "none") {
       setSourceChoicePending(null);
       $("submit-source-choice").textContent = "Confirm thesis choice";
       $("source-choice-ack").hidden = false;
       $("source-choice-ack").textContent =
-        "Recorded: none selected. No normalization or thesis was created.";
+        "Recorded: none selected. No candidate was normalized and no thesis was created.";
       step("st-extract", "done");
       return;
     }
@@ -886,10 +1896,18 @@ $("submit-source-choice").onclick = async () => {
     $("submit-source-choice").textContent = "Confirm thesis choice";
     $("source-choice-ack").hidden = false;
     $("source-choice-ack").textContent =
-      "Priority recorded. This candidate now enters normalization review.";
+      "Priority recorded. Only the selected thesis enters normalization; " +
+      "other source candidates remain below as retained evidence.";
     renderAttempt(out);
   } catch (e) {
     if (tokenAtCall !== chain.requestToken) return;
+    if (choiceRecorded && applyTerminalProviderState(e, {
+      requestToken: tokenAtCall,
+      sourceInterpretationId: interpretationAtCall,
+      sourceCandidateId: candidateAtCall,
+      predecessorAttemptId: null,
+      predecessorDigest: null
+    })) return;
     setSourceChoicePending(null);
     if (choiceRecorded && chain.sourceChoiceKind === "candidate") {
       $("submit-source-choice").disabled = false;
@@ -925,12 +1943,13 @@ $("accept-proposal").onclick = async () => {
         attemptAtCall !== chain.normalizationAttemptId ||
         out.normalization_attempt_id !== chain.normalizationAttemptId) return;
     chain.thesisId = out.thesis_analysis_id;
-    const selectedSourceState = document.querySelector(
-      '.source-option input[name="source-choice"]:checked'
-    )?.closest(".source-option")?.querySelector(".source-state");
+    chain.normalizationDecisionId = out.normalization_decision_id;
+    const selectedSourceState = allSourceCandidateCards().find((card) =>
+      card.dataset.sourceCandidateId === chain.selectedSourceCandidateId
+    )?.querySelector(".source-state");
     if (selectedSourceState) {
       selectedSourceState.textContent =
-        "human-selected focus · normalization accepted";
+        "selected thesis · normalization accepted for this run";
     }
     $("norm-summary").textContent = $("proposal-summary").textContent;
     $("thesis-id").textContent = out.thesis_analysis_id;
@@ -940,6 +1959,7 @@ $("accept-proposal").onclick = async () => {
     $("s1-out").hidden = false;
     $("proposal-actions").hidden = true;
     stale("s3", false);
+    enableFrozenDemoMarketStep();
   } catch (e) { err("s1-err", e.detail || e.message); }
 };
 
@@ -947,6 +1967,17 @@ function requestedResumeThesisId() {
   const requested = new URLSearchParams(window.location.search)
     .get(RESUME_THESIS_ID_PARAM);
   return requested && UUID_PATTERN.test(requested) ? requested.toLowerCase() : null;
+}
+
+function acceptedStateIsBound(out, expectedThesisId) {
+  return out &&
+    String(out.thesis_analysis_id || "").toLowerCase() === expectedThesisId &&
+    typeof out.accepted_thesis_summary === "string" &&
+    out.accepted_thesis_summary.trim().length > 0 &&
+    UUID_PATTERN.test(String(out.normalization_decision_id || "")) &&
+    typeof out.accepted_at === "string" && out.accepted_at.length > 0 &&
+    out.acceptance_origin === "human_ui" &&
+    restoredSourceIsBound(out.restored_source, out);
 }
 
 function restoredSourceIsBound(source, accepted) {
@@ -970,21 +2001,13 @@ function restoredSourceIsBound(source, accepted) {
     (source.source_url === null || typeof source.source_url === "string");
 }
 
-function acceptedStateIsBound(out, expectedThesisId) {
-  return out &&
-    String(out.thesis_analysis_id || "").toLowerCase() === expectedThesisId &&
-    typeof out.accepted_thesis_summary === "string" &&
-    out.accepted_thesis_summary.trim().length > 0 &&
-    UUID_PATTERN.test(String(out.normalization_decision_id || "")) &&
-    typeof out.accepted_at === "string" && out.accepted_at.length > 0 &&
-    out.acceptance_origin === "human_ui" &&
-    restoredSourceIsBound(out.restored_source, out);
-}
-
 function renderRestoredAcceptedThesis(out) {
-  // Historical source context is read-only. No source choice or proposal is
-  // reconstructed as an active control.
+  // Historical source context is read-only; no source/candidate/attempt
+  // state is reconstructed as an active control.
   chain.thesisId = out.thesis_analysis_id;
+  enableFrozenDemoMarketStep();
+  chain.normalizationDecisionId = out.normalization_decision_id;
+  chain.sourceCandidateChoiceId = out.restored_source?.source_candidate_choice_id || null;
   $("norm-summary").textContent = out.accepted_thesis_summary;
   $("thesis-id").textContent = out.thesis_analysis_id;
   $("restored-acceptance").textContent =
@@ -1021,6 +2044,8 @@ async function resumeAcceptedThesis(
 ) {
   const hasResumeParameter = new URLSearchParams(window.location.search)
     .has(RESUME_THESIS_ID_PARAM);
+  // `/api/health` resolves asynchronously.  A source edit before it resolves
+  // starts a newer journey, so the page-load resume intent must not bind it.
   if (bootstrapRequestToken !== chain.requestToken) return hasResumeParameter;
   const requestedThesisId = requestedResumeThesisId();
   if (!requestedThesisId) {
@@ -1048,6 +2073,10 @@ async function resumeAcceptedThesis(
 }
 
 function updateClarificationSubmitState() {
+  if (hasCurrentNormalizationTerminal()) {
+    $("submit-clarification").disabled = true;
+    return;
+  }
   const answer = $("clarification-answer").value.trim();
   const fixtureAnswer =
     ($("load-clarification-fixture").dataset.answer || "").trim();
@@ -1070,15 +2099,20 @@ function updateClarificationSubmitState() {
 }
 
 function setClarificationPending(isPending) {
+  const terminal = hasCurrentNormalizationTerminal();
   $("clarification-form").setAttribute("aria-busy", String(isPending));
   $("clarification-pending").hidden = !isPending;
   $("submit-clarification").textContent = isPending
     ? "Preparing proposal…"
     : "Answer and rerun";
   $("clarification-answer").disabled = isPending;
-  $("load-clarification-fixture").disabled = isPending;
-  $("open-revision").disabled = isPending || !chain.normalizationDigest;
+  $("load-clarification-fixture").disabled = isPending || terminal;
+  $("open-revision").disabled = isPending || !chain.normalizationDigest || terminal;
   $("reject-proposal").disabled = isPending;
+  if (terminal) {
+    $("submit-clarification").disabled = true;
+    return;
+  }
   if (!isPending) updateClarificationSubmitState();
 }
 
@@ -1087,6 +2121,7 @@ $("clarification-answer").addEventListener(
 );
 
 $("load-clarification-fixture").onclick = () => {
+  if (hasCurrentNormalizationTerminal()) return;
   const answer = $("load-clarification-fixture").dataset.answer || "";
   $("clarification-answer").value = answer;
   updateClarificationSubmitState();
@@ -1094,6 +2129,7 @@ $("load-clarification-fixture").onclick = () => {
 };
 
 $("submit-clarification").onclick = async () => {
+  if (hasCurrentNormalizationTerminal()) return;
   const answer = $("clarification-answer").value.trim();
   const fixtureAnswer =
     ($("load-clarification-fixture").dataset.answer || "").trim();
@@ -1128,22 +2164,31 @@ $("submit-clarification").onclick = async () => {
   } catch (e) {
     if (tokenAtCall !== chain.requestToken ||
         attemptAtCall !== chain.normalizationAttemptId) return;
+    if (applyTerminalProviderState(e, {
+      requestToken: tokenAtCall,
+      sourceInterpretationId: chain.sourceInterpretationId,
+      sourceCandidateId: candidateAtCall,
+      predecessorAttemptId: attemptAtCall,
+      predecessorDigest: digestAtCall
+    })) return;
     setClarificationPending(false);
     err("s1-err", e.detail || e.message);
   }
 };
 
 $("open-revision").onclick = () => {
-  if (!chain.normalizationAttemptId || !chain.normalizationDigest) return;
+  if (hasCurrentNormalizationTerminal() || !chain.normalizationAttemptId || !chain.normalizationDigest) return;
   $("revision_text").value = chain.normalizationInputText || "";
   $("revision-form").hidden = false;
   $("revision_text").focus();
 };
 
-$("cancel-revision").onclick = () => { $("revision-form").hidden = true; };
+$("cancel-revision").onclick = () => {
+  if (!hasCurrentNormalizationTerminal()) $("revision-form").hidden = true;
+};
 
 $("submit-revision").onclick = async () => {
-  if (!chain.normalizationAttemptId || !chain.normalizationDigest) return;
+  if (hasCurrentNormalizationTerminal() || !chain.normalizationAttemptId || !chain.normalizationDigest) return;
   const attemptAtCall = chain.normalizationAttemptId;
   const digestAtCall = chain.normalizationDigest;
   const tokenAtCall = chain.requestToken;
@@ -1161,7 +2206,18 @@ $("submit-revision").onclick = async () => {
         out.predecessor_attempt_id !== attemptAtCall) return;
     chain.normalizationInputText = $("revision_text").value;
     renderAttempt(out);
-  } catch (e) { err("s1-err", e.detail || e.message); }
+  } catch (e) {
+    if (tokenAtCall !== chain.requestToken ||
+        attemptAtCall !== chain.normalizationAttemptId) return;
+    if (applyTerminalProviderState(e, {
+      requestToken: tokenAtCall,
+      sourceInterpretationId: chain.sourceInterpretationId,
+      sourceCandidateId: chain.selectedSourceCandidateId,
+      predecessorAttemptId: attemptAtCall,
+      predecessorDigest: digestAtCall
+    })) return;
+    err("s1-err", e.detail || e.message);
+  }
 };
 
 $("reject-proposal").onclick = async () => {
@@ -1207,12 +2263,21 @@ const PAIR_LABEL = {
   not_an_expression: "not an expression"
 };
 
+function enableFrozenDemoMarketStep() {
+  if (!anonymousDemo || !chain.thesisId) return;
+  $("demo-market-pending").hidden = true;
+  $("find-markets").disabled = false;
+}
+
 function clearPoolProjection() {
+  clearRevisitFollowup();
   chain.marketDisplaySetId = null; chain.marketSnapshotId = null;
-  chain.marketCandidateSetId = null; chain.selectedAssessmentId = null;
+  chain.marketSnapshotAsOf = null;
+  chain.marketCandidateSetId = null; chain.marketCards = [];
+  chain.marketChoiceId = null; chain.selectedAssessmentId = null;
+  chain.selectedMarket = null;
   chain.selectionKind = null; chain.feedbackAssessmentId = null;
   $("pool").hidden = true; $("market-grid").innerHTML = "";
-  $("pool-thesis").textContent = ""; $("pool-evidence").textContent = "";
   $("choose-none").checked = false; $("choose-none").disabled = false;
   $("submit-choice").disabled = true;
   $("choice-state").textContent = "unanswered";
@@ -1221,8 +2286,13 @@ function clearPoolProjection() {
 }
 
 function selectMarketChoice(kind, assessmentId) {
+  clearRevisitFollowup();
+  chain.marketChoiceId = null;
   chain.selectionKind = kind;
   chain.selectedAssessmentId = assessmentId || null;
+  chain.selectedMarket = assessmentId
+    ? chain.marketCards.find((card) => card.market_assessment_id === assessmentId) || null
+    : null;
   chain.feedbackAssessmentId = assessmentId || null;
   $("submit-choice").disabled = false;
   $("choice-state").textContent = kind === "none"
@@ -1256,6 +2326,10 @@ function assessmentCard(card) {
   meta.className = "market-meta";
   meta.textContent = (PAIR_LABEL[card.pair_class] || card.pair_class) +
     " · retrieval rank " + card.retrieval_rank + " · market " + card.market_id;
+  if (card.frozen_demo_evidence) {
+    meta.textContent = (PAIR_LABEL[card.pair_class] || card.pair_class) +
+      " · Frozen demo assessment";
+  }
 
   const report = document.createElement("div"); report.className = "capmiss";
   const captures = document.createElement("div"); captures.className = "captures";
@@ -1289,7 +2363,67 @@ function assessmentCard(card) {
     $("feedback-note").focus();
   });
 
-  body.append(title, meta, report, resolution, flag);
+  body.append(title, meta, report);
+  const frozen = card.frozen_demo_evidence;
+  if (frozen) {
+    const conditions = document.createElement("div");
+    conditions.className = "market-meta";
+    [
+      ["Yes", frozen.yes_condition], ["No", frozen.no_condition],
+      ["Rule deadline", frozen.rule_deadline],
+      ["Resolution source", frozen.resolution_source]
+    ].forEach(([label, text]) => {
+      const line = document.createElement("p");
+      line.textContent = label + ": " + text;
+      conditions.append(line);
+    });
+    if (frozen.yes_no_summary_basis === "derived_from_child_title_plus_parent_rules") {
+      const basis = document.createElement("p");
+      basis.textContent = "Yes/No summaries are derived from this child market's title, group label and outcomes together with the event's winner rules. The child supplies no separate binary Yes/No resolution prose.";
+      conditions.append(basis);
+    }
+    const fixtureStatus = document.createElement("p");
+    fixtureStatus.className = "market-meta";
+    fixtureStatus.textContent = "Synthetic fixture versioned " + frozen.fixture_versioned_utc.slice(0, 10) +
+      ". No current price or final outcome is asserted.";
+    const snapshotDetails = document.createElement("details");
+    snapshotDetails.className = "resolution";
+    const snapshotHeading = document.createElement("summary");
+    snapshotHeading.textContent = "Snapshot and assessment details";
+    const diagnostic = document.createElement("p");
+    const automatic = frozen.automatic_diagnostic;
+    diagnostic.textContent = "Curated assessment: " +
+      (PAIR_LABEL[card.pair_class] || card.pair_class) + " · " + frozen.policy_version +
+      " · authority " + frozen.authority + ". Automatic diagnostic: " +
+      (PAIR_LABEL[automatic.pair_class] || automatic.pair_class) +
+      " · " + automatic.fit_gate_policy_version + " · " + automatic.authority +
+      ". Curated confidence is unavailable.";
+    const provenance = document.createElement("p");
+    const eventCopy = frozen.event_association
+      ? "Matched event " + frozen.event_association.event_id + " by child market and condition ID; " +
+        (frozen.event_association.parent_description_differs
+          ? "parent description differs, so this card uses its own market rules. "
+          : "child rules match this card. ")
+      : "Event association is unknown. ";
+    provenance.textContent = "Project-authored synthetic fixture versioned " + frozen.fixture_versioned_utc + ". " +
+      "Market ID " + frozen.market_id + " · condition ID " + frozen.condition_id +
+      " · resource " + frozen.fixture_resource +
+      " · fixture SHA-256 " + frozen.fixture_sha256 + ". " +
+      "Rules SHA-256 " + frozen.rules_sha256 + ". " +
+      "Fixture liquidity: $" + frozen.fixture_liquidity_usd +
+      " · demo eligibility policy " + frozen.eligibility_policy_version +
+      " (floor $" + frozen.eligibility_liquidity_floor_usd + "). " +
+      "No current price or final outcome is asserted. " + eventCopy +
+      "Source metadata comes from the project-authored fixture.";
+    const link = document.createElement("a");
+    link.href = "/assets/demo-fixtures/markets/" + encodeURIComponent(frozen.fixture_resource);
+    link.target = "_blank"; link.rel = "noopener noreferrer";
+    link.textContent = "View packaged synthetic fixture";
+    snapshotDetails.append(snapshotHeading, diagnostic, provenance, link);
+    body.append(conditions, fixtureStatus, snapshotDetails);
+  }
+  body.append(resolution);
+  if (!anonymousDemo) body.append(flag);
   shell.append(radio, body);
   return shell;
 }
@@ -1298,12 +2432,27 @@ function validatePoolBinding(out, thesisId) {
   if (out.thesis_analysis_id !== thesisId ||
       out.displayed_count !== out.candidate_markets.length ||
       out.displayed_count > 3 || !out.accepted_thesis_summary) return false;
+  const frozenDemoPool = out.snapshot_id?.startsWith("frozen-demo-") ||
+    out.candidate_markets.some((card) => Boolean(card.frozen_demo_evidence));
+  const scopeProvider = out.retrieval_scope?.provider;
+  if (frozenDemoPool && scopeProvider !== "frozen-demo-six-market-v3") return false;
   const ids = new Set();
   for (let index = 0; index < out.candidate_markets.length; index += 1) {
     const card = out.candidate_markets[index];
     if (card.display_rank !== index + 1 || card.snapshot_id !== out.snapshot_id ||
         !card.market_assessment_id || !card.candidate_set_member_id ||
         !card.rules_capture_id || ids.has(card.market_assessment_id)) return false;
+    const frozen = card.frozen_demo_evidence;
+    if (frozenDemoPool && (!frozen || card.authority !== "offline_demo_proposal" ||
+        frozen.authority !== card.authority || frozen.market_id !== card.market_id ||
+        frozen.snapshot_id !== out.snapshot_id ||
+        frozen.thesis_structure_sha256 !== out.retrieval_scope?.query_binding ||
+        frozen.schema_version !== "fitcheck.frozen_demo_evidence.v3" ||
+        frozen.policy_version !== "frozen-demo-curation-v3" ||
+        !SYNTHETIC_MARKET_FIXTURE_ASSETS.has(frozen.fixture_resource) ||
+        card.pair_class !== frozen.pair_class || out.target_count !== 3 ||
+        out.retrieval_scope?.returned_count !== 3 ||
+        card.fit_confidence !== null)) return false;
     ids.add(card.market_assessment_id);
   }
   return true;
@@ -1312,7 +2461,9 @@ function validatePoolBinding(out, thesisId) {
 function renderMarketPool(out) {
   chain.marketDisplaySetId = out.market_display_set_id;
   chain.marketSnapshotId = out.snapshot_id;
+  chain.marketSnapshotAsOf = out.snapshot_as_of;
   chain.marketCandidateSetId = out.candidate_set_id;
+  chain.marketCards = out.candidate_markets;
   $("pool").hidden = false;
   const summary = $("pool-summary"); summary.className = "pool-summary";
   if (out.system_pool_outcome === "candidate_expressions") {
@@ -1320,8 +2471,9 @@ function renderMarketPool(out) {
       " assessed contract" + (out.displayed_count === 1 ? "" : "s") +
       " — compare their resolution conditions before choosing.";
   } else if (out.system_pool_outcome === "no_clean_expression") {
-    summary.textContent = "No clean expression among the checked candidates. " +
-      "The weak or negative matches remain visible so you can inspect why.";
+    summary.textContent = "No clean expression among the checked candidates. " + out.displayed_count +
+      " fully assessed displayed candidate" + (out.displayed_count === 1 ? "" : "s") +
+      ". This is not a conclusion about the whole market catalog.";
   } else {
     summary.classList.add("incomplete");
     summary.textContent = "Assessment incomplete — " +
@@ -1335,39 +2487,66 @@ function renderMarketPool(out) {
   const scope = out.retrieval_scope;
   const scopeText = !scope
     ? "Search scope is unavailable for this historical candidate set."
-    : "Retrieved from " + scope.provider + ": " +
-      scope.returned_count + " returned · " +
-      scope.lifecycle_eligible_count + " lifecycle-eligible · " +
-      scope.gate_eligible_count + " passed initial gates · " +
-      out.assessed_count + " assessed for " + out.target_count + " target" +
-      (out.target_count === 1 ? "." : "s.");
-  $("pool-evidence").textContent =
-    scopeText + " Frozen candidate evidence · snapshot " + out.snapshot_id +
-    " as of " + out.snapshot_as_of + " · display policy " + out.display_policy_version;
+    : scope.scope_kind === "bounded_query_observation"
+      ? "Checked the exact query “" + (scope.query_text || "query unavailable") +
+        "” as one bounded observation, not the whole market catalog: " +
+        scope.returned_count + " returned · " +
+        scope.lifecycle_eligible_count + " lifecycle-eligible · " +
+        scope.gate_eligible_count + " passed initial gates · " +
+        out.assessed_count + " assessed for " + out.target_count + " target" +
+        (out.target_count === 1 ? "." : "s.")
+      : (anonymousDemo ? "Fixed owner-selected candidate pool; not a catalog search. " : "") +
+        "Retrieved from " + scope.provider + ": " +
+        scope.returned_count + " returned · " +
+        scope.lifecycle_eligible_count + " lifecycle-eligible · " +
+        scope.gate_eligible_count + " passed initial gates · " +
+        out.assessed_count + " assessed for " + out.target_count + " target" +
+        (out.target_count === 1 ? "." : "s.");
+  const syntheticV3 = out.candidate_markets.some((card) =>
+    card.frozen_demo_evidence?.schema_version === "fitcheck.frozen_demo_evidence.v3");
+  const snapshotTime = syntheticV3
+    ? " · project-authored fixture version " + out.snapshot_as_of
+    : " · latest reported constituent capture " + out.snapshot_as_of +
+      " (individual cards retain their own reported times)";
+  $("pool-evidence").textContent = acceptancePrefix() + scopeText +
+    (syntheticV3 ? " Synthetic candidate evidence · snapshot " :
+      " Frozen candidate evidence · snapshot ") + out.snapshot_id +
+    snapshotTime + " · display policy " + out.display_policy_version;
 }
 
 $("find-markets").onclick = async () => {
-  if (!chain.thesisId) return;
-  const thesisAtCall = chain.thesisId;
-  const tokenAtCall = chain.requestToken;
+  if (!chain.thesisId || chain.marketRequest !== null || $("find-markets").disabled) return;
+  const request = beginMarketRequest();
+  const thesisAtCall = request.thesisId;
   clearPoolProjection(); err("s3-err", null);
   step("st-retrieve", "pending"); step("st-fit", "pending");
   try {
     const out = await api(`/api/v3/theses/${thesisAtCall}/market-pool`, { method: "POST" });
-    if (tokenAtCall !== chain.requestToken || thesisAtCall !== chain.thesisId) return;
+    if (!marketRequestIsCurrent(request)) return;
     if (!validatePoolBinding(out, thesisAtCall)) {
       clearPoolProjection();
       throw new Error("market evidence identity mismatch — nothing was rendered");
     }
     renderMarketPool(out);
     step("st-retrieve", "done"); step("st-fit", out.assessment_complete ? "done" : "failed");
+    releaseMarketRequest(request);
   } catch (e) {
-    if (tokenAtCall !== chain.requestToken || thesisAtCall !== chain.thesisId) return;
+    if (!marketRequestIsCurrent(request)) return;
+    if (applyTerminalMarketState(e, request)) return;
     clearPoolProjection();
-    err("s3-err", e.httpStatus === 503
+    err("s3-err", e.error === "service_unavailable" && e.httpStatus === 503
+      ? "Your accepted thesis remains available. " +
+        (e.detail || "Market evidence is unavailable.")
+      : e.error === "market_pool_unavailable"
+      ? e.detail
+      : e.httpStatus === 503
       ? "retrieval/model service unavailable — " + (e.detail || "")
       : e.message);
     step("st-fit", "failed");
+    releaseMarketRequest(request);
+    if (anonymousDemo && e.error === "market_pool_unavailable") {
+      $("demo-market-pending").hidden = false;
+    }
   }
 };
 
@@ -1376,19 +2555,31 @@ $("choose-none").addEventListener("change", () => selectMarketChoice("none", nul
 $("submit-choice").onclick = async () => {
   if (!chain.marketDisplaySetId || !chain.selectionKind) return;
   const displaySetAtCall = chain.marketDisplaySetId;
+  const selectionAtCall = chain.selectionKind;
+  const assessmentAtCall = chain.selectedAssessmentId;
   const tokenAtCall = chain.requestToken;
+  $("submit-choice").disabled = true;
   err("s3-err", null);
   try {
     const out = await api(`/api/v3/market-pools/${displaySetAtCall}/choice`, {
       method: "POST",
       body: JSON.stringify({
-        selection_kind: chain.selectionKind,
-        market_assessment_id: chain.selectedAssessmentId
+        selection_kind: selectionAtCall,
+        market_assessment_id: assessmentAtCall
       })
     });
     if (tokenAtCall !== chain.requestToken ||
         displaySetAtCall !== chain.marketDisplaySetId ||
-        out.market_display_set_id !== displaySetAtCall) return;
+        selectionAtCall !== chain.selectionKind ||
+        assessmentAtCall !== chain.selectedAssessmentId) return;
+    if (out.market_display_set_id !== displaySetAtCall ||
+        out.selection_kind !== selectionAtCall ||
+        out.market_assessment_id !== assessmentAtCall ||
+        !UUID_PATTERN.test(String(out.market_choice_id || ""))) {
+      clearRevisitFollowup();
+      throw new Error("market choice identity mismatch — follow-up unavailable");
+    }
+    chain.marketChoiceId = out.market_choice_id;
     $("choice-ack").hidden = false;
     $("choice-ack").textContent = out.selection_kind === "none"
       ? "Recorded: none of the displayed contracts."
@@ -1396,8 +2587,927 @@ $("submit-choice").onclick = async () => {
     $("choice-state").textContent = "decision recorded";
     $("submit-choice").disabled = true;
     document.querySelectorAll('input[name="market-choice"]').forEach((input) => input.disabled = true);
+    showRevisitEligibility();
     step("st-ledger", "done");
-  } catch (e) { err("s3-err", e.message); }
+  } catch (e) {
+    if (tokenAtCall !== chain.requestToken ||
+        displaySetAtCall !== chain.marketDisplaySetId) return;
+    $("submit-choice").disabled = false;
+    err("s3-err", e.message);
+  }
+};
+
+const REVISIT_BINDING_KEYS = [
+  "personal_thesis_id", "revision_id", "revision_digest", "thesis_analysis_id",
+  "normalization_decision_id", "source_candidate_choice_id",
+  "market_display_set_id", "market_choice_id", "market_assessment_id",
+  "market_id", "baseline_snapshot_id", "baseline_rules_capture_id",
+  "baseline_rules_digest"
+];
+const REVISIT_BASELINE_KEYS = [
+  "market_id", "accepted_thesis", "source_excerpt", "title", "rules",
+  "title_hash", "rules_hash", "deadline", "lifecycle", "condition_id",
+  "snapshot_as_of", "source_kind"
+];
+
+function revisitBaselineEquals(left, right) {
+  return left && right && REVISIT_BASELINE_KEYS.every(
+    (key) => left[key] === right[key]);
+}
+
+function revisitBindingMatchesChoice(binding) {
+  if (chain.revisitResumed) {
+    return revisitBindingEquals(binding, chain.revisitBinding);
+  }
+  const market = chain.selectedMarket;
+  return binding && market && chain.selectionKind === "market" &&
+    UUID_PATTERN.test(String(binding.personal_thesis_id || "")) &&
+    UUID_PATTERN.test(String(binding.revision_id || "")) &&
+    typeof binding.revision_digest === "string" && !!binding.revision_digest &&
+    typeof binding.baseline_rules_digest === "string" &&
+    !!binding.baseline_rules_digest &&
+    binding.thesis_analysis_id === chain.thesisId &&
+    binding.normalization_decision_id === chain.normalizationDecisionId &&
+    binding.source_candidate_choice_id === chain.sourceCandidateChoiceId &&
+    binding.market_display_set_id === chain.marketDisplaySetId &&
+    binding.market_choice_id === chain.marketChoiceId &&
+    binding.market_assessment_id === chain.selectedAssessmentId &&
+    binding.market_id === market.market_id &&
+    binding.baseline_snapshot_id === chain.marketSnapshotId &&
+    binding.baseline_rules_capture_id === market.rules_capture_id;
+}
+
+function revisitBindingEquals(left, right) {
+  return left && right && REVISIT_BINDING_KEYS.every(
+    (key) => left[key] === right[key]);
+}
+
+function currentRevisitRequest(token, serial, binding = null) {
+  return token === chain.requestToken &&
+    serial === chain.revisitRequestSequence &&
+    (!!chain.marketChoiceId || chain.revisitResumed) &&
+    (!binding || (revisitBindingMatchesChoice(binding) &&
+      revisitBindingEquals(binding, chain.revisitBinding)));
+}
+
+function showRevisitEligibility() {
+  clearRevisitFollowup();
+  $("revisit-followup").hidden = false;
+  if (chain.selectionKind === "none") {
+    $("revisit-eligibility").textContent =
+      "Selected-contract manual revisit is unavailable for your recorded none choice.";
+    $("activate-revisit").hidden = true;
+    return;
+  }
+  if (!chain.marketChoiceId || !chain.selectedMarket ||
+      !chain.normalizationDecisionId) {
+    $("revisit-eligibility").textContent =
+      "The recorded choice or accepted-thesis binding is unavailable.";
+    return;
+  }
+  $("revisit-eligibility").textContent =
+    "Available for the contract you selected. Activation saves its existing frozen capture.";
+  $("activate-revisit").disabled = false;
+}
+
+function revisitSourceLabel(sourceKind) {
+  return sourceKind === "synthetic_fixture"
+    ? "Synthetic saved-evidence replay"
+    : sourceKind === "retained_capture"
+      ? "Registered retained capture"
+      : "Saved capture source unavailable";
+}
+
+function renderRevisitActivation(out) {
+  const captures = out?.registered_captures || [];
+  const baselineBound = chain.revisitResumed
+    ? revisitBaselineEquals(out?.baseline, chain.revisitBaseline)
+    : out?.baseline && chain.selectedMarket &&
+      out.baseline.accepted_thesis === $("norm-summary").textContent &&
+      out.baseline.title === chain.selectedMarket.market_title &&
+      out.baseline.rules === chain.selectedMarket.resolution_conditions &&
+      out.baseline.snapshot_as_of === chain.marketSnapshotAsOf;
+  if (!revisitBindingMatchesChoice(out?.binding) || !out.active ||
+      !baselineBound ||
+      out.baseline.source_kind !== "frozen_market_snapshot" ||
+      !Array.isArray(captures) || captures.some((capture) =>
+        !UUID_PATTERN.test(String(capture.capture_id || "")) ||
+        !["synthetic_fixture", "retained_capture"].includes(capture.source_kind) ||
+        typeof capture.observed_at !== "string" ||
+        typeof capture.receipt_at !== "string")) {
+    throw new Error("revisit baseline identity mismatch — nothing was rendered");
+  }
+  chain.revisitBinding = out.binding;
+  chain.revisitBaseline = out.baseline;
+  chain.revisitRegisteredCaptures = captures;
+  $("activate-revisit").disabled = true;
+  $("activate-revisit").textContent = "Manual revisit active";
+  $("revisit-activation-ack").hidden = false;
+  $("revisit-activation-ack").textContent = chain.revisitResumed
+    ? "Restored saved follow-up. No new acceptance, choice, or activation was recorded."
+    : "Activated for this exact selected contract. The original capture remains the baseline.";
+  $("revisit-active").hidden = false;
+  $("revisit-resume-link").href =
+    (window.location.pathname || "/") + "?" +
+    RESUME_REVISIT_REVISION_ID_PARAM + "=" +
+    encodeURIComponent(out.binding.revision_id) + "#revisit-followup";
+  $("revisit-resume-link").hidden = false;
+  $("refresh-revisit").disabled = false;
+  $("revisit-source").textContent = out.baseline.source_excerpt ||
+    "Original source excerpt unavailable in this saved thesis.";
+  $("revisit-thesis").textContent = out.baseline.accepted_thesis;
+  $("revisit-market").textContent = out.baseline.title +
+    " · market " + out.binding.market_id;
+  $("revisit-baseline-date").textContent = out.baseline.snapshot_as_of;
+  $("revisit-baseline-source").textContent =
+    "Frozen baseline evidence · " + out.binding.baseline_snapshot_id;
+  const fixture = productMode === "fixture" && !anonymousDemo;
+  const savedSelect = $("revisit-saved-capture");
+  savedSelect.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Choose a saved capture…";
+  savedSelect.append(placeholder);
+  captures.forEach((capture) => {
+    const option = document.createElement("option");
+    option.value = capture.capture_id;
+    option.textContent = revisitSourceLabel(capture.source_kind) +
+      " · observed " + capture.observed_at +
+      " · received " + capture.receipt_at;
+    savedSelect.append(option);
+  });
+  savedSelect.value = "";
+  $("revisit-fixture-scenario").value = "";
+  $("revisit-fixture-controls").hidden = !fixture;
+  $("revisit-saved-controls").hidden = captures.length === 0;
+  $("revisit-check-mode").textContent = fixture
+    ? "Choose a registered saved capture or a Synthetic saved-evidence replay case. Neither starts a live provider call."
+    : captures.length
+      ? "Choose a registered saved capture. This check uses retained evidence and does not start a live provider call."
+      : anonymousDemo
+        ? "This demo has no later saved capture for this contract. Choose the retained-rules journey above to compare its registered capture."
+        : "Saved-observation check unavailable here: no registered later capture is exposed to this console.";
+  $("run-revisit-check").disabled = true;
+}
+
+function formatRevisitValue(value) {
+  return value === null || value === undefined || value === ""
+    ? "Unavailable" : String(value);
+}
+
+const REVISIT_EVIDENCE_COPY = {
+  title_changed: "The contract title changed.",
+  rules_changed: "The resolution rules changed.",
+  deadline_changed: "The scheduled deadline changed.",
+  deadline_reached: "The scheduled deadline passed. This trigger alone does not establish resolution or outcome.",
+  lifecycle_changed: "The recorded lifecycle status changed.",
+  market_identity_mismatch: "The later capture does not match the selected contract.",
+  baseline_condition_unknown: "The original capture did not retain a contract condition identifier.",
+  later_condition_unknown: "The later capture does not provide a contract condition identifier.",
+  baseline_title_unknown: "The original capture did not retain the contract title.",
+  later_title_unknown: "The later capture does not provide the contract title.",
+  baseline_rules_unknown: "The original capture did not retain the resolution rules.",
+  later_rules_unknown: "The later capture does not provide resolution rules.",
+  baseline_deadline_unknown: "The original capture did not retain a scheduled deadline.",
+  later_deadline_unknown: "The later capture does not provide a scheduled deadline.",
+  deadline_invalid: "The captured deadline could not be interpreted.",
+  baseline_lifecycle_unknown: "The original capture did not retain lifecycle status.",
+  later_lifecycle_unknown: "The later capture does not provide lifecycle status.",
+  capture_not_later_than_baseline: "The capture is not later than the original snapshot.",
+  title_unchanged: "Contract title unchanged",
+  rules_unchanged: "Resolution rules unchanged",
+  deadline_unchanged: "Scheduled deadline unchanged",
+  lifecycle_unchanged: "Lifecycle status unchanged",
+  condition_unchanged: "Contract condition identifier unchanged"
+};
+
+function revisitEvidenceCopy(codes) {
+  return codes.map((code) => REVISIT_EVIDENCE_COPY[code] ||
+    "A required evidence detail is unavailable.").join(" ");
+}
+
+function ruleLineUnits(text) {
+  const lines = text.split("\n");
+  const finalLineBreak = text.endsWith("\n");
+  if (finalLineBreak) lines.pop();
+  return lines.map((line, index) => ({
+    line, raw: line + (index < lines.length - 1 || finalLineBreak ? "\n" : "")
+  }));
+}
+
+function markInlineRuleChanges(lines) {
+  for (let index = 0; index + 1 < lines.length; index += 1) {
+    const removed = lines[index];
+    const added = lines[index + 1];
+    if (removed.kind !== "remove" || added.kind !== "add" ||
+        (index > 0 && lines[index - 1].kind === "remove") ||
+        (index + 2 < lines.length && lines[index + 2].kind === "add")) continue;
+    const oldChars = Array.from(removed.line);
+    const newChars = Array.from(added.line);
+    let prefix = 0;
+    while (prefix < oldChars.length && prefix < newChars.length &&
+        oldChars[prefix] === newChars[prefix]) prefix += 1;
+    let suffix = 0;
+    while (suffix < oldChars.length - prefix && suffix < newChars.length - prefix &&
+        oldChars[oldChars.length - 1 - suffix] === newChars[newChars.length - 1 - suffix]) {
+      suffix += 1;
+    }
+    for (const [line, chars] of [[removed, oldChars], [added, newChars]]) {
+      line.inline = {
+        start: prefix, end: chars.length - suffix,
+        prefix: (prefix > 60 ? "…" : "") +
+          chars.slice(Math.max(0, prefix - 60), prefix).join(""),
+        changed: chars.slice(prefix, chars.length - suffix).join(""),
+        suffix: chars.slice(chars.length - suffix,
+          Math.min(chars.length, chars.length - suffix + 60)).join("") +
+          (suffix > 60 ? "…" : "")
+      };
+    }
+    index += 1;
+  }
+}
+
+function alignedRuleLines(before, after) {
+  const original = ruleLineUnits(before);
+  const later = ruleLineUnits(after);
+  // Bound both allocation and visible output. Full raw versions remain below.
+  if (before.length + after.length > 100000 || original.length > 240 ||
+      later.length > 240 || original.length * later.length > 40000) return null;
+  const score = Array.from({ length: original.length + 1 },
+    () => new Uint16Array(later.length + 1));
+  for (let i = original.length - 1; i >= 0; i -= 1) {
+    for (let j = later.length - 1; j >= 0; j -= 1) {
+      score[i][j] = original[i].line === later[j].line
+        ? score[i + 1][j + 1] + 1
+        : Math.max(score[i + 1][j], score[i][j + 1]);
+    }
+  }
+  const lines = [];
+  let i = 0;
+  let j = 0;
+  while (i < original.length || j < later.length) {
+    if (i < original.length && j < later.length &&
+        original[i].line === later[j].line) {
+      const beforeRaw = original[i].raw;
+      const afterRaw = later[j].raw;
+      lines.push({ kind: beforeRaw === afterRaw ? "same" :
+        beforeRaw.endsWith("\n") ? "remove_linebreak" : "add_linebreak",
+      line: original[i].line, before: beforeRaw, after: afterRaw });
+      i += 1;
+      j += 1;
+    } else if (i < original.length &&
+        (j === later.length || score[i + 1][j] >= score[i][j + 1])) {
+      lines.push({ kind: "remove", line: original[i].line,
+        before: original[i].raw, after: "" });
+      i += 1;
+    } else {
+      lines.push({ kind: "add", line: later[j].line,
+        before: "", after: later[j].raw });
+      j += 1;
+    }
+  }
+  // An empty whole-string unit carries no evidence; final line breaks are
+  // already attached to their preceding line by ruleLineUnits.
+  const contentLines = lines.filter((line) => line.before || line.after);
+  markInlineRuleChanges(contentLines);
+  const changed = contentLines.filter((line) => line.kind !== "same");
+  if (changed.length > 80 ||
+      changed.reduce((total, line) => total + line.line.length, 0) > 20000) {
+    return null;
+  }
+  return contentLines;
+}
+
+function boundedRuleLine(value, limit) {
+  if (!value) return "(blank line)";
+  const characters = Array.from(value);
+  return characters.length > limit
+    ? characters.slice(0, limit).join("") +
+      "… (line shortened; open the full rules below)"
+    : value;
+}
+
+function appendRuleDiffLine(parent, line, context = false) {
+  if (line.inline && !line.inline.changed) return;
+  const row = document.createElement("div");
+  const added = line.kind === "add" || line.kind === "add_linebreak";
+  const removed = line.kind === "remove" || line.kind === "remove_linebreak";
+  row.className = "revisit-diff-line revisit-diff-" +
+    (added ? "add" : removed ? "remove" : "same");
+  const label = document.createElement("span");
+  label.textContent = added ? "+ Added" : removed ? "− Removed" : "  Context";
+  const content = document.createElement("span");
+  if (line.inline) {
+    const prefix = document.createElement("span");
+    prefix.textContent = line.inline.prefix;
+    const changed = document.createElement("span");
+    changed.className = "revisit-diff-changed";
+    changed.textContent = boundedRuleLine(line.inline.changed, 2000);
+    const suffix = document.createElement("span");
+    suffix.textContent = line.inline.suffix;
+    content.append(prefix, changed, suffix);
+  } else if (line.kind === "add_linebreak" || line.kind === "remove_linebreak") {
+    content.textContent = "(line break at end)";
+  } else {
+    content.textContent = boundedRuleLine(line.line, context ? 160 : 2000);
+  }
+  row.append(label, content);
+  parent.append(row);
+}
+
+function appendUnchangedRuleRun(parent, run, beforeChange, afterChange) {
+  const visible = new Set();
+  if (run.length <= 2) {
+    run.forEach((_, index) => visible.add(index));
+  } else {
+    if (beforeChange) visible.add(0);
+    if (afterChange) visible.add(run.length - 1);
+  }
+  for (let index = 0; index < run.length;) {
+    if (visible.has(index)) {
+      appendRuleDiffLine(parent, run[index], true);
+      index += 1;
+      continue;
+    }
+    const hidden = [];
+    while (index < run.length && !visible.has(index)) {
+      hidden.push(run[index]);
+      index += 1;
+    }
+    const detail = document.createElement("details");
+    detail.className = "revisit-diff-context";
+    const summary = document.createElement("summary");
+    summary.textContent = hidden.length + " unchanged line" +
+      (hidden.length === 1 ? "" : "s") + " · expand context";
+    detail.append(summary);
+    hidden.forEach((line) => appendRuleDiffLine(detail, line, true));
+    parent.append(detail);
+  }
+}
+
+function renderFullRuleVersion(target, lines, side) {
+  target.innerHTML = "";
+  for (const line of lines) {
+    const raw = line[side];
+    if (!raw) continue;
+    if (line.kind === "add_linebreak" || line.kind === "remove_linebreak") {
+      const changedSide = line.kind === "add_linebreak" ? "after" : "before";
+      if (side === changedSide) {
+        const prefix = document.createElement("span");
+        prefix.textContent = raw.slice(0, -1);
+        const changed = document.createElement("span");
+        changed.className = "revisit-full-" +
+          (side === "before" ? "remove" : "add");
+        changed.textContent = "\n";
+        target.append(prefix, changed);
+      } else {
+        const plain = document.createElement("span");
+        plain.textContent = raw;
+        target.append(plain);
+      }
+      continue;
+    }
+    if (line.inline) {
+      const chars = Array.from(raw);
+      const prefix = document.createElement("span");
+      prefix.textContent = chars.slice(0, line.inline.start).join("");
+      target.append(prefix);
+      if (line.inline.changed) {
+        const changed = document.createElement("span");
+        changed.className = "revisit-full-" +
+          (side === "before" ? "remove" : "add");
+        changed.textContent = chars.slice(line.inline.start, line.inline.end).join("");
+        target.append(changed);
+      }
+      const suffix = document.createElement("span");
+      suffix.textContent = chars.slice(line.inline.end).join("");
+      target.append(suffix);
+      continue;
+    }
+    const span = document.createElement("span");
+    span.className = line.kind === (side === "before" ? "remove" : "add")
+      ? "revisit-full-" + (side === "before" ? "remove" : "add") : "";
+    span.textContent = raw;
+    target.append(span);
+  }
+}
+
+function addRevisitRulesChange(before, after, beforeHash, afterHash) {
+  const row = document.createElement("div");
+  row.className = "revisit-change";
+  const heading = document.createElement("h3");
+  heading.textContent = "Resolution rules · literal text diff";
+  row.append(heading);
+  const lines = alignedRuleLines(before, after);
+  if (lines) {
+    const diff = document.createElement("div");
+    diff.className = "revisit-rule-diff";
+    for (let index = 0; index < lines.length;) {
+      if (lines[index].kind !== "same") {
+        appendRuleDiffLine(diff, lines[index]);
+        index += 1;
+        continue;
+      }
+      const start = index;
+      while (index < lines.length && lines[index].kind === "same") index += 1;
+      appendUnchangedRuleRun(diff, lines.slice(start, index), start > 0,
+        index < lines.length);
+    }
+    row.append(diff);
+  } else {
+    const fallback = document.createElement("p");
+    fallback.className = "notice";
+    fallback.textContent = "This rules diff exceeds the safe display limit. " +
+      "Open the full original and later rules below to inspect the exact text.";
+    row.append(fallback);
+  }
+  const hashes = document.createElement("div");
+  hashes.className = "revisit-rule-hashes";
+  hashes.textContent = "Original rules SHA-256: " + beforeHash +
+    " · Later rules SHA-256: " + afterHash;
+  row.append(hashes);
+  $("revisit-changes").append(row);
+  return lines;
+}
+
+function addRevisitChange(label, before, after, beforeHash = null, afterHash = null) {
+  const row = document.createElement("div");
+  row.className = "revisit-change";
+  const heading = document.createElement("h3");
+  heading.textContent = label;
+  row.append(heading);
+  const columns = document.createElement("div");
+  columns.className = "revisit-before-after";
+  for (const [name, value, hash] of [
+    ["Original", before, beforeHash], ["Later", after, afterHash]
+  ]) {
+    const cell = document.createElement("div");
+    cell.textContent = name + ": " + formatRevisitValue(value) +
+      (hash ? "\nSHA-256: " + hash : "");
+    columns.append(cell);
+  }
+  row.append(columns);
+  $("revisit-changes").append(row);
+}
+
+function fixtureImpactMatches(out) {
+  const note = out?.fixture_possible_impact;
+  const observation = out?.observation;
+  const packet = out?.packet;
+  const keys = REVISIT_BINDING_KEYS;
+  return productMode === "fixture" && !!note && !!observation && !!packet &&
+    note.version === "fixture-possible-impact-v1" &&
+    note.approval_scope === "copy_only_not_semantic_adjudication" &&
+    note.provenance === "Owner-approved fixture explanation" &&
+    note.binding && Object.keys(note.binding).length === keys.length &&
+    keys.every((key) => Object.prototype.hasOwnProperty.call(note.binding, key) &&
+      note.binding[key] === out.binding[key]) &&
+    note.observation_id === observation.id &&
+    note.capture_id === observation.capture_id &&
+    note.capture_digest === observation.capture_digest &&
+    note.source_kind === observation.source_kind &&
+    note.source_ref === observation.source_ref &&
+    note.policy_version === observation.policy_version &&
+    note.packet_id === packet.id && note.packet_digest === packet.digest &&
+    note.before_rules_hash === observation.before.rules_hash &&
+    note.after_rules_hash === observation.after.rules_hash &&
+    observation.triggers.includes("rules_changed") &&
+    typeof note.resolution_effect === "string" &&
+    !!note.resolution_effect.trim() && note.resolution_effect.length <= 2000 &&
+    typeof note.fit_effect === "string" &&
+    !!note.fit_effect.trim() && note.fit_effect.length <= 2000;
+}
+
+function renderRevisitImpact(out, allowFixtureImpact) {
+  const note = allowFixtureImpact && fixtureImpactMatches(out)
+    ? out.fixture_possible_impact : null;
+  $("revisit-rules-impact").hidden = false;
+  $("revisit-impact-heading").textContent = note
+    ? "Possible impact — requires review" : "Why review this change?";
+  $("revisit-impact-provenance").hidden = !note;
+  $("revisit-impact-provenance").textContent = note ? note.provenance : "";
+  $("revisit-impact-resolution").textContent = note
+    ? note.resolution_effect
+    : "Different rules may change how or when this contract resolves. " +
+      "This comparison does not establish an outcome.";
+  $("revisit-impact-fit").textContent = note
+    ? note.fit_effect
+    : "Any earlier assessment belongs to the earlier rules. The later rules " +
+      "may test the saved thesis differently; no new expression class was assigned.";
+  $("revisit-impact-caveat").textContent = note
+    ? "This explanation describes possible effects. The market has not been reassessed."
+    : "No case-specific explanation is available. This comparison does not reassess the market.";
+}
+
+function renderRevisitResult(out, allowFixtureImpact = false) {
+  const observation = out?.observation;
+  if (!revisitBindingMatchesChoice(out?.binding) ||
+      !revisitBindingEquals(out.binding, chain.revisitBinding) ||
+      !observation || !UUID_PATTERN.test(String(observation.id || "")) ||
+      !["no_material_change", "revisit_proposed", "incomplete"].includes(observation.result) ||
+      !Array.isArray(observation.triggers) || !Array.isArray(observation.unknowns) ||
+      !Array.isArray(observation.unchanged) ||
+      !UUID_PATTERN.test(String(observation.capture_id || "")) ||
+      typeof observation.capture_digest !== "string" ||
+      !["synthetic_fixture", "retained_capture"].includes(observation.source_kind) ||
+      typeof observation.observed_at !== "string" ||
+      typeof observation.receipt_at !== "string" ||
+      !observation.before || !observation.after ||
+      observation.before.title !== chain.revisitBaseline.title ||
+      observation.before.rules !== chain.revisitBaseline.rules ||
+      observation.before.title_hash !== chain.revisitBaseline.title_hash ||
+      observation.before.rules_hash !== out.binding.baseline_rules_digest ||
+      (observation.triggers.includes("rules_changed") &&
+        (typeof observation.after.rules !== "string" ||
+          observation.before.rules === observation.after.rules)) ||
+      (observation.result === "revisit_proposed") !== !!out.packet ||
+      (out.packet && (!UUID_PATTERN.test(String(out.packet.id || "")) ||
+        !out.packet.digest)) ||
+      (out.decision && (!revisitBindingEquals(out.decision.binding, out.binding) ||
+        out.decision.packet_id !== out.packet?.id ||
+        out.decision.observation_id !== observation.id ||
+        out.decision.decision_origin !== "human_ui" ||
+        !UUID_PATTERN.test(String(out.decision.decision_id || "")) ||
+        !["dismiss", "reaffirm"].includes(out.decision.action)))) {
+    throw new Error("revisit observation identity mismatch — nothing was rendered");
+  }
+  clearRevisitResult();
+  chain.revisitObservationId = observation.id;
+  chain.revisitPacketId = out.packet?.id || null;
+  chain.revisitPacketDigest = out.packet?.digest || null;
+  $("revisit-result").hidden = false;
+  const proposed = observation.result === "revisit_proposed";
+  $("revisit-result-heading").textContent = proposed
+    ? "Revisit proposed" : observation.result === "no_material_change"
+      ? "No material change in this saved comparison" : "Comparison incomplete";
+  $("revisit-result-explanation").textContent = proposed
+    ? revisitEvidenceCopy(observation.triggers) + (out.decision
+      ? " A human revisit decision is already recorded for this evidence."
+      : " This proposes human review of the saved evidence.")
+    : observation.result === "no_material_change"
+      ? "The required captured fields were comparable and unchanged under this policy."
+      : "The saved evidence does not establish a no-change conclusion.";
+  $("revisit-later-date").textContent =
+    formatRevisitValue(observation.observed_at) +
+    " · received " + formatRevisitValue(observation.receipt_at);
+  $("revisit-later-source").textContent = observation.source_kind === "synthetic_fixture"
+    ? "Synthetic saved-evidence replay · no live provider call"
+    : revisitSourceLabel(observation.source_kind);
+  $("revisit-unknowns").textContent = observation.unknowns.length
+    ? revisitEvidenceCopy(observation.unknowns) : "None reported";
+  const requestCapture = out.request_capture;
+  if (requestCapture && requestCapture.id !== observation.capture_id &&
+      UUID_PATTERN.test(String(requestCapture.id || "")) &&
+      ["synthetic_fixture", "retained_capture"].includes(requestCapture.source_kind) &&
+      typeof requestCapture.observed_at === "string") {
+    $("revisit-request-capture").hidden = false;
+    $("revisit-request-capture").textContent =
+      "This request also inspected an equivalent " +
+      revisitSourceLabel(requestCapture.source_kind).toLowerCase() + " from " +
+      formatRevisitValue(requestCapture.observed_at) + ". The comparison and decision above remain bound to the first recorded evidence.";
+  }
+  const before = observation.before;
+  const after = observation.after;
+  const rulesChanged = observation.triggers.includes("rules_changed");
+  if (rulesChanged) renderRevisitImpact(out, allowFixtureImpact);
+  let ruleLines = null;
+  for (const [key, label] of [
+    ["title", "Contract title"], ["rules", "Resolution rules"],
+    ["deadline", "Scheduled deadline"], ["lifecycle", "Lifecycle"],
+    ["condition_id", "Contract condition identifier"]
+  ]) {
+    if (key === "rules" && !rulesChanged) continue;
+    if (before[key] == null || after[key] == null || before[key] === after[key]) continue;
+    if (key === "rules") {
+      ruleLines = addRevisitRulesChange(before.rules, after.rules,
+        before.rules_hash, after.rules_hash);
+      continue;
+    }
+    addRevisitChange(label, before[key], after[key],
+      key === "title" ? before.title_hash : null,
+      key === "title" ? after.title_hash : null);
+  }
+  if (!$("revisit-changes").children.length) {
+    $("revisit-changes").textContent = observation.unchanged.length
+      ? "Unchanged captured fields: " + revisitEvidenceCopy(observation.unchanged)
+      : "No comparable field change was evidenced.";
+  }
+  if (ruleLines) {
+    renderFullRuleVersion($("revisit-before-rules-text"), ruleLines, "before");
+    renderFullRuleVersion($("revisit-after-rules-text"), ruleLines, "after");
+  } else {
+    $("revisit-before-rules-text").textContent = formatRevisitValue(before.rules);
+    $("revisit-after-rules-text").textContent = formatRevisitValue(after.rules);
+  }
+  $("revisit-before-rules").open = false;
+  $("revisit-after-rules").open = false;
+  $("revisit-disposition").hidden = !proposed || !!out.decision;
+  $("open-revisit-draft").disabled = !proposed || !!out.decision;
+  if (out.decision) {
+    $("revisit-decision-ack").hidden = false;
+    $("revisit-decision-ack").textContent =
+      "Recorded human revisit decision: " + out.decision.action + ".";
+    $("revisit-decision-state").textContent = "decision recorded";
+  }
+}
+
+function savedRevisitReadIsBound(out, requestedRevisionId) {
+  const activation = out?.activation;
+  const binding = activation?.binding;
+  const baseline = activation?.baseline;
+  const uuidFields = [
+    "personal_thesis_id", "revision_id", "thesis_analysis_id",
+    "normalization_decision_id", "market_display_set_id", "market_choice_id",
+    "market_assessment_id", "baseline_rules_capture_id"
+  ];
+  const sha256 = /^[0-9a-f]{64}$/i;
+  return activation?.active === true && binding && baseline &&
+    binding.revision_id === requestedRevisionId &&
+    uuidFields.every((key) => UUID_PATTERN.test(String(binding[key] || ""))) &&
+    (binding.source_candidate_choice_id === null ||
+      UUID_PATTERN.test(String(binding.source_candidate_choice_id || ""))) &&
+    sha256.test(String(binding.revision_digest || "")) &&
+    sha256.test(String(binding.baseline_rules_digest || "")) &&
+    typeof binding.market_id === "string" && !!binding.market_id &&
+    typeof binding.baseline_snapshot_id === "string" &&
+    !!binding.baseline_snapshot_id &&
+    baseline.market_id === binding.market_id &&
+    typeof baseline.accepted_thesis === "string" &&
+    !!baseline.accepted_thesis.trim() &&
+    (baseline.source_excerpt === null ||
+      typeof baseline.source_excerpt === "string") &&
+    typeof baseline.title === "string" && !!baseline.title.trim() &&
+    typeof baseline.rules === "string" && !!baseline.rules.trim() &&
+    sha256.test(String(baseline.title_hash || "")) &&
+    baseline.rules_hash === binding.baseline_rules_digest &&
+    (baseline.deadline === null || typeof baseline.deadline === "string") &&
+    (baseline.lifecycle === null || typeof baseline.lifecycle === "string") &&
+    (baseline.condition_id === null || typeof baseline.condition_id === "string") &&
+    typeof baseline.snapshot_as_of === "string" &&
+    !Number.isNaN(Date.parse(baseline.snapshot_as_of)) &&
+    baseline.source_kind === "frozen_market_snapshot" &&
+    (out.latest === null || revisitBindingEquals(out.latest?.binding, binding));
+}
+
+function showUnavailableSavedRevisit() {
+  clearRevisitFollowup();
+  $("revisit-followup").hidden = false;
+  $("activate-revisit").hidden = true;
+  $("revisit-eligibility").textContent = "Saved follow-up unavailable.";
+  err("revisit-error", "This saved revisit could not be verified for this local session.");
+}
+
+async function resumeSavedRevisit(bootstrapRequestToken = chain.requestToken) {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has(RESUME_REVISIT_REVISION_ID_PARAM)) return false;
+  // A newer source edit cancels page-load restoration before or during GET.
+  if (bootstrapRequestToken !== chain.requestToken) return true;
+  const requested = params.get(RESUME_REVISIT_REVISION_ID_PARAM);
+  if (!requested || !UUID_PATTERN.test(requested)) {
+    showUnavailableSavedRevisit();
+    return true;
+  }
+  const revisionId = requested.toLowerCase();
+  const token = chain.requestToken;
+  const serial = ++chain.revisitRequestSequence;
+  try {
+    const out = await api(`/api/v3/thesis-revisions/${revisionId}/revisit`);
+    if (token !== chain.requestToken || serial !== chain.revisitRequestSequence) return true;
+    if (!savedRevisitReadIsBound(out, revisionId)) {
+      throw new Error("saved revisit identity mismatch");
+    }
+    chain.revisitResumed = true;
+    chain.revisitBinding = out.activation.binding;
+    chain.revisitBaseline = out.activation.baseline;
+    $("revisit-followup").hidden = false;
+    $("revisit-eligibility").textContent =
+      "Restored saved follow-up. Source, thesis, market choice, and evidence remain as recorded.";
+    $("activate-revisit").hidden = true;
+    renderRevisitActivation(out.activation);
+    if (out.latest) renderRevisitResult(out.latest, true);
+    renderSavedRevisitUpstream(out.activation);
+    $("revisit-followup").scrollIntoView({ block: "start" });
+  } catch (_) {
+    if (token === chain.requestToken && serial === chain.revisitRequestSequence) {
+      showUnavailableSavedRevisit();
+    }
+  }
+  return true;
+}
+
+async function loadRevisitProjection(binding) {
+  const token = chain.requestToken;
+  const serial = ++chain.revisitRequestSequence;
+  try {
+    const out = await api(`/api/v3/thesis-revisions/${binding.revision_id}/revisit`);
+    if (!currentRevisitRequest(token, serial, binding)) return;
+    if (chain.revisitResumed && !savedRevisitReadIsBound(out, binding.revision_id)) {
+      throw new Error("saved revisit identity mismatch");
+    }
+    if (!revisitBindingEquals(out?.activation?.binding, binding) ||
+        (out.latest && !revisitBindingEquals(out.latest.binding, binding))) {
+      throw new Error("revisit read projection identity mismatch");
+    }
+    renderRevisitActivation(out.activation);
+    if (out.latest) renderRevisitResult(out.latest, true);
+    if (chain.revisitResumed) renderSavedRevisitUpstream(out.activation);
+  } catch (e) {
+    if (!currentRevisitRequest(token, serial, binding)) return;
+    if (chain.revisitResumed) {
+      showUnavailableSavedRevisit();
+      return;
+    }
+    clearRevisitResult();
+    err("revisit-error", e.detail || e.message);
+  }
+}
+
+$("refresh-revisit").onclick = () => {
+  if (!chain.revisitBinding || $("refresh-revisit").disabled) return;
+  err("revisit-error", null);
+  $("revisit-check-pending").hidden = true;
+  clearRevisitResult();
+  return loadRevisitProjection(chain.revisitBinding);
+};
+
+$("activate-revisit").onclick = async () => {
+  if (!chain.marketChoiceId || chain.selectionKind !== "market" ||
+      $("activate-revisit").disabled) return;
+  const choice = chain.marketChoiceId;
+  const token = chain.requestToken;
+  const serial = ++chain.revisitRequestSequence;
+  $("activate-revisit").disabled = true;
+  $("revisit-activation-pending").hidden = false;
+  err("revisit-error", null);
+  try {
+    const out = await api(`/api/v3/market-choices/${choice}/revisit-activation`,
+      { method: "POST" });
+    if (!currentRevisitRequest(token, serial) || choice !== chain.marketChoiceId) return;
+    renderRevisitActivation(out);
+    $("revisit-activation-pending").hidden = true;
+    await loadRevisitProjection(out.binding);
+  } catch (e) {
+    if (!currentRevisitRequest(token, serial) || choice !== chain.marketChoiceId) return;
+    clearRevisitResult();
+    $("revisit-activation-pending").hidden = true;
+    $("activate-revisit").disabled = false;
+    err("revisit-error", e.detail || e.message);
+  }
+};
+
+function updateRevisitCheckSelection() {
+  chain.revisitRequestSequence += 1;
+  chain.revisitCheckRequest = null;
+  clearRevisitResult();
+  err("revisit-error", null);
+  $("revisit-check-pending").hidden = true;
+  const scenario = productMode === "fixture" && !anonymousDemo
+    ? $("revisit-fixture-scenario").value : null;
+  const captureId = $("revisit-saved-capture").value;
+  $("run-revisit-check").disabled = !chain.revisitBinding ||
+    (!scenario && !chain.revisitRegisteredCaptures.some(
+      (capture) => capture.capture_id === captureId));
+}
+
+$("revisit-fixture-scenario").addEventListener("change", () => {
+  $("revisit-saved-capture").value = "";
+  updateRevisitCheckSelection();
+});
+
+$("revisit-saved-capture").addEventListener("change", () => {
+  $("revisit-fixture-scenario").value = "";
+  updateRevisitCheckSelection();
+});
+
+$("run-revisit-check").onclick = async () => {
+  const binding = chain.revisitBinding;
+  if (!binding || $("run-revisit-check").disabled) return;
+  const scenario = productMode === "fixture" && !anonymousDemo
+    ? $("revisit-fixture-scenario").value : null;
+  const captureId = $("revisit-saved-capture").value || null;
+  if (!!scenario === !!captureId || (captureId &&
+      !chain.revisitRegisteredCaptures.some(
+        (capture) => capture.capture_id === captureId))) return;
+  const target = scenario || captureId;
+  if (!chain.revisitCheckRequest || chain.revisitCheckRequest.target !== target) {
+    chain.revisitCheckRequest = { target, idempotencyKey: crypto.randomUUID() };
+  }
+  const request = chain.revisitCheckRequest;
+  const token = chain.requestToken;
+  const serial = ++chain.revisitRequestSequence;
+  clearRevisitResult();
+  $("run-revisit-check").disabled = true;
+  $("revisit-check-pending").hidden = false;
+  err("revisit-error", null);
+  try {
+    const payload = { idempotency_key: request.idempotencyKey };
+    if (scenario) payload.fixture_scenario = scenario;
+    if (captureId) payload.capture_id = captureId;
+    const out = await api(`/api/v3/thesis-revisions/${binding.revision_id}/revisit-check`, {
+      method: "POST", body: JSON.stringify(payload)
+    });
+    if (!currentRevisitRequest(token, serial, binding) ||
+        request !== chain.revisitCheckRequest) return;
+    renderRevisitResult(out);
+    $("revisit-check-pending").hidden = true;
+    $("run-revisit-check").disabled = false;
+  } catch (e) {
+    if (!currentRevisitRequest(token, serial, binding) ||
+        request !== chain.revisitCheckRequest) return;
+    clearRevisitResult();
+    $("revisit-check-pending").hidden = true;
+    $("run-revisit-check").disabled = false;
+    err("revisit-error", e.detail || e.message);
+  }
+};
+
+$("open-revisit-draft").onclick = () => {
+  const binding = chain.revisitBinding;
+  const baseline = chain.revisitBaseline;
+  if (!binding || !baseline || !chain.revisitObservationId ||
+      !chain.revisitPacketId || !chain.revisitPacketDigest ||
+      $("revisit-disposition").hidden || $("open-revisit-draft").disabled ||
+      typeof baseline.accepted_thesis !== "string") return;
+  const draft = $("revisit-revision-draft");
+  draft.dataset.binding = JSON.stringify(binding);
+  draft.dataset.observationId = chain.revisitObservationId;
+  draft.dataset.packetId = chain.revisitPacketId;
+  draft.dataset.packetDigest = chain.revisitPacketDigest;
+  $("revisit-draft-current").textContent = baseline.accepted_thesis;
+  $("revisit-draft-text").value = baseline.accepted_thesis;
+  document.querySelectorAll('input[name="revisit-decision"]').forEach((input) => {
+    input.checked = false;
+    input.disabled = true;
+  });
+  $("submit-revisit-decision").disabled = true;
+  $("revisit-decision-state").textContent = "unanswered";
+  $("open-revisit-draft").disabled = true;
+  draft.hidden = false;
+  $("revisit-draft-text").focus();
+};
+
+$("cancel-revisit-draft").onclick = () => {
+  if ($("revisit-revision-draft").hidden) return;
+  clearRevisitDraft();
+};
+
+document.querySelectorAll('input[name="revisit-decision"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    if (!$('revisit-revision-draft').hidden) {
+      input.checked = false;
+      return;
+    }
+    if (!chain.revisitPacketId || !chain.revisitObservationId) return;
+    $("revisit-decision-state").textContent = input.value + " selected";
+    $("submit-revisit-decision").disabled = false;
+  });
+});
+
+$("submit-revisit-decision").onclick = async () => {
+  const binding = chain.revisitBinding;
+  const packet = chain.revisitPacketId;
+  const observation = chain.revisitObservationId;
+  const selected = Array.from(document.querySelectorAll('input[name="revisit-decision"]'))
+    .find((input) => input.checked)?.value;
+  if (!binding || !packet || !observation ||
+      !["dismiss", "reaffirm"].includes(selected) ||
+      !$("revisit-revision-draft").hidden ||
+      $("submit-revisit-decision").disabled) return;
+  const token = chain.requestToken;
+  const serial = ++chain.revisitRequestSequence;
+  $("submit-revisit-decision").disabled = true;
+  err("revisit-error", null);
+  try {
+    const out = await api(`/api/v3/revisit-packets/${packet}/decision`, {
+      method: "POST", body: JSON.stringify({
+        action: selected,
+        expected_revision_digest: binding.revision_digest,
+        expected_observation_id: observation
+      })
+    });
+    if (!currentRevisitRequest(token, serial, binding) ||
+        packet !== chain.revisitPacketId ||
+        observation !== chain.revisitObservationId) return;
+    if (!revisitBindingEquals(out?.binding, binding) ||
+        out.packet_id !== packet || out.observation_id !== observation ||
+        out.action !== selected || out.decision_origin !== "human_ui" ||
+        !UUID_PATTERN.test(String(out.decision_id || ""))) {
+      throw new Error("revisit decision identity mismatch");
+    }
+    $("revisit-disposition").hidden = true;
+    document.querySelectorAll('input[name="revisit-decision"]').forEach((input) => {
+      input.disabled = true;
+    });
+    $("revisit-decision-ack").hidden = false;
+    $("revisit-decision-ack").textContent =
+      "Recorded human revisit decision: " + selected + ".";
+    $("revisit-decision-state").textContent = "decision recorded";
+  } catch (e) {
+    if (!currentRevisitRequest(token, serial, binding)) return;
+    $("revisit-disposition").hidden = true;
+    err("revisit-error", "Decision status needs a bound refresh. " +
+      (e.detail || e.message));
+  }
 };
 
 $("feedback-btn").onclick = async () => {
@@ -1631,18 +3741,107 @@ function showEntry(e) {
   $("e-created").textContent = e.created_at || "";
 }
 
-api("/api/health").then((h) => {
+function setupFounderAcceptance(payload) {
+  founderAcceptance = payload;
+  if (!payload?.enabled || productMode !== "fixture") return;
+  founderAcceptanceCases = payload.cases || [];
+  const select = $("acceptance-case");
+  for (const item of founderAcceptanceCases) {
+    const option = document.createElement("option");
+    option.value = item.case_id;
+    option.textContent = item.case_id + " — " + item.title;
+    select.append(option);
+  }
+  $("acceptance-build").textContent =
+    "human acceptance pending · fixture UX/authority evidence only · git " +
+    payload.git_head + " · worktree " + payload.worktree_digest +
+    " · manifest " + payload.manifest_version + " / " +
+    payload.manifest_digest + " · url " + payload.session_url +
+    " · disposable db " + payload.database_path;
+  $("acceptance-catalog").hidden = false;
+}
+
+async function beginDemoJourney(kind) {
+  if (!anonymousDemo) return;
+  const status = $("demo-journey-state");
+  $("demo-source").disabled = true;
+  $("demo-hormuz").disabled = true;
+  status.textContent = "Starting a private fixture session…";
+  try {
+    const reset = await api("/api/demo/reset", { method: "POST" });
+    demoSessionRef = reset.session_ref;
+    localStorage.removeItem(SOURCE_JOB_STORAGE_KEY);
+    sessionStorage.removeItem(ACCEPTANCE_CASE_STORAGE_KEY);
+    clearAcceptanceCase();
+    resetDownstream();
+    $("input_text").value = "";
+    if (kind === "source") {
+      $("input_text").value = fixtureSourceExample;
+      $("run").disabled = false;
+      status.textContent = "Stablecoin / Robinhood · synthetic source. Choose a candidate after finding theses; three synthetic contracts per supported accepted thesis are available.";
+      $("s1").scrollIntoView({ block: "start" });
+    } else {
+      const seeded = await api("/api/demo/hormuz", { method: "POST" });
+      if (!UUID_PATTERN.test(String(seeded.revision_id || ""))) {
+        throw new Error("Hormuz fixture identity is unavailable");
+      }
+      const params = new URLSearchParams(window.location.search);
+      params.set(RESUME_REVISIT_REVISION_ID_PARAM, seeded.revision_id);
+      window.history.replaceState(window.history.state, "",
+        (window.location.pathname || "/") + "?" + params.toString() +
+        "#revisit-followup");
+      status.textContent = "Hormuz · retained rules, reconstructed test-only baseline and decisions.";
+      await resumeSavedRevisit(chain.requestToken);
+    }
+  } catch (e) {
+    status.textContent = "Could not start the selected fixture journey: " + (e.detail || e.message);
+  } finally {
+    $("demo-source").disabled = false;
+    $("demo-hormuz").disabled = false;
+  }
+}
+
+$("demo-source").onclick = () => beginDemoJourney("source");
+$("demo-hormuz").onclick = () => beginDemoJourney("hormuz");
+
+api("/api/health").catch((e) => {
+  if (e.error !== "session_expired") throw e;
+  localStorage.removeItem(SOURCE_JOB_STORAGE_KEY);
+  sessionStorage.removeItem(ACCEPTANCE_CASE_STORAGE_KEY);
+  return api("/api/demo/reset", { method: "POST" })
+    .then(() => api("/api/health"));
+}).then((h) => {
   productMode = h.mode;
+  anonymousDemo = h.anonymous_demo === true;
+  demoSessionRef = h.session_ref || null;
+  if (anonymousDemo) {
+    $("demo-journeys").hidden = false;
+    $("input_text").readOnly = true;
+    $("run").disabled = true;
+    $("load-fixture").hidden = true;
+    $("find-markets").disabled = true;
+    $("demo-journey-state").textContent =
+      "Choose one journey. Stablecoin / Robinhood compares three synthetic contracts for each supported accepted thesis.";
+  }
   $("mode").textContent = "mode: " + h.mode;
+  setupFounderAcceptance(h.founder_acceptance);
   if (h.mode === "fixture" && h.fixture_source_examples?.length) {
     fixtureSourceExample = h.fixture_source_examples[0];
-    $("load-fixture").hidden = false;
+    if (!anonymousDemo) $("load-fixture").hidden = false;
   }
   if (h.mode === "fixture" && h.fixture_clarification_examples?.length) {
     fixtureClarificationExamples = h.fixture_clarification_examples;
   }
-}).then(() => resumeAcceptedThesis(BOOTSTRAP_RESUME_TOKEN));
-loadLedger();
+}).then(async () => {
+  if (!anonymousDemo) loadLedger();
+  const revisitRequested = await resumeSavedRevisit(BOOTSTRAP_RESUME_TOKEN);
+  if (revisitRequested) return;
+  const resumeRequested = await resumeAcceptedThesis(BOOTSTRAP_RESUME_TOKEN);
+  if (!resumeRequested) {
+    restoreAcceptanceCase();
+    return resumePendingSourceJob();
+  }
+});
 </script>
 </body>
 </html>

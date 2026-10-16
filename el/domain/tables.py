@@ -60,6 +60,16 @@ class User(_PK, _Created, Base):
     email: Mapped[str] = mapped_column(String(320), unique=True)
 
 
+class DemoSession(_PK, _Created, Base):
+    """Opaque anonymous demo cookie binding. Only a token digest is stored."""
+
+    __tablename__ = "demo_sessions"
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class ApiClient(_PK, _Created, Base):
     __tablename__ = "api_clients"
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
@@ -76,12 +86,7 @@ class ApiClient(_PK, _Created, Base):
 
 
 class McpUsageBucket(Base):
-    """Bounded cross-instance usage counter for one API client and window.
-
-    The stable scope names are overwritten when their fixed window rolls, so
-    storage is bounded by ``api_clients * configured scopes`` rather than by
-    request volume.  Production currently uses exactly two scopes.
-    """
+    """Bounded public MCP usage counter for one API client and time window."""
 
     __tablename__ = "mcp_usage_buckets"
     api_client_id: Mapped[uuid.UUID] = mapped_column(
@@ -96,9 +101,7 @@ class McpUsageBucket(Base):
         DateTime(timezone=True), nullable=False
     )
     __table_args__ = (
-        CheckConstraint(
-            "used_units >= 0", name="ck_mcp_usage_units_nonnegative"
-        ),
+        CheckConstraint("used_units >= 0", name="ck_mcp_usage_units_nonnegative"),
     )
 
 
@@ -166,8 +169,8 @@ class Job(_PK, _Created, Base):
     # Operator-only structured diagnostics. A future public status DTO must
     # exclude this field even when its current producer stores bounded data.
     error_details: Mapped[dict | None] = mapped_column(JSONVariant)
-    # Validated W3C context is operational only: outside payloads, pins,
-    # idempotency, and business correlations.
+    # Validated W3C context from initial transport acceptance.  It is kept
+    # outside business payloads, pins, idempotency, and correlations.
     accepted_traceparent: Mapped[str | None] = mapped_column(String(55))
     correlation_id: Mapped[str] = mapped_column(String(64))
     started_at: Mapped[datetime | None] = mapped_column(
@@ -661,7 +664,9 @@ class CandidateSet(_PK, _Created, Base):
     # Claim-specific retrieval provenance belongs here, not on the shared
     # legacy market snapshot row.
     retrieval_id: Mapped[str | None] = mapped_column(String(128))
-    # Retained scope from the actual retrieval; historical nulls stay unknown.
+    # A small immutable projection of the exact provider result used for this
+    # set.  Null is deliberate for historical rows: do not reconstruct a past
+    # query or observation from current provider configuration.
     retrieval_scope: Mapped[dict | None] = mapped_column(JSONVariant)
     job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id"))
     __table_args__ = (UniqueConstraint("job_id", name="uq_candidate_set_job"),)
@@ -729,7 +734,9 @@ class FitCard(_PK, _Created, Base):
     candidate_set_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("candidate_sets.id")
     )
-    semantic_fit_class: Mapped[str] = mapped_column(String(32))
+    # NULL is reserved for the test-only reconstructed Hormuz graph. It is
+    # never a fifth semantic-fit verdict or an assessed market pool result.
+    semantic_fit_class: Mapped[str | None] = mapped_column(String(32))
     recommended_market_id: Mapped[str | None] = mapped_column(String(128))
     what_it_captures: Mapped[str] = mapped_column(Text)
     what_it_misses: Mapped[str] = mapped_column(Text)
@@ -744,11 +751,19 @@ class FitCard(_PK, _Created, Base):
     )
     provenance: Mapped[dict] = mapped_column(JSONVariant)
     job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id"))
-    __table_args__ = (UniqueConstraint("job_id", name="uq_fit_card_job"),)
+    __table_args__ = (
+        UniqueConstraint("job_id", name="uq_fit_card_job"),
+        CheckConstraint(
+            "semantic_fit_class IS NOT NULL OR "
+            "COALESCE(provenance ->> 'reconstructed', '') = "
+            "'public-demo-hormuz-reconstruction-v1'",
+            name="ck_fit_card_demo_unassessed_only",
+        ),
+    )
 
 
 class MarketAssessment(_PK, _Created, Base):
-    """One terminal v3 assessment of one candidate in one frozen fit run."""
+    """One v3 assessment, or an explicit unassessed demo reconstruction."""
 
     __tablename__ = "market_assessments"
     fit_card_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("fit_cards.id"))
@@ -767,7 +782,7 @@ class MarketAssessment(_PK, _Created, Base):
     snapshot_id: Mapped[str] = mapped_column(ForeignKey("market_snapshots.id"))
     market_id: Mapped[str] = mapped_column(String(128))
     retrieval_rank: Mapped[int] = mapped_column(Integer)
-    pair_class: Mapped[str] = mapped_column(String(32))
+    pair_class: Mapped[str | None] = mapped_column(String(32))
     what_it_captures: Mapped[str] = mapped_column(Text)
     what_it_misses: Mapped[str] = mapped_column(Text)
     horizon_match: Mapped[str | None] = mapped_column(String(8))
@@ -783,8 +798,10 @@ class MarketAssessment(_PK, _Created, Base):
             "retrieval_rank > 0", name="ck_market_assessment_retrieval_rank"
         ),
         CheckConstraint(
-            "pair_class IN ('direct', 'indirect', 'weak_proxy', "
-            "'not_an_expression')",
+            "(authority = 'demo_reconstruction_only' AND pair_class IS NULL) OR "
+            "(authority <> 'demo_reconstruction_only' AND pair_class IS NOT NULL "
+            "AND pair_class IN ('direct', 'indirect', 'weak_proxy', "
+            "'not_an_expression'))",
             name="ck_market_assessment_pair_class",
         ),
     )
@@ -824,7 +841,11 @@ class MarketDisplaySet(_PK, _Created, Base):
             name="ck_market_display_displayed_count",
         ),
         CheckConstraint(
-            "displayed_count <= assessed_count",
+            "displayed_count <= assessed_count OR "
+            "(display_policy_version = 'public-demo-hormuz-reconstruction-v1' "
+            "AND assessed_count = 0 AND displayed_count = 1 "
+            "AND target_count = 1 AND assessment_complete = FALSE "
+            "AND system_pool_outcome = 'incomplete')",
             name="ck_market_display_count_within_assessed",
         ),
         CheckConstraint(
@@ -882,6 +903,103 @@ class MarketChoice(_PK, _Created, Base):
             name="ck_market_choice_selection_shape",
         ),
     )
+
+
+class PersonalThesis(_PK, _Created, Base):
+    """User-owned durable identity; v0 has one activated revision."""
+
+    __tablename__ = "personal_theses"
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    active_revision_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+
+
+class ThesisRevision(_PK, _Created, Base):
+    """Immutable human activation of one accepted analysis and market choice."""
+
+    __tablename__ = "thesis_revisions"
+    personal_thesis_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("personal_theses.id"))
+    thesis_analysis_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("thesis_analyses.id"), unique=True)
+    normalization_decision_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("normalization_decisions.id"))
+    source_candidate_choice_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("source_candidate_choices.id"))
+    market_display_set_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("market_display_sets.id"))
+    market_choice_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("market_choices.id"), unique=True)
+    market_assessment_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("market_assessments.id"))
+    market_id: Mapped[str] = mapped_column(String(128))
+    snapshot_id: Mapped[str] = mapped_column(ForeignKey("market_snapshots.id"))
+    rules_capture_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("market_rules_captures.id"))
+    revision_digest: Mapped[str] = mapped_column(String(64), unique=True)
+    baseline: Mapped[dict] = mapped_column(JSONVariant)
+    activated_by: Mapped[str] = mapped_column(String(160))
+
+
+class RevisitCapture(_PK, _Created, Base):
+    """Server-registered retained evidence; never client-attested provider data."""
+
+    __tablename__ = "revisit_captures"
+    revision_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("thesis_revisions.id"))
+    market_id: Mapped[str] = mapped_column(String(128))
+    source_kind: Mapped[str] = mapped_column(String(48))
+    source_ref: Mapped[str] = mapped_column(String(256))
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    receipt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    capture_digest: Mapped[str] = mapped_column(String(64))
+    evidence: Mapped[dict] = mapped_column(JSONVariant)
+    __table_args__ = (
+        UniqueConstraint("revision_id", "capture_digest", name="uq_revisit_capture_digest"),
+    )
+
+
+class MonitoringObservation(_PK, _Created, Base):
+    """Immutable deterministic comparison against one activation baseline."""
+
+    __tablename__ = "monitoring_observations"
+    revision_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("thesis_revisions.id"))
+    capture_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("revisit_captures.id"))
+    result: Mapped[str] = mapped_column(String(32))
+    comparison: Mapped[dict] = mapped_column(JSONVariant)
+    policy_version: Mapped[str] = mapped_column(String(64))
+    __table_args__ = (
+        UniqueConstraint("revision_id", "capture_id", name="uq_revisit_observation_capture"),
+    )
+
+
+class RevisitRequest(_PK, _Created, Base):
+    """Caller key binding, separate from immutable deduplicated observations."""
+
+    __tablename__ = "revisit_requests"
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    revision_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("thesis_revisions.id"))
+    idempotency_key: Mapped[str] = mapped_column(String(160))
+    request_digest: Mapped[str] = mapped_column(String(64))
+    capture_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("revisit_captures.id"))
+    observation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("monitoring_observations.id"))
+    __table_args__ = (
+        UniqueConstraint("user_id", "revision_id", "idempotency_key", name="uq_revisit_request_key"),
+    )
+
+
+class RevisitPacket(_PK, _Created, Base):
+    """Human review proposal; no semantic or lifecycle authority."""
+
+    __tablename__ = "revisit_packets"
+    revision_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("thesis_revisions.id"))
+    observation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("monitoring_observations.id"), unique=True)
+    packet_digest: Mapped[str] = mapped_column(String(64))
+
+
+class HumanRevisitDecision(_PK, _Created, Base):
+    """One explicit local-human disposition on one exact packet."""
+
+    __tablename__ = "human_revisit_decisions"
+    packet_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("revisit_packets.id"), unique=True)
+    revision_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("thesis_revisions.id"))
+    observation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("monitoring_observations.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    actor_id: Mapped[str] = mapped_column(String(160))
+    action: Mapped[str] = mapped_column(String(16))
+    decision_origin: Mapped[str] = mapped_column(String(32))
+    packet_digest: Mapped[str] = mapped_column(String(64))
+    __table_args__ = (CheckConstraint("action IN ('dismiss', 'reaffirm')", name="ck_revisit_decision_action"),)
 
 
 class MarketRecommendation(_PK, _Created, Base):

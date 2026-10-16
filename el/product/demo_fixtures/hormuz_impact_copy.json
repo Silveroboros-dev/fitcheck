@@ -1,0 +1,7 @@
+{
+  "version": "fixture-possible-impact-v1",
+  "approval_scope": "copy_only_not_semantic_adjudication",
+  "provenance": "Owner-approved fixture explanation",
+  "resolution_effect": "The new rule allows extra time to correct obvious data errors. It is unclear whether a correction can cancel an earlier reading of 60 or more: another rule says qualifying readings still count after revision.",
+  "fit_effect": "A delay alone may leave the fit unchanged. If a qualifying reading can be rejected, the market may become a weaker expression of your thesis."
+}

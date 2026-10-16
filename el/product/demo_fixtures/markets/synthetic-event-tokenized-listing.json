@@ -1,0 +1,27 @@
+{
+  "schema_version": "fitcheck.synthetic_event_fixture.v1",
+  "fixture_kind": "project_authored_synthetic",
+  "event_id": "synthetic-event-tokenized-listing",
+  "title": "Synthetic first tokenized-listing platform",
+  "description": "This project-authored synthetic market resolves Yes if Robinhood is first among Robinhood, Coinbase, Kraken, and Gemini to let a U.S. customer in at least one state purchase a token representing a U.S. exchange-listed stock or ETF after September 17, 2026 and by December 31, 2027, 23:59 ET. Announcements and tests do not qualify. If platforms qualify on the same ET calendar day, earlier purchasability wins; if that order cannot be established, earlier public confirmation wins. Otherwise it resolves No.",
+  "source_url": "https://example.invalid/fitcheck/events/synthetic-event-tokenized-listing",
+  "fixture_versioned_utc": "2026-10-15T00:00:00Z",
+  "markets": [
+    {
+      "schema_version": "fitcheck.synthetic_market_fixture.v1",
+      "fixture_kind": "project_authored_synthetic",
+      "market_id": "synthetic-broker-first-tokenized",
+      "title": "Will Robinhood be first among four named platforms to offer a qualifying tokenized U.S. stock or ETF?",
+      "resolution_rules": "This project-authored synthetic market resolves Yes if Robinhood is first among Robinhood, Coinbase, Kraken, and Gemini to let a U.S. customer in at least one state purchase a token representing a U.S. exchange-listed stock or ETF after September 17, 2026 and by December 31, 2027, 23:59 ET. Announcements and tests do not qualify. If platforms qualify on the same ET calendar day, earlier purchasability wins; if that order cannot be established, earlier public confirmation wins. Otherwise it resolves No.",
+      "condition_id": "synthetic-condition-broker-first-tokenized",
+      "outcomes": [
+        "Yes",
+        "No"
+      ],
+      "close_at_utc": "2028-01-01T04:59:00Z",
+      "liquidity_usd": 1200.0,
+      "source_url": "https://example.invalid/fitcheck/markets/synthetic-broker-first-tokenized",
+      "fixture_versioned_utc": "2026-10-15T00:00:00Z"
+    }
+  ]
+}

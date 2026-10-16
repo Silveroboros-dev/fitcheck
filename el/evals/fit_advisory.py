@@ -27,6 +27,7 @@ from el.domain.enums import FitClass
 from el.evals.fit import load_fit_cases, load_market_registry
 from el.domain.structures import ExtractedStructure
 from el.fitgate.gate import merge_advisory, quote_span_violations
+from el.fitgate.token_rules import token_rules_version
 from el.fitgate.m1_subject_only import evaluate_market
 from el.fitgate.policy import (
     STRONG_CLASSES,
@@ -130,6 +131,7 @@ def run_advisory_agreement(
                     advisory,
                     claim_text=_claim_corpus(case.structure),
                     rules_text=rules_text,
+                    token_rules_version=token_rules_version(policy),
                 ):
                     advisory = None  # non-citing -> falls to the ceiling
             merge = merge_advisory(

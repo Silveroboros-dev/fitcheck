@@ -14,9 +14,18 @@ PAGE = (
 HTML = PAGE.read_text(encoding="utf-8")
 
 
+def test_logo_header_has_no_text_era_marker_and_stacks_on_small_screens():
+    assert 'src="/assets/brand/fitcheck-logo-on-dark.svg"' in HTML
+    assert "header h1::after" not in HTML
+    assert "header h1 img { display:block; max-width:100%; height:auto; }" in HTML
+    mobile = HTML[HTML.index("@media (max-width:760px)") :]
+    assert "header { flex-direction:column; align-items:flex-start; gap:10px; }" in mobile
+
+
 def test_editing_source_clears_downstream_state():
     # Changing the input marks downstream stale; a run resets the chain.
-    assert 'addEventListener("input", resetDownstream)' in HTML
+    assert 'addEventListener("input", sourceInputChanged)' in HTML
+    assert re.search(r'function sourceInputChanged\(\)\s*\{[^}]*resetDownstream\(\)', HTML)
     assert "chain.thesisId = null" in HTML
     assert "chain.fitCardId = null" in HTML
 
@@ -68,8 +77,7 @@ def test_no_restricted_vocabulary_in_system_copy():
         assert not re.search(rf"\b{word}\b", lowered), f"restricted word: {word}"
 
 
-def test_blind_prior_panel_precedes_market_card():
+def test_legacy_blind_prior_panel_is_hidden_before_market_section():
     assert HTML.index('id="s2"') < HTML.index('id="s3"')
+    assert '<section id="s2" class="stale" data-plate="02" hidden>' in HTML
     assert "before any market" in HTML
-    assert "before market odds" in HTML
-    assert "before market context" not in HTML

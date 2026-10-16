@@ -19,6 +19,7 @@ from el.jobs import (
     JobStore,
     canonical_payload_hash,
 )
+from el.jobs.store import ExternalEffectDenied
 
 NOW = datetime(2026, 8, 6, 12, 0, tzinfo=timezone.utc)
 
@@ -73,6 +74,10 @@ def test_submit_is_actor_scoped_idempotent_and_payload_sensitive(tmp_path):
         assert session.scalar(select(func.count()).select_from(Job)) == 2
 
 
+@pytest.mark.filterwarnings(
+    "error:The `objects` parameter of `Session.flush` is deprecated:"
+    "sqlalchemy.exc.SADeprecationWarning"
+)
 def test_caller_owned_unrelated_insert_error_preserves_outer_work(tmp_path):
     store, sessions = _store(tmp_path)
     user_id = uuid.uuid4()
@@ -95,6 +100,10 @@ def test_caller_owned_unrelated_insert_error_preserves_outer_work(tmp_path):
 
 
 @pytest.mark.parametrize("conflicting_payload", [False, True])
+@pytest.mark.filterwarnings(
+    "error:The `objects` parameter of `Session.flush` is deprecated:"
+    "sqlalchemy.exc.SADeprecationWarning"
+)
 def test_caller_owned_same_key_collision_recovers_exactly(tmp_path, conflicting_payload):
     store, sessions = _store(tmp_path)
     winner = None
@@ -127,6 +136,48 @@ def test_caller_owned_same_key_collision_recovers_exactly(tmp_path, conflicting_
     assert winner.created
     with sessions() as session:
         assert session.scalar(select(func.count()).select_from(Job)) == 1
+
+
+@pytest.mark.parametrize("invalid_owner", [False, True])
+@pytest.mark.filterwarnings(
+    "error:The `objects` parameter of `Session.flush` is deprecated:"
+    "sqlalchemy.exc.SADeprecationWarning"
+)
+def test_caller_owned_job_flush_hooks_stay_inside_insert_savepoint(
+    tmp_path, invalid_owner
+):
+    store, sessions = _store(tmp_path)
+    outer_id, hook_id = uuid.uuid4(), uuid.uuid4()
+    with sessions() as session:
+        session.add(User(id=outer_id, email=f"{outer_id}@example.invalid"))
+
+        def add_hook_work(active, _flush_context, _instances):
+            if any(isinstance(row, Job) for row in active.new):
+                assert active.in_nested_transaction()
+                assert active.get(User, outer_id) is not None
+                active.add(User(id=hook_id, email=f"{hook_id}@example.invalid"))
+
+        event.listen(session, "before_flush", add_hook_work)
+        try:
+            if invalid_owner:
+                with pytest.raises(IntegrityError):
+                    _submit(store, session=session, owner_user_id=uuid.uuid4())
+                assert session.get(User, hook_id) is None
+            else:
+                result = _submit(store, session=session)
+                assert result.created
+                assert session.get(User, hook_id) is not None
+            assert session.get(User, outer_id) is not None
+            session.commit()
+        finally:
+            event.remove(session, "before_flush", add_hook_work)
+
+    with sessions() as session:
+        assert session.get(User, outer_id) is not None
+        assert (session.get(User, hook_id) is not None) is (not invalid_owner)
+        assert session.scalar(select(func.count()).select_from(Job)) == int(
+            not invalid_owner
+        )
 
 
 def test_unknown_payload_hash_version_fails_closed(tmp_path):
@@ -722,6 +773,29 @@ def test_claim_exposes_job_correlation_and_attempt_trace_ids(tmp_path):
     assert attempt is not None
     assert attempt.attempt_trace_id == claim.attempt_trace_id
     assert store.get(submitted.job_id).correlation_id == claim.job_correlation_id
+
+
+def test_repeated_nonbudget_effect_seal_preserves_running_attempt(tmp_path):
+    store, sessions = _store(tmp_path)
+    submitted = _submit(store)
+    claim = store.claim_due(worker_id="effect-worker", lease_seconds=30, now=NOW)
+    assert claim is not None
+    assert store.begin_external_effect(claim, now=NOW + timedelta(seconds=1))
+
+    with pytest.raises(ExternalEffectDenied, match="already sealed"):
+        store.begin_external_effect(claim, now=NOW + timedelta(seconds=2))
+    with sessions() as session:
+        job = session.get(Job, submitted.job_id)
+        attempt = session.get(JobAttempt, claim.attempt_id)
+        assert job.status == JobStatus.RUNNING.value
+        assert job.active_attempt_id == claim.attempt_id
+        assert job.external_effect_attempt_id == claim.attempt_id
+        assert attempt.status == AttemptStatus.RUNNING.value
+    assert store.succeed(
+        claim,
+        result={"fixture": True},
+        now=NOW + timedelta(seconds=3),
+    )
 
 
 def test_transient_backoff_is_due_bounded_and_audited(tmp_path):

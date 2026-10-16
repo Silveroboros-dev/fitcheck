@@ -14,8 +14,7 @@ a valid result only for the exact, non-empty, fully assessed displayed pool.
 
 ![FitCheck v3.1 thesis-selection UI showing two source-derived candidates and an explicit none option](docs/assets/fitcheck-fixture-ui.png)
 
-*The v3.1 local fixture UI: choose a source-derived thesis or none. Shown with
-synthetic data, before any thesis is confirmed.*
+*An earlier v3.1 fixture screen, before the anonymous two-journey demo.*
 
 ## Product direction and public boundary
 
@@ -33,11 +32,18 @@ process. They do not own thesis meaning, confidence, commitment, or semantic
 review decisions. The intended source-selection and confirmation interaction
 is recorded in the [v3.1 UI contract](docs/fitcheck-v3.1-ui-contract.md).
 
-The local v3.1 UI provides a synchronous, offline fixture path: source
-interpretation, explicit candidate-or-`none` choice, normalization
-confirmation, an assessed market pool, and market-or-`none` choice. The MCP
-source path uses separate submission and worker processes. Its STDIO fixture
-test also exercises the subsequent decision and market-pool tools.
+The local anonymous demo offers two offline journeys. Stablecoin/Robinhood
+source interpretation runs through a fixture worker, explicit candidate
+choice, clarification, and human confirmation. Each supported accepted thesis
+compares three fixed, minimal synthetic test abstractions that preserve the
+required demo edge cases, with curated proposals and complete fixture rules.
+Any no-clean result applies only to those three fully assessed displayed
+contracts. Unsupported thesis edits fail closed. The identities, provenance,
+and fail-closed compatibility rules are in the
+[v3 frozen market demo contract](docs/fitcheck-frozen-market-demo-contract-v3.md).
+The separate Hormuz journey replays retained before/after market rules with
+visitor-owned, clearly labelled test setup for thesis acceptance and market
+choice. The MCP fixture path retains its separate market-pool reference flow.
 Legacy predecessor routes remain available for compatibility and are not the
 default journey.
 
@@ -59,23 +65,24 @@ flowchart LR
     C -->|candidate| N["Normalization proposal\nor clarification"]
     N --> D{"Human accepts,\nrevises, or rejects"}
     D -->|accept| T["Confirmed thesis"]
-    T --> P["Retrieved and assessed\nmarket pool"]
+    T --> P["Three frozen, fully assessed\ncontract candidates"]
     P --> M{"Human chooses\nmarket or none"}
     C -->|none| X["No thesis selected"]
     D -->|reject| X
     M --> R["Reviewable session evidence"]
 
-    F["Fixture proposers and\nfrozen market snapshot"] -. proposes .-> I
+    F["Fixture proposers and\nsynthetic market snapshot"] -. proposes .-> I
     F -. proposes .-> N
-    F -. assesses .-> P
+    F -. prepares .-> P
 ```
 
 Models and providers can propose evidence; they do not own durable truth.
 Deterministic checks preserve declared policy, schema, provenance, and
-bookkeeping; they do not establish semantic truth. The fixture UI executes the
-diagrammed journey synchronously. Durable worker and snapshot foundations are
-separate, tested components; the fixture UI does not represent an asynchronous
-or live-provider workflow.
+bookkeeping; they do not establish semantic truth. The anonymous source demo
+uses a durable fixture worker. For either exact supported thesis, it presents
+the bound three-contract frozen pool and an explicit market-or-`none` choice.
+Unsupported source edits fail unavailable. This is not a live-provider
+workflow.
 
 ## Engineering evidence
 
@@ -97,11 +104,13 @@ handling behind those links, see the
 
 | Surface | Status | Boundary |
 | --- | --- | --- |
-| v3.1 source -> selected candidate -> confirmed thesis -> market-pool -> market-or-none fixture journey | **Public, offline fixture reference** | Synchronous local SQLite flow using project-authored synthetic source and frozen market fixtures. It makes no live provider or model call. |
+| Anonymous source -> selected candidate -> confirmed thesis | **Public, offline fixture demo** | A local fixture worker processes the frozen two-thesis source. Each supported 2027 thesis has three newly written minimal synthetic market abstractions, separately attributed curated expression-quality proposals and automatic diagnostics, full fixture rules, and an explicit market-or-none choice. Unsupported edits fail unavailable; this is not a catalog search or a governed golden. |
+| Hormuz retained-rules revisit | **Public, offline test reconstruction** | Exact retained old/new rules drive a visitor-owned change packet. Thesis acceptance and market choice are reconstructed test setup, not historical human decisions; semantic market fit is unassessed. |
 | Accepted-thesis restoration | **Public, local fixture reference** | A read-only, actor-bound `accepted-state` view restores the original source and selected excerpt when their retained lineage is complete. It does not record another decision or automatically assess a market pool. |
+| Persisted journey resume | **Public, local fixture reference** | Read-only account-state, source, market-pool, and market-choice views return only IDs and records owned by the prebound local actor or anonymous visitor session. The private account adapter is excluded, so these routes do not establish production authentication or multitenancy. |
 | Legacy predecessor classify, blind-prior, draft, and simple-ledger routes | **Public compatibility reference** | Retained for replay and compatibility; they are not the default v3.1 journey. |
-| Durable jobs, classification worker, and snapshot validation | **Public, separately tested foundations** | The fixture UI does not use these as an asynchronous workflow. The MCP source-interpretation protocol reuses a bounded fixture worker separately. Public CI adds a disposable PostgreSQL contention gate. |
-| Deterministic fit policies, correction intake, review queue, and MCP contracts | **Public, offline fixture reference** | MCP source interpretation submits, runs, and polls a bounded fixture job; that is distinct from the synchronous UI path. SQL-backed per-key admission applies. Synthetic tests establish declared contracts, not live-data accuracy, production readiness, or a verified external client. |
+| Durable jobs, classification worker, and snapshot validation | **Public, separately tested foundations** | The anonymous source demo uses a separate fixture source worker. MCP has its own bounded fixture-worker reference. Public CI adds a disposable PostgreSQL contention gate. |
+| Deterministic fit policies, correction intake, review queue, and MCP contracts | **Public, offline fixture reference** | MCP source interpretation also submits, runs, and polls a bounded fixture job. Anonymous demo requests are visitor-scoped and cannot enter correction/review or legacy ledger writes. Synthetic tests establish declared contracts, not live-data accuracy, production readiness, or a verified external client. |
 | Cloud, provider, and operational runtime | **Not attested by this public repository** | Service identifiers, infrastructure configuration, database, credentials, and current operational evidence are excluded. |
 | Live PolyData retrieval source and provider operations | **Excluded** | Provider implementation, credentials, payloads, retry policy, and authorization are absent; live-provider selection fails closed. |
 | Governed review corpus and reported evaluation rows | **Private** | Public fixtures are regression material, not the governed benchmark or evidence for external validity. |
@@ -113,10 +122,20 @@ This repository is an offline-runnable and credential-free-by-default
 distribution of the core domain services, deterministic policy gates, worker
 contracts, local product surface, and a selected offline test suite. After
 dependencies are installed, fixture-mode tests and the local product flow make
-no network or model calls. The included fixture data is project-authored
-synthetic material with fabricated or neutralized identifiers for public
-regression testing; it is not a market feed, governed review corpus, or
-production evaluation corpus.
+no network or model calls. Most included fixture data consists of synthetic
+test material with fabricated or neutralized identifiers. The narrow
+Hormuz retained-rules resource contains real historical rule text and approved
+possible-effects copy for a labelled test reconstruction; it is not a market
+feed, governed review corpus, or production evaluation corpus. The source
+journey includes six newly written minimal synthetic market abstractions and
+two synthetic event bindings identified in the data card. They preserve only
+the required demo edge cases, use FitCheck-owned schemas, and are not provider
+response bodies or provider schemas. Their identifiers, URLs, timestamps,
+liquidity values, and event relationships are fabricated.
+
+FitCheck `0.2.0` uses this v3 synthetic-fixture format exclusively. Persisted
+v1/v2 frozen-demo pools are unsupported at runtime and fail closed; they are
+not relabelled or reprojected as v3 evidence.
 
 The authoritative governed review corpus remains private. It contains review
 provenance and source material whose redistribution rights and privacy
@@ -126,7 +145,8 @@ the [`July 2026 reviewed-data measurement summary`](docs/experiments/README.md)
 for the observed limitations and negative results.
 
 The retrieval layer exposes a provider protocol, but this distribution ships
-only `FixtureMarketProvider`. Live provider implementations, credentials,
+only fixture providers, including the exact-thesis `FrozenDemoMarketProvider`.
+Live provider implementations, credentials,
 payloads, retry policy, and operational configuration are absent.
 `MARKET_PROVIDER=polydata` deliberately fails closed. Offline fixture mode
 does not make network or model calls.
@@ -136,7 +156,7 @@ service identifiers, database, secrets, deployment configuration, and current
 operational state are not published here. The Docker image in this repository
 runs the local fixture UI; it is not a reference deployment image.
 
-## Quick start: v3.1 synchronous fixture reference
+## Quick start: anonymous fixture demo
 
 Python 3.12 or newer is required. The full offline test suite also uses
 Node.js 22 or newer for a dependency-free DOM regression; the fixture UI and
@@ -158,31 +178,36 @@ The focused v3.1 command passes without a provider or model call. Run the
 broader offline suite separately after dependency installation:
 
 ```bash
-.venv/bin/python -m pytest --ignore=tests/test_job_store_postgres.py
+.venv/bin/python -m pytest \
+  --ignore=tests/test_job_store_postgres.py \
+  --ignore=tests/test_mcp_schema_migration_postgres.py
 ```
 
-Run the local fixture UI:
+Run the local fixture UI and source worker from one command:
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. \
-FITCHECK_UI_MODE=fixture \
-FITCHECK_UI_DB_URL=sqlite:////tmp/fitcheck-v31-fixture.db \
-.venv/bin/uvicorn el.product.app:app \
-  --host 127.0.0.1 --port 8100
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/fitcheck-demo \
+  --db /tmp/fitcheck-demo.sqlite --host 127.0.0.1 --port 8100
 ```
 
-Open `http://127.0.0.1:8100`. Select **Load synthetic two-thesis fixture** to replay one
-project-authored fictional source with two candidate theses, then choose one,
-answer its fixture clarification, accept the resulting proposal, and inspect
-the market pool. Each card compares the accepted thesis with the frozen
-contract structure and lets you expand its resolution conditions. Keep the
-displayed analysis ID after acceptance; reopening
-`http://127.0.0.1:8100/?resume_thesis_id=<analysis-id>` shows the original
-source before the accepted thesis. The resumed source is read-only, and market
-assessment still requires a separate click. The app uses a local SQLite database and frozen synthetic
-fixtures. It needs no cloud account, provider credential, or model credential.
-Use a distinct disposable SQLite path for each fixture run. `FITCHECK_UI_DB_URL`
-is deliberately for the synchronous UI only; do not reuse it for MCP jobs.
+Open `http://127.0.0.1:8100` and choose **Source discovery** or **Changed
+market rules**. Source discovery queues a worker job for the frozen two-thesis
+source; choose one candidate, answer its clarification, and accept or reject
+the proposal. Each supported thesis (December 31, 2027) then compares three
+frozen synthetic market fixtures, each with its own 2026 or 2027 rule deadline.
+Inspect their curated expression-quality proposals, separate automatic diagnostics,
+Yes/No conditions and complete rules, then choose one market or explicit none.
+Four proposals are weak proxies and two are not expressions; these are fixture
+proposals rather than human adjudications or goldens. Fixture version timestamps
+are synthetic metadata, and no current prices or final outcomes are asserted.
+The Hormuz journey shows exact retained before/after
+rules, an evidence-bound revisit packet, and separate dismiss, reaffirm, and
+revision-draft actions. Its prior acceptance and market choice are test-only
+reconstruction. Each visitor has an isolated expiring session; switching
+journeys resets it. The command creates or migrates a fresh local SQLite demo
+database and starts web plus worker against that same path. An existing
+unversioned database is rejected. No cloud account or provider/model credential
+is needed. Use a distinct disposable SQLite path for each run.
 
 ### MCP fixture-worker checkpoint
 
@@ -233,6 +258,16 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. \
 Do not treat the worker invocation as a deployed service or named-client
 integration.
 
+### Optional Google ADK client
+
+The Google ADK client is an independent package under
+[`clients/adk`](clients/adk/README.md). Install it in a clean client virtual
+environment, separate from the FitCheck server environment, because their
+tested OpenTelemetry dependency ranges are incompatible. Public CI installs
+that package in its own job and runs credential-free connection-type contracts
+with network access fenced and skips treated as failures. Those contracts do
+not run an agent or make a provider call.
+
 ## Containerized fixture UI
 
 ```bash
@@ -240,16 +275,17 @@ docker build -t fitcheck-fixture .
 docker run --rm -p 127.0.0.1:8080:8080 fitcheck-fixture
 ```
 
-Then open `http://127.0.0.1:8080`. Keep the host-side port bound to loopback:
-the fixture API is a single-user, unauthenticated local surface. Do not treat
-this container as a production authentication or deployment reference.
+Then open `http://127.0.0.1:8080`. Keep the host-side port bound to loopback.
+The cookie isolates local visitors but is not a production authentication or
+deployment reference.
 
-## Optional PostgreSQL contention test
+## Optional PostgreSQL integration tests
 
-The public CI workflow runs `tests/test_job_store_postgres.py` against a
-temporary PostgreSQL 16 service. Locally, set `FITCHECK_POSTGRES_TEST_URL` to a
-disposable test database before running that module. Never point the test at a
-shared or production database.
+The public CI workflow runs `tests/test_job_store_postgres.py` and
+`tests/test_mcp_schema_migration_postgres.py` against a temporary PostgreSQL 16
+service. Locally, set `FITCHECK_POSTGRES_TEST_URL` to a disposable test database
+before running those modules. Never point the tests at a shared or production
+database.
 
 ## Design tradeoffs and failure modes
 
@@ -271,17 +307,21 @@ shared or production database.
 
 ## Honest limitations
 
-- The public fixtures are small, synthetic, and non-representative. Passing
+- The public fixtures are small and non-representative. Passing
   them does not establish real-world retrieval recall, classification accuracy,
   calibration, or market coverage.
-- The live provider source and the reference deployment configuration are not
-  included, so this repository cannot reproduce live retrieval or attest the
-  private service's operational state.
+- Historical live-provider and predecessor deployment configuration are not
+  included, so this repository cannot reproduce live retrieval or attest that
+  the predecessor service still exists or has any current operational state.
 - Dependency ranges are declared in `pyproject.toml`, but this distribution
   does not include an exact resolved dependency lock. It therefore claims an
   offline-runnable, credential-free fixture path—not byte-for-byte environment
   reproduction.
-- The fixture UI is a local single-user surface and is not an authentication,
+- Shared source-job modules retain bounded SourcePilot admission types and
+  FULL31 job-type/budget-guard hooks as extension contracts. The public fixture
+  launch path supplies neither private pilot provisioning nor a budget adapter;
+  those declarations do not activate a pilot or provider call.
+- The fixture UI has anonymous visitor isolation and is not an authentication,
   tenancy, metering, migration, or internet-exposure reference.
 
 ## Trust boundaries
@@ -300,8 +340,17 @@ and [`SECURITY.md`](SECURITY.md) for private vulnerability reporting.
 
 ## License
 
-The code, documentation, and project-authored synthetic fixtures in this
-public distribution are licensed under the
-[Apache License 2.0](LICENSE). Private governed data, provider material, and
-other excluded artifacts are not part of this distribution or this license
-grant.
+The code, documentation, and newly written minimal synthetic fixture
+abstractions in this public distribution are licensed under the
+[Apache License 2.0](LICENSE). The retained Hormuz excerpts are declared
+third-party historical market content in the [data card](DATA_CARD.md) and
+[third-party notices](THIRD_PARTY_NOTICES.md); the Apache grant does not assert
+ownership of that material. The six current market fixtures and two event
+bindings use FitCheck-owned minimal schemas and are not provider response
+bodies. Private governed data and other excluded artifacts are absent from
+this distribution.
+
+The exact retained Hormuz projection is included under
+`hormuz-publication-risk-exception-v1`: redistribution rights remain
+unverified, and the owner has explicitly accepted the residual publication
+risk. See [the bounded exception](PUBLIC_REPO_BOUNDARY.md#hormuz-publication-risk-exception-v1).

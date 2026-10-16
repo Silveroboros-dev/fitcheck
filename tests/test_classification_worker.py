@@ -54,6 +54,7 @@ from el.domain.tables import (
     RejectedMarketRow,
     ThesisAnalysis,
 )
+from el.domain.vocabulary import vocabulary_violations
 from el.jobs import JobStatus, JobStore, canonical_payload_hash
 from el.fitgate.m1_subject_only import (
     M1_SUBJECT_ONLY_POLICY_VERSION,
@@ -111,6 +112,26 @@ def test_new_classification_runtime_pins_m1_successor_by_default():
         m1_direction_guard=pins.m1_direction_guard,
     )
     assert restored.gate_policy_version == M1_SUBJECT_ONLY_POLICY_VERSION
+
+
+def test_explicit_token_successor_worker_pins_replays_and_persists_version(tmp_path):
+    from el.fitgate.m1_subject_only import TOKEN_V2_FIT_POLICY_VERSION, stopword_corrected_fit_policy
+    from el.fitgate.token_rules import TOKEN_RULES_SUCCESSOR_VERSION
+
+    environment = _environment(tmp_path, fit_policy=stopword_corrected_fit_policy())
+    submitted = environment.submit(key="token-v2-explicit-runtime")
+    job = environment.jobs.get(submitted.job_id)
+    assert job.pinned_manifest["fit"]["token_rules_version"] == TOKEN_RULES_SUCCESSOR_VERSION
+    assert job.pinned_manifest["fit"]["gate_policy_version"] == TOKEN_V2_FIT_POLICY_VERSION
+    retry = environment.submit(key="token-v2-explicit-runtime")
+    assert retry.job_id == submitted.job_id and not retry.created
+    assert environment.worker().run_once(now=NOW).status == "succeeded"
+    with environment.sessions() as session:
+        card = session.scalars(select(FitCard)).one()
+        assert all(
+            judgment["token_rules_version"] == TOKEN_RULES_SUCCESSOR_VERSION
+            for judgment in card.provenance["per_market"].values()
+        )
 
 
 def test_legacy_predecessor_manifest_reenqueues_with_its_original_hash(
@@ -746,6 +767,88 @@ def test_direct_job_pins_active_snapshot_and_commits_one_complete_bundle(tmp_pat
     assert counts["cards"] == 1
     assert counts["recommendations"] == 1
     assert counts["captures"] == counts["members"]
+
+
+def test_worker_masks_restricted_claim_wording_in_generated_fit_text(tmp_path):
+    restricted_mechanism = "people buy widgets"
+    environment = _environment(
+        tmp_path,
+        claim=_claim(
+            mechanism=Mechanism(
+                asserted_causal_chain=restricted_mechanism,
+            )
+        ),
+    )
+    environment.submit(key="restricted-claim-wording")
+
+    result = environment.worker().run_once(now=NOW)
+
+    assert result.status == "succeeded"
+    with environment.sessions() as session:
+        analysis = session.get(ThesisAnalysis, environment.analysis_id)
+        card = session.get(FitCard, result.fit_card_id)
+        recommendation = session.scalars(select(MarketRecommendation)).one()
+        assert analysis.extracted_structure["mechanism"][
+            "asserted_causal_chain"
+        ] == restricted_mechanism
+        assert not vocabulary_violations(
+            " ".join(
+                (
+                    card.what_it_captures,
+                    card.what_it_misses,
+                    recommendation.fit_reason,
+                )
+            )
+        )
+        assert restricted_mechanism not in json.dumps(card.provenance)
+        mechanism = next(
+            check
+            for check in card.provenance["per_market"][
+                "mkt_gemini_lmsys_1"
+            ]["checks"]
+            if check["check_id"] == "X1"
+        )
+        assert mechanism["detail_status"] == (
+            "restricted_source_wording_withheld"
+        )
+        assert "source wording withheld" in mechanism["detail"]
+        assert not vocabulary_violations(mechanism["detail"])
+
+
+def test_worker_does_not_render_restricted_market_identifier_as_advice(tmp_path):
+    market_id = "people buy widgets"
+    rows = [_market_row(market_id)]
+    source_structure = _phase0_structures()["mkt_gemini_lmsys_1"]
+    structures = {
+        market_id: source_structure.model_copy(update={"market_id": market_id})
+    }
+    environment = _environment(
+        tmp_path,
+        rows=rows,
+        structures=structures,
+    )
+    environment.submit(key="restricted-market-identifier")
+
+    result = environment.worker().run_once(now=NOW)
+
+    assert result.status == "succeeded"
+    assert result.recommended_market_id == market_id
+    with environment.sessions() as session:
+        card = session.get(FitCard, result.fit_card_id)
+        recommendation = session.scalars(select(MarketRecommendation)).one()
+        assert card.recommended_market_id == market_id
+        assert market_id in card.provenance["per_market"]
+        assert "identifier retained in provenance" in card.what_it_captures
+        assert market_id not in card.what_it_captures
+        assert not vocabulary_violations(
+            " ".join(
+                (
+                    card.what_it_captures,
+                    card.what_it_misses,
+                    recommendation.fit_reason,
+                )
+            )
+        )
 
 
 def test_worker_card_serializes_through_public_contract(tmp_path):

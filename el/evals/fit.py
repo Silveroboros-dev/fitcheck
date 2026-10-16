@@ -36,6 +36,7 @@ from el.domain.structures import ExtractedStructure, MarketStructure
 from el.fitgate.aliases import ALIAS_RULES_EMPTY
 from el.fitgate.checks import TOKEN_RULES_VERSION
 from el.fitgate.m1_subject_only import aggregate_thesis, evaluate_market, gate_policy_version
+from el.fitgate.token_rules import token_rules_version
 from el.fitgate.policy import (
     FIT_GATE_POLICY_VERSION,
     STRONG_CLASSES,
@@ -383,6 +384,7 @@ def run_fit_eval(
     ]
     return FitEvalReport(
         gate_policy_version=gate_policy_version(policy),
+        token_rules_version=token_rules_version(policy),
         alias_rules_version=policy.alias_rules_version,
         gated_cases=sorted(GATED_CASES),
         cases=results,

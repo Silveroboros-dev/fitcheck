@@ -762,3 +762,16 @@ def test_mcp_usage_limit_is_atomic_under_postgres_contention(
         MINUTE_SCOPE: 10,
         DAY_SCOPE: 10,
     }
+
+
+@pytest.mark.parametrize("boundary_name", ["request", "observation", "capture"])
+def test_revisit_overlapping_delivery_returns_one_result(postgres_harness, boundary_name):
+    from test_revisit_idempotency import assert_overlapping_check
+
+    assert_overlapping_check(postgres_harness.sessions, boundary_name)
+
+
+def test_revisit_overlapping_key_with_conflicting_input(postgres_harness):
+    from test_revisit_idempotency import assert_overlapping_conflicting_input
+
+    assert_overlapping_conflicting_input(postgres_harness.sessions)

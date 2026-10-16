@@ -1,0 +1,16 @@
+{
+  "schema_version": "fitcheck.synthetic_market_fixture.v1",
+  "fixture_kind": "project_authored_synthetic",
+  "market_id": "synthetic-treasury-ledger-payment",
+  "title": "Will the U.S. Treasury announce a qualifying public-ledger payment by December 31, 2026?",
+  "resolution_rules": "This project-authored synthetic market retains two deadline clauses. The primary clause requires a qualifying U.S. Treasury transaction on a public distributed ledger by December 31, 2026, 23:59 ET. A supplemental clause requires public announcement of an ordinary government payment by that deadline regardless of when the transaction occurred. Payments by the Treasury or an authorized Treasury sub-body or entity are in scope. Pilots, tests, and proofs of concept do not qualify. The fixture preserves both clauses without choosing between them; otherwise it resolves No.",
+  "condition_id": "synthetic-condition-treasury-ledger-payment",
+  "outcomes": [
+    "Yes",
+    "No"
+  ],
+  "close_at_utc": "2027-01-01T04:59:00Z",
+  "liquidity_usd": 900.0,
+  "source_url": "https://example.invalid/fitcheck/markets/synthetic-treasury-ledger-payment",
+  "fixture_versioned_utc": "2026-10-15T00:00:00Z"
+}
