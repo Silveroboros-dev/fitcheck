@@ -39,6 +39,9 @@ NON_PILOT_SOURCE = or_(
 FULL31_STAGE_TYPES = frozenset({
     "full31_normalization_v1", "full31_market_pool_v1",
 })
+SOURCE_STAGE_TYPES = frozenset({
+    "source_interpretation_v1", "account_source_interpretation_v1",
+})
 NON_PILOT_STAGE = or_(
     Job.job_type.notin_(FULL31_STAGE_TYPES),
     Job.submitted_by_api_client_id.is_(None),
@@ -467,6 +470,57 @@ class JobStore:
             session.expunge(row)
             return row
 
+    def reconcile_owned_terminal(
+        self,
+        job_id: uuid.UUID,
+        *,
+        job_type: str,
+        owner_client_type: str,
+        owner_actor_id: str,
+        now: datetime | None = None,
+    ) -> Job:
+        """Apply deadline/exhaustion without trusting a worker's runtime pins.
+
+        A newer targeted worker may be unable to execute an older pinned Job,
+        but it may still expire that exact owner-bound Job. This keeps runtime
+        pin checks fail-closed while allowing its budget reservation to be
+        reconciled after the immutable submission deadline.
+        """
+        if not all(
+            isinstance(value, str) and value.strip()
+            for value in (job_type, owner_client_type, owner_actor_id)
+        ):
+            raise ValueError("job type and owner are required")
+        scope = (
+            Job.job_type == job_type,
+            Job.owner_client_type == owner_client_type,
+            Job.owner_actor_id == owner_actor_id,
+        )
+        with self._sessions() as session:
+            if session.scalar(
+                select(Job.id).where(Job.id == job_id, *scope)
+            ) is None:
+                raise JobNotFound("job not found")
+            timestamp = self._time(session, now)
+            self._mark_deadline_exceeded(
+                session,
+                timestamp,
+                job_id=job_id,
+                additional_scope=scope,
+            )
+            self._mark_exhausted(
+                session,
+                timestamp,
+                job_id=job_id,
+                additional_scope=scope,
+            )
+            session.commit()
+        return self.get_owned(
+            job_id,
+            owner_client_type=owner_client_type,
+            owner_actor_id=owner_actor_id,
+        )
+
     def cancel_owned(
         self,
         job_id: uuid.UUID,
@@ -603,11 +657,21 @@ class JobStore:
                 for value in (
                     expected_owner_client_type,
                     expected_owner_actor_id,
-                    expected_pinned_manifest,
                 )
             ):
                 raise ValueError("target guards require job_id")
             target_scope = ()
+            if expected_pinned_manifest is not None and len(allowed_types) != 1:
+                raise ValueError("untargeted pin guard requires one job type")
+
+        pin_scope = (
+            (Job.pinned_manifest == expected_pinned_manifest,)
+            if expected_pinned_manifest is not None and not targeted else ()
+        )
+        reconcile_scope = (
+            (Job.job_type == allowed_types[0], *pin_scope)
+            if pin_scope else ()
+        )
 
         for _ in range(contention_retries):
             with self._sessions() as session:
@@ -627,11 +691,13 @@ class JobStore:
                     session, timestamp, job_id=job_id,
                     exclude_api_submitted=exclude_api_submitted,
                     exclude_full31_stage=not targeted,
+                    additional_scope=reconcile_scope,
                 )
                 self._mark_exhausted(
                     session, timestamp, job_id=job_id,
                     exclude_api_submitted=exclude_api_submitted,
                     exclude_full31_stage=not targeted,
+                    additional_scope=reconcile_scope,
                 )
                 # Reconciliation is independent of this worker's subsequent
                 # claim CAS. Preserve terminal transitions even if contention
@@ -639,7 +705,7 @@ class JobStore:
                 session.commit()
                 timestamp = _aware(now) if now else self._database_now(session)
                 predicate = self._claimable(timestamp)
-                query = select(Job).where(predicate, *target_scope)
+                query = select(Job).where(predicate, *target_scope, *pin_scope)
                 if exclude_api_submitted:
                     query = query.where(NON_PILOT_SOURCE)
                 if not targeted:
@@ -677,6 +743,7 @@ class JobStore:
                         self._claimable(timestamp),
                         *target_cas,
                         *target_scope,
+                        *pin_scope,
                     )
                     .values(
                         status=JobStatus.RUNNING.value,
@@ -692,6 +759,49 @@ class JobStore:
                     .execution_options(synchronize_session=False)
                 )
                 if updated.rowcount != 1:
+                    session.rollback()
+                    continue
+
+                # The CAS can wait behind a row lock. Refresh the database
+                # clock after it owns the row so a stale pre-wait timestamp
+                # cannot create an attempt past its deadline or an already
+                # shortened lease.
+                claim_clock = _aware(now) if now else self._database_now(session)
+                if (
+                    candidate.deadline_at is not None
+                    and _aware(candidate.deadline_at) <= claim_clock
+                ):
+                    session.rollback()
+                    expiry_clock = _aware(now) if now else self._database_now(session)
+                    self._mark_deadline_exceeded(
+                        session,
+                        expiry_clock,
+                        job_id=candidate.id,
+                        exclude_api_submitted=exclude_api_submitted,
+                        exclude_full31_stage=not targeted,
+                        additional_scope=reconcile_scope,
+                    )
+                    session.commit()
+                    return None
+
+                timestamp = claim_clock
+                lease_expires_at = timestamp + timedelta(seconds=lease_seconds)
+                refreshed = session.execute(
+                    update(Job)
+                    .where(
+                        Job.id == candidate.id,
+                        Job.status == JobStatus.RUNNING.value,
+                        Job.active_attempt_id == attempt_id,
+                    )
+                    .values(
+                        lease_expires_at=lease_expires_at,
+                        heartbeat_at=timestamp,
+                        started_at=candidate.started_at or timestamp,
+                        updated_at=timestamp,
+                    )
+                    .execution_options(synchronize_session=False)
+                )
+                if refreshed.rowcount != 1:
                     session.rollback()
                     continue
 
@@ -897,29 +1007,39 @@ class JobStore:
             if budget_allowed and budget_pinned and budget_guard is not None:
                 budget_allowed = budget_guard.validate(session, job, effect_clock)
             marked_pilot_without_policy = (
-                job.job_type in ({"source_interpretation_v1"} | FULL31_STAGE_TYPES)
+                job.job_type in (SOURCE_STAGE_TYPES | FULL31_STAGE_TYPES)
                 and job.submitted_by_api_client_id is not None
                 and allow_effect is None
             )
             budget_pinned_without_guard = (
                 budget_pinned and budget_guard is None
             )
+            account_source_without_budget = (
+                job.job_type == "account_source_interpretation_v1"
+                and not budget_pinned
+            )
             if (
                 marked_pilot_without_policy or budget_pinned_without_guard
+                or account_source_without_budget
                 or not guard_allowed or not budget_allowed
             ):
                 denied_code = (
-                    ("budget_effect_guard_required" if budget_pinned_without_guard else "budget_effect_denied")
-                    if budget_pinned else
+                    (
+                        "budget_effect_guard_required"
+                        if budget_pinned_without_guard
+                        or account_source_without_budget
+                        else "budget_effect_denied"
+                    )
+                    if budget_pinned or account_source_without_budget else
                     "source_pilot_effect_denied"
-                    if job.job_type == "source_interpretation_v1" else
+                    if job.job_type in SOURCE_STAGE_TYPES else
                     "full31_pilot_effect_denied"
                 )
                 denied_message = (
                     "budget authorization is required before external effects"
-                    if budget_pinned else
+                    if budget_pinned or account_source_without_budget else
                     "source pilot authorization expired or was revoked"
-                    if job.job_type == "source_interpretation_v1" else
+                    if job.job_type in SOURCE_STAGE_TYPES else
                     "full31 pilot authorization expired or was revoked"
                 )
                 denied_at = self._completion_clock(session, now)
@@ -1303,6 +1423,7 @@ class JobStore:
         job_id: uuid.UUID | None = None,
         exclude_api_submitted: bool = False,
         exclude_full31_stage: bool = False,
+        additional_scope: tuple = (),
     ) -> int:
         uncertain_predicate = and_(
             Job.status == JobStatus.RUNNING.value,
@@ -1315,6 +1436,8 @@ class JobStore:
             uncertain_predicate = and_(uncertain_predicate, NON_PILOT_SOURCE)
         if exclude_full31_stage:
             uncertain_predicate = and_(uncertain_predicate, NON_PILOT_STAGE)
+        if additional_scope:
+            uncertain_predicate = and_(uncertain_predicate, *additional_scope)
         uncertain = cls._transition_terminal_jobs(
             session,
             uncertain_predicate,
@@ -1350,6 +1473,8 @@ class JobStore:
             predicate = and_(predicate, NON_PILOT_SOURCE)
         if exclude_full31_stage:
             predicate = and_(predicate, NON_PILOT_STAGE)
+        if additional_scope:
+            predicate = and_(predicate, *additional_scope)
         regular = cls._transition_terminal_jobs(
             session,
             predicate,
@@ -1370,6 +1495,7 @@ class JobStore:
         job_id: uuid.UUID | None = None,
         exclude_api_submitted: bool = False,
         exclude_full31_stage: bool = False,
+        additional_scope: tuple = (),
     ) -> int:
         uncertain_predicate = and_(
             Job.status == JobStatus.RUNNING.value,
@@ -1383,6 +1509,8 @@ class JobStore:
             uncertain_predicate = and_(uncertain_predicate, NON_PILOT_SOURCE)
         if exclude_full31_stage:
             uncertain_predicate = and_(uncertain_predicate, NON_PILOT_STAGE)
+        if additional_scope:
+            uncertain_predicate = and_(uncertain_predicate, *additional_scope)
         uncertain = cls._transition_terminal_jobs(
             session,
             uncertain_predicate,
@@ -1418,6 +1546,8 @@ class JobStore:
             predicate = and_(predicate, NON_PILOT_SOURCE)
         if exclude_full31_stage:
             predicate = and_(predicate, NON_PILOT_STAGE)
+        if additional_scope:
+            predicate = and_(predicate, *additional_scope)
         exhausted = cls._transition_terminal_jobs(
             session,
             predicate,

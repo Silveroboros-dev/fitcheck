@@ -8,14 +8,17 @@ errors carry the contract's explicit failure states.
 import uuid
 from contextvars import ContextVar
 from copy import deepcopy
+from datetime import datetime
+from hashlib import sha256
 from importlib.resources import files
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import Literal, Protocol
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
+from starlette.routing import Match
 
 from el.extraction.service import NormalizationAttemptConflict
 from el.jobs import IdempotencyConflict
@@ -29,16 +32,26 @@ from el.mcp.contracts import (
 from el.models.vertex_canary import VertexCanaryRefused
 from el.observability import configure_structured_stderr_logging, extract_traceparent
 from el.product.api import ProductApi, ProposerUnavailable
-from el.product.wiring import ProductServices, build_services, local_actor
+from el.product.demo_admission import (
+    DemoAdmission, DemoAdmissionDenied, MAX_REQUEST_BYTES,
+)
+from el.product.wiring import HumanActor, ProductServices, build_services, local_actor
 from el.product.demo_sessions import COOKIE_NAME, SESSION_SECONDS, DemoSessions
 from el.revisit.service import RevisitConflict, RevisitNotFound, RevisitUnavailable
 from el.sourceinterpretation.service import SourceCandidateChoiceConflict
-
-if TYPE_CHECKING:
-    from el.product.accounts import AccountResolver
-
+from el.sourceinterpretation.jobs import (
+    SourceJobAdmission,
+    SourceJobAdmissionError,
+)
 
 STATIC_HTML = files("el.product").joinpath("static", "product_console.html")
+ACCOUNT_COOKIE_NAME_PREFIX = "__Host-fitcheck_account_"
+# Public-projection compatibility alias. The value is now a prefix; the
+# concrete private session adapter appends the full token digest.
+ACCOUNT_COOKIE_NAME = ACCOUNT_COOKIE_NAME_PREFIX
+MAX_ACCOUNT_COOKIE_CANDIDATES = 8
+MAX_ACCOUNT_COOKIE_HEADER_BYTES = 4096
+_ACCOUNT_COOKIE_DIGEST_LENGTH = 64
 SYNTHETIC_MARKET_FIXTURE_ASSETS = frozenset({
     "synthetic-market-stablecoin-total-cap.json",
     "synthetic-market-stablecoin-unit-cap.json",
@@ -47,6 +60,110 @@ SYNTHETIC_MARKET_FIXTURE_ASSETS = frozenset({
     "synthetic-market-broker-first-tokenized.json",
     "synthetic-market-broker-chain-token.json",
 })
+
+
+class AccountVerifiedBinding(Protocol):
+    actor: HumanActor
+
+
+class AccountSessionIssue(Protocol):
+    raw_token: str
+    cookie_name: str
+    expires_at: datetime
+
+
+class AccountSessionResolution(Protocol):
+    actor: HumanActor
+    account_identity_id: uuid.UUID
+    audience: str
+
+
+class AccountSessionManager(Protocol):
+    def rotate(self, binding: AccountVerifiedBinding) -> AccountSessionIssue: ...
+    def resolve(self, raw_token: object) -> AccountSessionResolution | None: ...
+    def revoke(self, raw_token: object) -> bool: ...
+
+
+class AccountResolverProtocol(Protocol):
+    require_https: bool
+    allowed_origin: str
+
+    async def resolve(self, request: Request) -> HumanActor: ...
+    async def resolve_verified(self, request: Request) -> AccountVerifiedBinding: ...
+    def revalidate_session(
+        self, *, account_identity_id: uuid.UUID, audience: str, actor: HumanActor
+    ) -> HumanActor: ...
+
+
+def _account_cookie_name(raw_token: object) -> str | None:
+    if not isinstance(raw_token, str):
+        return None
+    try:
+        encoded = raw_token.encode("ascii")
+    except UnicodeEncodeError:
+        return None
+    return f"{ACCOUNT_COOKIE_NAME_PREFIX}{sha256(encoded).hexdigest()}"
+
+
+def _safe_account_cookie_name(name: str) -> bool:
+    if not name.startswith(ACCOUNT_COOKIE_NAME_PREFIX):
+        return False
+    suffix = name[len(ACCOUNT_COOKIE_NAME_PREFIX) :]
+    return (
+        len(suffix) == _ACCOUNT_COOKIE_DIGEST_LENGTH
+        and suffix == suffix.lower()
+        and all(character in "0123456789abcdef" for character in suffix)
+    )
+
+
+def _account_cookie_candidates(
+    request: Request,
+) -> tuple[list[tuple[str, str]], bool] | None:
+    raw_values = [
+        value
+        for name, value in request.scope.get("headers", ())
+        if name.lower() == b"cookie"
+    ]
+    if sum(len(value) for value in raw_values) > MAX_ACCOUNT_COOKIE_HEADER_BYTES:
+        return None
+    prefix = ACCOUNT_COOKIE_NAME_PREFIX.encode("ascii")
+    candidates: list[tuple[str, str]] = []
+    for raw_value in raw_values:
+        for raw_pair in raw_value.split(b";"):
+            raw_name, separator, raw_token = raw_pair.strip().partition(b"=")
+            if separator and raw_name.startswith(prefix):
+                candidates.append(
+                    (
+                        raw_name.decode("latin-1"),
+                        raw_token.strip().decode("latin-1"),
+                    )
+                )
+                if len(candidates) > MAX_ACCOUNT_COOKIE_CANDIDATES:
+                    return candidates[:MAX_ACCOUNT_COOKIE_CANDIDATES], True
+    return candidates, False
+
+
+def _delete_account_cookies(response: Response, names: list[str]) -> None:
+    seen: set[str] = set()
+    for name in names:
+        if name in seen or not _safe_account_cookie_name(name):
+            continue
+        seen.add(name)
+        response.delete_cookie(
+            name,
+            path="/",
+            secure=True,
+            httponly=True,
+            samesite="strict",
+        )
+
+
+def _account_identity_denied(*, stale_names: list[str] | None = None) -> Response:
+    response = JSONResponse({"error": "identity_denied"}, status_code=401)
+    if stale_names:
+        _delete_account_cookies(response, stale_names)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 class _RequestApi:
@@ -68,6 +185,8 @@ class NormalizationProposalIn(IntakeIn):
 
 
 class SourceInterpretationJobIn(NormalizationProposalIn):
+    model_config = ConfigDict(extra="forbid")
+
     idempotency_key: str = Field(min_length=1, max_length=160)
 
 
@@ -185,12 +304,33 @@ def _bound_fixture_impact(note: object, saved: dict) -> dict | None:
 
 def build_app(
     api: ProductApi | ProductServices, *, fixture_revisit_explanation: dict | None = None,
-    account_resolver: "AccountResolver | None" = None,
+    account_resolver: AccountResolverProtocol | None = None,
+    account_sessions: AccountSessionManager | None = None,
+    source_job_admission: SourceJobAdmission | None = None,
+    demo_admission: DemoAdmission | None = None,
 ) -> FastAPI:
     if account_resolver is not None and not isinstance(api, ProductServices):
         raise ValueError("account mode requires services, not a prebound actor")
+    if account_sessions is not None and account_resolver is None:
+        raise ValueError("account sessions require account mode")
+    if account_sessions is not None and not account_resolver.require_https:
+        raise ValueError("account browser sessions require HTTPS")
+    if source_job_admission is not None and account_resolver is None:
+        raise ValueError("source job admission requires account mode")
+    source_request_max_bytes = (
+        source_job_admission.request_max_bytes
+        if source_job_admission is not None
+        else None
+    )
+    if source_request_max_bytes is not None and (
+        type(source_request_max_bytes) is not int
+        or not 1 <= source_request_max_bytes < 2**31
+    ):
+        raise ValueError("bounded source request byte limit is required")
     account_services = api if account_resolver is not None else None
     demo_services = api if isinstance(api, ProductServices) and account_resolver is None else None
+    if demo_admission is not None and demo_services is None:
+        raise ValueError("fixture admission requires anonymous demo services")
     if account_services is not None and account_services.mode != "fixture":
         raise ValueError("offline account mode requires fixture services")
     if demo_services is not None and demo_services.mode != "fixture":
@@ -201,7 +341,7 @@ def build_app(
     request_api = _RequestApi() if demo_services is not None or account_services is not None else None
     if request_api is not None:
         api = request_api
-    demo_sessions = DemoSessions(demo_services.session_factory) if demo_services else None
+    demo_sessions = DemoSessions(demo_services.session_factory, demo_admission) if demo_services else None
     configure_structured_stderr_logging()
     app = FastAPI(title="FitCheck", version="product_ui_v3")
 
@@ -223,35 +363,190 @@ def build_app(
                 return await call_next(request)
             if not account_route_allowed(request.method, path):
                 return JSONResponse({"error": "not_found"}, status_code=404)
-            if account_resolver.require_https and request.url.scheme != "https":
+            if path == "/api/v3/account-session" and account_sessions is None:
+                return JSONResponse({"error": "not_found"}, status_code=404)
+            request_origin = f"{request.url.scheme}://{request.url.netloc}"
+            if (
+                account_sessions is not None
+                and (
+                    request.url.scheme != "https"
+                    or request_origin != account_resolver.allowed_origin
+                )
+            ) or (
+                account_sessions is None
+                and account_resolver.require_https
+                and request.url.scheme != "https"
+            ):
+                return JSONResponse(
+                    {"error": "cross_origin_denied"}, status_code=403
+                )
+            if account_sessions is not None and (
+                (
+                    request.headers.get("origin") is not None
+                    and request.headers.get("origin")
+                    != account_resolver.allowed_origin
+                )
+                or request.headers.get("sec-fetch-site") == "cross-site"
+            ):
                 return JSONResponse(
                     {"error": "cross_origin_denied"}, status_code=403
                 )
             if request.method not in {"GET", "HEAD"}:
                 origin = request.headers.get("origin")
-                host_origin = f"{request.url.scheme}://{request.headers.get('host', '')}"
                 if (
-                    origin != host_origin
+                    origin != account_resolver.allowed_origin
                     or request.headers.get("sec-fetch-site") == "cross-site"
                 ):
                     return JSONResponse(
                         {"error": "cross_origin_denied"}, status_code=403
                     )
+            account_cookie_candidates = None
+            if account_sessions is not None:
+                parsed_account_cookies = _account_cookie_candidates(request)
+                if parsed_account_cookies is None:
+                    return _account_identity_denied()
+                account_cookie_candidates, account_cookie_overflow = (
+                    parsed_account_cookies
+                )
+                if account_cookie_overflow:
+                    # Bound response amplification while giving a legitimate
+                    # browser a recovery path from delayed login responses.
+                    return _account_identity_denied(
+                        stale_names=[
+                            name for name, _ in account_cookie_candidates
+                        ]
+                    )
+            if request.method not in {"GET", "HEAD"}:
+                if (
+                    request.method == "POST"
+                    and path == "/api/v3/source-interpretation-jobs"
+                    and source_job_admission is None
+                ):
+                    return JSONResponse(
+                        {"error": "pilot_admission_unconfigured"},
+                        status_code=503,
+                    )
+                if source_request_max_bytes is not None:
+                    declared_size = request.headers.get("content-length", "0")
+                    if (
+                        declared_size.isdecimal()
+                        and int(declared_size) > source_request_max_bytes
+                    ):
+                        return JSONResponse(
+                            {"error": "request_too_large"}, status_code=413
+                        )
+                    body = bytearray()
+                    async for chunk in request.stream():
+                        if len(body) + len(chunk) > source_request_max_bytes:
+                            return JSONResponse(
+                                {"error": "request_too_large"}, status_code=413
+                            )
+                        body.extend(chunk)
+                    request._body = bytes(body)
+
+            if path == "/api/v3/account-session":
+                candidates = account_cookie_candidates
+                assert candidates is not None
+                if request.method == "POST":
+                    try:
+                        binding = await account_resolver.resolve_verified(request)
+                        issued = account_sessions.rotate(binding)
+                    except (IdentityDenied, ValueError):
+                        return _account_identity_denied()
+                    if issued.cookie_name != _account_cookie_name(issued.raw_token):
+                        raise RuntimeError(
+                            "account session issued an invalid cookie name"
+                        )
+                    response = Response(status_code=204)
+                    _delete_account_cookies(
+                        response, [name for name, _ in candidates]
+                    )
+                    response.set_cookie(
+                        issued.cookie_name,
+                        issued.raw_token,
+                        expires=issued.expires_at,
+                        secure=True,
+                        httponly=True,
+                        samesite="strict",
+                        path="/",
+                    )
+                    response.headers["Cache-Control"] = "no-store"
+                    return response
+                for name, raw_token in candidates:
+                    if name == _account_cookie_name(raw_token):
+                        account_sessions.revoke(raw_token)
+                response = Response(status_code=204)
+                _delete_account_cookies(
+                    response, [name for name, _ in candidates]
+                )
+                response.headers["Cache-Control"] = "no-store"
+                return response
+            stale_cookie_names: list[str] = []
             try:
-                actor = await account_resolver.resolve(request)
+                if account_sessions is None:
+                    actor = await account_resolver.resolve(request)
+                else:
+                    candidates = account_cookie_candidates
+                    assert candidates is not None
+                    valid_sessions = []
+                    for name, raw_token in candidates:
+                        if name != _account_cookie_name(raw_token):
+                            stale_cookie_names.append(name)
+                            continue
+                        resolved = account_sessions.resolve(raw_token)
+                        if resolved is None:
+                            stale_cookie_names.append(name)
+                        else:
+                            valid_sessions.append(resolved)
+                    if len(valid_sessions) != 1:
+                        return _account_identity_denied(
+                            stale_names=stale_cookie_names
+                        )
+                    resolved = valid_sessions[0]
+                    actor = account_resolver.revalidate_session(
+                        account_identity_id=resolved.account_identity_id,
+                        audience=resolved.audience,
+                        actor=resolved.actor,
+                    )
             except IdentityDenied:
-                return JSONResponse({"error": "identity_denied"}, status_code=401)
-            token = request_api.current.set(ProductApi(account_services, actor))
+                return _account_identity_denied(
+                    stale_names=[
+                        name for name, _ in account_cookie_candidates
+                    ]
+                    if account_cookie_candidates is not None
+                    else None
+                )
+            token = request_api.current.set(
+                ProductApi(
+                    account_services,
+                    actor,
+                    source_job_admission=source_job_admission,
+                )
+            )
             try:
                 response = await call_next(request)
             finally:
                 request_api.current.reset(token)
+            if stale_cookie_names:
+                _delete_account_cookies(response, stale_cookie_names)
             response.headers["Cache-Control"] = "no-store"
             return response
 
     if demo_sessions is not None:
         @app.middleware("http")
         async def demo_identity(request: Request, call_next):
+            # Count streamed bytes, including chunked bodies without a declared
+            # Content-Length, before any identity lookup or database mutation.
+            if demo_admission is not None:
+                declared_size = request.headers.get("content-length", "0")
+                if declared_size.isdecimal() and int(declared_size) > MAX_REQUEST_BYTES:
+                    return JSONResponse({"error": "request_too_large"}, status_code=413)
+                body = bytearray()
+                async for chunk in request.stream():
+                    body.extend(chunk)
+                    if len(body) > MAX_REQUEST_BYTES:
+                        return JSONResponse({"error": "request_too_large"}, status_code=413)
+                request._body = bytes(body)
             origin = request.headers.get("origin")
             host_origin = f"{request.url.scheme}://{request.headers.get('host', '')}"
             if request.method not in {"GET", "HEAD"} and (
@@ -260,11 +555,27 @@ def build_app(
             ):
                 return JSONResponse({"error": "cross_origin_denied"}, status_code=403)
             path = request.url.path
+            if path in {"/livez", "/readyz"}:
+                # Cloud probes do not bootstrap a visitor or spend demo quota.
+                return await call_next(request)
+            if (
+                demo_admission is not None
+                and request.method == "POST"
+                and path == "/api/v3/source-interpretations"
+            ):
+                # The bounded cloud slice uses the asynchronous path, where
+                # request and Job creation share one quota transaction.
+                return JSONResponse({"error": "not_found"}, status_code=404)
             if path.startswith("/api/") and not (
                 path == "/api/health"
                 or path == "/api/demo/reset"
                 or path == "/api/demo/hormuz"
                 or (path.startswith("/api/v3/") and not path.endswith("/feedback"))
+            ):
+                return JSONResponse({"error": "not_found"}, status_code=404)
+            if path != "/api/demo/reset" and not any(
+                route.matches(request.scope)[0] == Match.FULL
+                for route in app.router.routes
             ):
                 return JSONResponse({"error": "not_found"}, status_code=404)
             if (
@@ -274,6 +585,11 @@ def build_app(
                 # Static assets contain no visitor state. In particular, an
                 # expired cookie must not prevent the page from rendering.
                 return await call_next(request)
+            if demo_admission is not None and request.method not in {"GET", "HEAD"}:
+                try:
+                    demo_admission.require_writable()
+                except DemoAdmissionDenied as exc:
+                    return JSONResponse({"error": exc.reason}, status_code=exc.status_code)
             cookie = request.cookies.get(COOKIE_NAME)
             resolved = demo_sessions.resolve(cookie)
             if cookie and resolved is None and path not in {"/", "/api/demo/reset"}:
@@ -283,9 +599,14 @@ def build_app(
             if path == "/api/demo/reset":
                 if request.method != "POST":
                     return JSONResponse({"error": "not_found"}, status_code=404)
-                if resolved is not None:
+                if resolved is not None and demo_admission is None:
                     demo_sessions.revoke(cookie)
-                actor, session_ref, new_cookie = demo_sessions.create()
+                try:
+                    actor, session_ref, new_cookie = demo_sessions.create(
+                        cookie if resolved is not None else None
+                    )
+                except DemoAdmissionDenied as exc:
+                    return JSONResponse({"error": exc.reason}, status_code=exc.status_code)
                 response = JSONResponse({"session_ref": session_ref})
                 response.set_cookie(COOKIE_NAME, new_cookie, max_age=SESSION_SECONDS,
                                     httponly=True, samesite="lax", secure=request.url.scheme == "https")
@@ -294,7 +615,10 @@ def build_app(
             if resolved is None:
                 if request.method not in {"GET", "HEAD"}:
                     return JSONResponse({"error": "session_required"}, status_code=401)
-                actor, session_ref, new_cookie = demo_sessions.create()
+                try:
+                    actor, session_ref, new_cookie = demo_sessions.create()
+                except DemoAdmissionDenied as exc:
+                    return JSONResponse({"error": exc.reason}, status_code=exc.status_code)
             else:
                 actor, session_ref = resolved
             request.state.demo_session_ref = session_ref
@@ -361,6 +685,17 @@ def build_app(
             status_code=503,
             content={"error": "service_unavailable", "detail": exc.detail},
         )
+
+    @app.exception_handler(DemoAdmissionDenied)
+    async def _demo_admission_denied(_, exc: DemoAdmissionDenied):
+        return JSONResponse(status_code=exc.status_code, content={"error": exc.reason})
+
+    @app.exception_handler(SourceJobAdmissionError)
+    async def _source_job_admission_error(_, exc: SourceJobAdmissionError):
+        content = {"error": exc.error}
+        if exc.detail is not None:
+            content["detail"] = exc.detail
+        return JSONResponse(status_code=exc.status_code, content=content)
 
     @app.exception_handler(VertexCanaryRefused)
     async def _terminal_provider_operation(_, exc: VertexCanaryRefused):
@@ -472,6 +807,8 @@ def build_app(
 
     @app.post("/api/v3/source-interpretations")
     def interpret_source(payload: NormalizationProposalIn):
+        if demo_admission is not None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
         return api.interpret_source(
             payload.input_text, source_url=payload.source_url
         ).model_dump(mode="json")
@@ -502,6 +839,7 @@ def build_app(
                 payload.input_text,
                 source_url=payload.source_url,
                 idempotency_key=payload.idempotency_key,
+                demo_admission=demo_admission,
             ).model_dump(mode="json")
             span.set_attributes(
                 {

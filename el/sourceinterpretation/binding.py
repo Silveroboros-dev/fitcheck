@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Collection
 
 from sqlalchemy.orm import Session
 
@@ -24,6 +25,7 @@ def require_durable_source_binding(
     owner_actor_id: str,
     owner_user_id: uuid.UUID,
     agent_client_id: str,
+    allowed_job_types: Collection[str] = (SOURCE_INTERPRETATION_JOB_TYPE,),
 ) -> SourceInterpretationRequest | None:
     """Validate optional async request/job lineage and return its request.
 
@@ -55,7 +57,7 @@ def require_durable_source_binding(
         or request.input_digest != interpretation.input_digest
         or request.input_text != interpretation.input_text
         or request.source_url != interpretation.source_url
-        or job.job_type != SOURCE_INTERPRETATION_JOB_TYPE
+        or job.job_type not in allowed_job_types
         or job.owner_client_type != owner_client_type
         or job.owner_actor_id != owner_actor_id
         or job.owner_user_id != owner_user_id

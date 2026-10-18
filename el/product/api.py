@@ -60,6 +60,7 @@ from el.domain.tables import (
 )
 from el.extraction.service import NormalizationAttemptNotFound
 from el.jobs import JobNotFound
+from el.product.demo_admission import DemoAdmission
 from el.product.demo_frozen_markets import assessment_evidence, validate_frozen_display_pool
 from el.marketpool.service import MarketPoolConflict, MarketPoolNotFound
 from el.mcp.contracts import (
@@ -95,6 +96,7 @@ from el.sourceinterpretation.binding import (
     SOURCE_INTERPRETATION_JOB_TYPE,
     require_durable_source_binding,
 )
+from el.sourceinterpretation.jobs import SourceJobAdmission
 from el.sourceinterpretation.service import (
     SourceCandidateChoiceConflict,
     SourceInterpretationNotFound,
@@ -477,9 +479,31 @@ class CorrectionOut(_Out):
 
 
 class ProductApi:
-    def __init__(self, services: ProductServices, actor: HumanActor):
+    def __init__(
+        self,
+        services: ProductServices,
+        actor: HumanActor,
+        *,
+        source_job_admission: SourceJobAdmission | None = None,
+    ):
         self._s = services
         self._actor = actor
+        self._source_job_admission = source_job_admission
+        admitted_job_type = (
+            source_job_admission.job_type
+            if source_job_admission is not None
+            else SOURCE_INTERPRETATION_JOB_TYPE
+        )
+        if (
+            not isinstance(admitted_job_type, str)
+            or not admitted_job_type.strip()
+            or len(admitted_job_type) > 64
+        ):
+            raise ValueError("bounded source admission job type is required")
+        self._source_job_type = admitted_job_type
+        self._source_job_types = frozenset(
+            {SOURCE_INTERPRETATION_JOB_TYPE, admitted_job_type}
+        )
         self._sessions: sessionmaker[Session] = services.session_factory
         self._revisit = RevisitService(
             self._sessions, user_id=actor.user_id, actor_id=actor.actor_id,
@@ -646,9 +670,9 @@ class ProductApi:
         *,
         source_url: str | None,
         idempotency_key: str,
+        demo_admission: DemoAdmission | None = None,
     ) -> SourceInterpretationJobUiOut:
-        submitted = self._s.source_interpretation_jobs.submit(
-            input_text,
+        common = dict(
             source_url=source_url,
             idempotency_key=idempotency_key,
             owner_client_type=self._actor.client_type.value,
@@ -656,6 +680,22 @@ class ProductApi:
             agent_client_id=self._actor.agent_client_id,
             owner_user_id=self._actor.user_id,
         )
+        if self._source_job_admission is not None:
+            if demo_admission is not None:
+                raise ValueError(
+                    "server-owned and anonymous admission cannot be combined"
+                )
+            submitted = self._source_job_admission.submit(
+                self._s.source_interpretation_jobs,
+                input_text,
+                **common,
+            )
+        else:
+            submitted = self._s.source_interpretation_jobs.submit(
+                input_text,
+                demo_admission=demo_admission,
+                **common,
+            )
         return self._guard(
             SourceInterpretationJobUiOut(
                 job_id=submitted.job_id,
@@ -723,6 +763,7 @@ class ProductApi:
                 owner_client_type=self._actor.client_type.value,
                 owner_actor_id=self._actor.actor_id,
                 agent_client_id=self._actor.agent_client_id,
+                job_type=self._source_job_type,
             )
         except (JobNotFound, SourceInterpretationNotFound, RuntimeError, ValueError) as exc:
             raise NotFound("source interpretation job not found") from exc
@@ -793,6 +834,7 @@ class ProductApi:
                 owner_actor_id=self._actor.actor_id,
                 owner_user_id=self._actor.user_id,
                 agent_client_id=self._actor.agent_client_id,
+                allowed_job_types=self._source_job_types,
             )
         except DurableSourceBindingError:
             raise missing
@@ -1003,7 +1045,7 @@ class ProductApi:
             job_ids = session.scalars(
                 select(Job.id)
                 .where(
-                    Job.job_type == SOURCE_INTERPRETATION_JOB_TYPE,
+                    Job.job_type.in_(self._source_job_types),
                     Job.owner_client_type == ClientType.HUMAN_UI.value,
                     Job.owner_actor_id == self._actor.actor_id,
                     Job.owner_user_id == self._actor.user_id,

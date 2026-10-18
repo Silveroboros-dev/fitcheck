@@ -514,6 +514,52 @@ def test_public_ci_fences_offline_tests_and_smokes_built_wheels() -> None:
     assert b"fitcheck-public-wheel-smoke" in shipped_workflow
 
 
+def test_private_account_admission_stays_outside_public_runtime_manifest() -> None:
+    if not (ROOT / "public").is_dir():
+        pytest.skip("source manifest is verified in the private source checkout")
+
+    manifest = public_export.load_manifest(ROOT)
+    exported_files = public_export.collect_export_files(ROOT, manifest)
+    sources_by_destination = {
+        exported.destination.as_posix(): exported.source_label.as_posix()
+        for exported in exported_files
+    }
+    exported_sources = {
+        exported.source_label.as_posix() for exported in exported_files
+    }
+    exported_destinations = {
+        exported.destination.as_posix() for exported in exported_files
+    }
+    forbidden_private_paths = {
+        "el/sourceinterpretation/account_admission.py",
+        "el/product/account_sessions.py",
+        "migrations/versions/c8e1f4a2b6d9_account_browser_sessions.py",
+    }
+    assert forbidden_private_paths.isdisjoint(exported_sources)
+    assert forbidden_private_paths.isdisjoint(exported_destinations)
+    assert sources_by_destination["el/sourceinterpretation/__init__.py"] == (
+        "public/el/sourceinterpretation/__init__.py"
+    )
+
+    forbidden_concrete_dependencies = (
+        "el.budget",
+        "BudgetReservation",
+        "AccountSourceAdmission",
+    )
+    for destination in (
+        "el/sourceinterpretation/jobs.py",
+        "el/product/api.py",
+        "el/product/app.py",
+    ):
+        source = ROOT / sources_by_destination[destination]
+        body = source.read_text(encoding="utf-8")
+        assert "SourceJobAdmission" in body
+        assert not any(
+            dependency in body
+            for dependency in forbidden_concrete_dependencies
+        ), destination
+
+
 def test_fixture_projection_runs_without_private_account_adapter(tmp_path, monkeypatch):
     """Import and exercise the actual projection, not the private checkout."""
     if not (ROOT / "public").is_dir():
@@ -526,7 +572,15 @@ def test_fixture_projection_runs_without_private_account_adapter(tmp_path, monke
     destination = tmp_path / "fixture-projection"
     public_export.build_export(destination, files)
     assert not (destination / "el/product/accounts.py").exists()
+    assert not (destination / "el/product/account_sessions.py").exists()
+    assert not (
+        destination
+        / "migrations/versions/c8e1f4a2b6d9_account_browser_sessions.py"
+    ).exists()
     assert not (destination / "el/budget").exists()
+    assert not (
+        destination / "el/sourceinterpretation/account_admission.py"
+    ).exists()
     code = r'''import importlib.abc
 import pathlib
 import socket
@@ -536,10 +590,14 @@ class RejectPrivateAdapter(importlib.abc.MetaPathFinder):
     missing_name = "el.product.accounts"
 
     def find_spec(self, fullname, path=None, target=None):
-        if fullname == "el.product.accounts":
+        if fullname in {"el.product.accounts", "el.product.account_sessions"}:
             raise ModuleNotFoundError(
                 "private account adapter must not load in fixture projection",
-                name=self.missing_name,
+                name=(
+                    self.missing_name
+                    if fullname == "el.product.accounts"
+                    else fullname
+                ),
             )
         return None
 private_adapter_rejector = RejectPrivateAdapter()
@@ -559,11 +617,17 @@ from el.domain.tables import Base
 from el.product.api import ProductApi
 from el.product.app import build_app
 from el.product.wiring import build_services, local_actor
+from el.sourceinterpretation import jobs as projected_source_jobs
 import el.product.app as projected_app
 assert pathlib.Path(projected_app.__file__).resolve().is_relative_to(pathlib.Path.cwd())
+assert not hasattr(projected_source_jobs, "AccountSourceAdmission")
+assert "el.sourceinterpretation.account_admission" not in sys.modules
+assert not any(name == "el.budget" or name.startswith("el.budget.") for name in sys.modules)
 assert "el.product.accounts" not in sys.modules
+assert "el.product.account_sessions" not in sys.modules
 engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
 Base.metadata.create_all(engine)
+assert "account_browser_sessions" not in Base.metadata.tables
 sessions = sessionmaker(bind=engine, expire_on_commit=False)
 services = build_services(mode="fixture", session_factory=sessions)
 
@@ -605,6 +669,7 @@ choice = client.post("/api/v3/market-pools/" + pool_id + "/choice", json={"selec
 assert choice.status_code == 200, choice.text
 assert client.get("/api/v3/market-choices/" + choice.json()["market_choice_id"]).json() == choice.json()
 assert "el.product.accounts" not in sys.modules
+assert "el.product.account_sessions" not in sys.modules
 
 import pytest
 raise SystemExit(pytest.main([
