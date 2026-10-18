@@ -494,6 +494,10 @@ destination = "el/product/api.py"
 source = "el/product/app.py"
 destination = "el/product/app.py"
 
+[[include]]
+source = "el/product/demo_admission.py"
+destination = "el/product/demo_admission.py"
+
 [[overlay]]
 source = "public/el/product/wiring.py"
 destination = "el/product/wiring.py"

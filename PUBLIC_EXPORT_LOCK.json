@@ -326,7 +326,7 @@
     },
     {
       "path": "el/jobs/store.py",
-      "sha256": "77afbbd7eb4d12b6272b9a822eabb875e50d1c2e5ec6cc5324d45cb18a314db2"
+      "sha256": "ac13342b852a2d2f2a2adb34929a255066d14737826d4b5ffbeefc1478661f33"
     },
     {
       "path": "el/ledger/__init__.py",
@@ -462,11 +462,15 @@
     },
     {
       "path": "el/product/api.py",
-      "sha256": "2ab488ea90985887e962b1086e1e0e416e2fee956e5f52aaff6e9d969adf9fed"
+      "sha256": "f8290cf9ecb9257100469553cb9a01086356bb09d6143834fe944c5df0337042"
     },
     {
       "path": "el/product/app.py",
-      "sha256": "678d30db4e3e44f519dcb19241fc6c455d3fc769467876d25934ba2f447535d4"
+      "sha256": "779734b20ac394243a65a30a6e741e9bcfae080956bebd41bc3e6af3aa14e8b5"
+    },
+    {
+      "path": "el/product/demo_admission.py",
+      "sha256": "f2d13d2fb1e1148cc1c1fbc922a52398f9217f2677c8e360c0a82ac0e1b1707a"
     },
     {
       "path": "el/product/demo_fixtures/__init__.py",
@@ -550,7 +554,7 @@
     },
     {
       "path": "el/product/demo_sessions.py",
-      "sha256": "2da798ffa634c8c6c1cb1865469ace76815eebdd80f848e4ceb1bfd7701ee9b4"
+      "sha256": "fde3f89475454642399fb08da7a40eb437171a73d91684fc876d46794a4b1558"
     },
     {
       "path": "el/product/founder_acceptance.py",
@@ -682,11 +686,11 @@
     },
     {
       "path": "el/sourceinterpretation/binding.py",
-      "sha256": "fefeaa65ae9e5d9462a70e56bc7bbdf24970b487188f3524ba35b8672ff557e6"
+      "sha256": "4af466f8215f62949b16164b13c61b06012c37eff3d8a0b8ad62e777a403e4ed"
     },
     {
       "path": "el/sourceinterpretation/jobs.py",
-      "sha256": "6eac4fc7078826dbc7006b68a91e95b3f8e9f7a73d1c9c9580c60b68ecc1ab37"
+      "sha256": "7f2fc1b26ff406899679977cc84a10a94b0fe208c09bc55bd4224f9293d7864b"
     },
     {
       "path": "el/sourceinterpretation/service.py",
@@ -794,7 +798,7 @@
     },
     {
       "path": "public-export.toml",
-      "sha256": "93a52fd74a2c90811e0b143c33539a8ca88064743a9072f5abc5935b75d87c07"
+      "sha256": "6c9804daedfe1d0caca4a56a80e1c630c4bc26d40b9be7ddb43b17be0680d0ec"
     },
     {
       "path": "pyproject.toml",
@@ -970,7 +974,7 @@
     },
     {
       "path": "tests/test_mcp_schema_migration_postgres.py",
-      "sha256": "2173c65b8418a0f9b983671515d61cd94b297fa13cdf6b520ff814f788bfb20b"
+      "sha256": "673895925a2ecacafb431adff1242233b153aed2e78ddbb864002cb201e77d75"
     },
     {
       "path": "tests/test_mcp_server.py",
@@ -1038,7 +1042,7 @@
     },
     {
       "path": "tests/test_public_export.py",
-      "sha256": "94fffdaea1f427b790875980670918ddcaf89caf2acb9b393871bc1ecba31cdc"
+      "sha256": "a3a21f155bf45c56aa0bfd21fca25af50cd49db15633202f514982dfa3a98cf5"
     },
     {
       "path": "tests/test_public_provider.py",

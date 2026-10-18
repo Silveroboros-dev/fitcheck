@@ -63,6 +63,7 @@ def _disposable_ci_url(raw_url: str) -> URL:
         url.get_backend_name() != "postgresql"
         or url.database != "fitcheck_ci"
         or url.host not in {"127.0.0.1", "localhost"}
+        or bool(url.query)
     ):
         raise ValueError(
             "migration rehearsal requires local PostgreSQL database fitcheck_ci"
@@ -89,6 +90,10 @@ def _downgrade(connection: Connection, revision: str) -> None:
     [
         "postgresql+psycopg://127.0.0.1/production",
         "postgresql+psycopg://db.example/fitcheck_ci",
+        (
+            "postgresql+psycopg://127.0.0.1/fitcheck_ci"
+            "?host=/cloudsql/foreign-instance"
+        ),
         "sqlite:///fitcheck_ci",
     ],
 )
