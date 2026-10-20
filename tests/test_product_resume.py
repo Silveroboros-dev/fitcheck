@@ -17,10 +17,12 @@ from el.domain.tables import (
     SourceThesisCandidate, ThesisAnalysis, ThesisRevision, User,
 )
 from el.domain.vocabulary import vocabulary_violations
+from el.marketpool.service import MarketPoolConflict
 from el.mcp.contracts import NotFound
 from el.mcp.vocab_guard import A7Violation
 from el.product.api import ProductApi
 from el.product.app import build_app
+from el.product.demo_hormuz import ensure_hormuz
 from el.product.wiring import HumanActor, build_services
 from el.sourceinterpretation.jobs import SourceInterpretationWorker
 
@@ -121,6 +123,7 @@ def test_fresh_instance_discovers_and_reads_original_ids_without_writes(env, sel
     assert source_read.json() == source
     accepted = fresh.get(f"/api/v3/theses/{thesis_id}/accepted-state")
     assert accepted.status_code == 200
+    assert accepted.json()["latest_market_display_set_id"] == pool["market_display_set_id"]
     assert accepted.json()["restored_source"]["original_source_text"] == CLEAN
     pool_read = fresh.get(f"/api/v3/market-pools/{pool['market_display_set_id']}")
     assert pool_read.status_code == 200
@@ -132,6 +135,64 @@ def test_fresh_instance_discovers_and_reads_original_ids_without_writes(env, sel
     with sessions() as session:
         after = {table.__tablename__: session.scalar(select(func.count()).select_from(table)) for table in tables}
     assert after == before
+
+
+def test_explicit_older_thesis_resumes_its_latest_pool_without_writes(env, monkeypatch):
+    from datetime import datetime, timezone
+
+    sessions, services, actor, client_for = env
+    identity = actor("saved-pools@example.invalid")
+    client = client_for(identity)
+    _, first_thesis, first_pool, _ = _journey(client)
+    next_pool_response = client.post(f"/api/v3/theses/{first_thesis}/market-pool")
+    assert next_pool_response.status_code == 200, next_pool_response.text
+    next_pool = next_pool_response.json()
+    _, other_thesis, other_pool, _ = _journey(client)
+    assert other_thesis != first_thesis
+    with sessions.begin() as session:
+        session.get(MarketDisplaySet, uuid.UUID(first_pool["market_display_set_id"])).created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        session.get(MarketDisplaySet, uuid.UUID(next_pool["market_display_set_id"])).created_at = datetime(2026, 1, 2, tzinfo=timezone.utc)
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("resume must not perform a new assessment")
+
+    monkeypatch.setattr(services.market_pool, "build", forbidden)
+    tables = (NormalizationDecision, MarketAssessment, MarketDisplaySet, MarketChoice)
+    before = {table: _count(sessions, table) for table in tables}
+    state = client.get(f"/api/v3/theses/{first_thesis}/accepted-state")
+    assert state.status_code == 200
+    assert state.json()["latest_market_display_set_id"] == next_pool["market_display_set_id"]
+    assert state.json()["latest_market_display_set_id"] != other_pool["market_display_set_id"]
+    restored = client.get(f"/api/v3/market-pools/{next_pool['market_display_set_id']}")
+    assert restored.status_code == 200
+    assert restored.json() == next_pool
+    assert {table: _count(sessions, table) for table in tables} == before
+
+
+def test_accepted_wording_keeps_canonical_summary_and_vocabulary_boundary(env):
+    sessions, _, actor, client_for = env
+    client = client_for(actor("wording@example.invalid"))
+    _, thesis_id, pool, _ = _journey(client)
+    with sessions.begin() as session:
+        thesis = session.get(ThesisAnalysis, uuid.UUID(thesis_id))
+        canonical = thesis.normalized_claim_summary
+        structure = dict(thesis.extracted_structure)
+        structure["contractible_version"] = "A system is launched or demonstrated by 2028."
+        thesis.extracted_structure = structure
+    for path in (
+        f"/api/v3/theses/{thesis_id}/accepted-state",
+        f"/api/v3/market-pools/{pool['market_display_set_id']}",
+    ):
+        out = client.get(path)
+        assert out.status_code == 200
+        assert out.json()["accepted_thesis_summary"] == canonical
+        assert out.json()["accepted_thesis_wording"] == structure["contractible_version"]
+    with sessions.begin() as session:
+        thesis = session.get(ThesisAnalysis, uuid.UUID(thesis_id))
+        thesis.extracted_structure = {**structure, "contractible_version": BUY}
+    out = client.get(f"/api/v3/theses/{thesis_id}/accepted-state")
+    assert out.status_code == 200
+    assert out.json()["accepted_thesis_wording"] == canonical
 
 
 def test_foreign_uuid_and_cross_client_reads_are_indistinguishable_from_missing(env):
@@ -198,6 +259,91 @@ def test_broken_pool_and_choice_parent_binding_fail_closed(env):
     assert client.get(f"/api/v3/market-pools/{pool_id}").status_code == 409
     assert client.get(f"/api/v3/market-choices/{choice['market_choice_id']}").status_code == 409
     assert client.get("/api/v3/account-state").json()["latest_market_display_set_id"] is None
+
+
+@pytest.mark.parametrize("corruption", ["count", "outcome", "pair_class"])
+def test_saved_pool_read_rejects_stale_exact_pool_result(env, corruption):
+    sessions, _, actor, client_for = env
+    client = client_for(actor(f"pool-binding-{corruption}@example.invalid"))
+    _, _, pool, _ = _journey(client)
+    pool_id = uuid.UUID(pool["market_display_set_id"])
+    assert client.get(f"/api/v3/market-pools/{pool_id}").status_code == 200
+
+    with sessions.begin() as session:
+        display_set = session.get(MarketDisplaySet, pool_id)
+        if corruption == "count":
+            display_set.displayed_count -= 1
+        elif corruption == "outcome":
+            display_set.system_pool_outcome = (
+                "candidate_expressions"
+                if display_set.system_pool_outcome == "no_clean_expression"
+                else "no_clean_expression"
+            )
+        else:
+            items = session.scalars(
+                select(MarketDisplayItem)
+                .where(MarketDisplayItem.market_display_set_id == pool_id)
+                .order_by(MarketDisplayItem.display_rank)
+            ).all()
+            assert items
+            if display_set.system_pool_outcome == "no_clean_expression":
+                session.get(MarketAssessment, items[0].market_assessment_id).pair_class = "direct"
+            else:
+                for item in items:
+                    session.get(MarketAssessment, item.market_assessment_id).pair_class = "not_an_expression"
+
+    response = client.get(f"/api/v3/market-pools/{pool_id}")
+    assert response.status_code == 409, response.text
+
+
+def test_hormuz_reconstruction_keeps_unassessed_pool_and_public_boundary(env):
+    sessions, services, actor, client_for = env
+    identity = actor("hormuz-reconstruction@example.invalid")
+    revision_id = uuid.UUID(ensure_hormuz(services, identity)["revision_id"])
+    with sessions() as session:
+        revision = session.get(ThesisRevision, revision_id)
+        pool_id, choice_id = revision.market_display_set_id, revision.market_choice_id
+
+    api = ProductApi(services, identity)
+    pool = api._market_pool_out(pool_id)
+    assert (pool.assessed_count, pool.displayed_count, pool.target_count) == (0, 1, 1)
+    assert (pool.assessment_complete, pool.system_pool_outcome) == (False, "incomplete")
+    assert pool.candidate_markets[0].pair_class is None
+    assert pool.candidate_markets[0].authority == "demo_reconstruction_only"
+
+    client = client_for(identity)
+    assert client.get(f"/api/v3/market-pools/{pool_id}").status_code == 404
+    assert client.get(f"/api/v3/market-choices/{choice_id}").status_code == 404
+    account = client.get("/api/v3/account-state")
+    assert account.status_code == 200
+    assert account.json()["latest_market_display_set_id"] is None
+    assert account.json()["latest_market_choice_id"] is None
+
+
+def test_hormuz_exception_rejects_wrong_marker_and_ordinary_pool_spoof(env):
+    sessions, services, actor, client_for = env
+    identity = actor("hormuz-marker@example.invalid")
+    revision_id = uuid.UUID(ensure_hormuz(services, identity)["revision_id"])
+    with sessions() as session:
+        pool_id = session.get(ThesisRevision, revision_id).market_display_set_id
+        assessment_id = session.scalar(select(MarketDisplayItem.market_assessment_id).where(
+            MarketDisplayItem.market_display_set_id == pool_id
+        ))
+    api = ProductApi(services, identity)
+    with sessions.begin() as session:
+        assessment = session.get(MarketAssessment, assessment_id)
+        assessment.provenance = {**assessment.provenance, "reconstructed": "wrong-marker"}
+    with pytest.raises(MarketPoolConflict, match="cross-bound"):
+        api._market_pool_out(pool_id)
+
+    _, _, ordinary, _ = _journey(client_for(identity))
+    ordinary_id = uuid.UUID(ordinary["market_display_set_id"])
+    with sessions.begin() as session:
+        session.get(MarketDisplaySet, ordinary_id).display_policy_version = (
+            "public-demo-hormuz-reconstruction-v1"
+        )
+    with pytest.raises(MarketPoolConflict, match="reconstructed market pool"):
+        api._market_pool_out(ordinary_id)
 
 
 def test_durable_source_job_is_discovered_only_by_its_owner(env):

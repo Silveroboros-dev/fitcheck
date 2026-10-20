@@ -399,7 +399,7 @@ def test_direct_choice_refuses_tampered_frozen_pool_before_write(demo, surface):
         display.target_count = 2
     display_id = uuid.UUID(pool["market_display_set_id"])
     if surface == "product":
-        with pytest.raises(MarketPoolConflict, match="mismatch"):
+        with pytest.raises(MarketPoolConflict, match="completeness binding"):
             ProductApi(services, actor).choose_market(
                 display_id, selection_kind="none", market_assessment_id=None)
     else:

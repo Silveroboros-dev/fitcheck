@@ -101,6 +101,8 @@ def test_market_pool_guard_checks_generated_summary_and_query_provenance(
         {
             "candidate_markets[].market_title",
             "candidate_markets[].resolution_conditions",
+            "candidate_markets[].relatedness_basis.proposal.claim_quote",
+            "candidate_markets[].relatedness_basis.proposal.rules_quote",
         }
     )
     assert_a7_clean(
@@ -109,8 +111,26 @@ def test_market_pool_guard_checks_generated_summary_and_query_provenance(
                 {
                     "market_title": "Will Acme sell its unit?",
                     "resolution_conditions": "The source says buy or sell.",
+                    "relatedness_basis": {
+                        "proposal": {
+                            "claim_quote": "The user's source says buy or sell.",
+                            "rules_quote": "The source says buy or sell.",
+                            "rationale": "A bounded candidate relationship.",
+                        },
+                    },
                 }
             ]
         },
         source_paths=output_type.SOURCE_PATHS,
+    )
+    with pytest.raises(A7Violation) as rationale_error:
+        assert_a7_clean(
+            {"candidate_markets": [{"relatedness_basis": {"proposal": {
+                "rules_quote": "The source says buy or sell.",
+                "rationale": "you should buy this market",
+            }}}]},
+            source_paths=output_type.SOURCE_PATHS,
+        )
+    assert rationale_error.value.offenders[0][0] == (
+        "candidate_markets[].relatedness_basis.proposal.rationale"
     )

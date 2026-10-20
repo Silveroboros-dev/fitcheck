@@ -689,6 +689,33 @@ raise SystemExit(pytest.main([
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_agi_export_contains_authored_summary_without_private_history():
+    if (ROOT / "public").is_dir():
+        _, files = public_export.prepare_export(ROOT)
+        contents = {item.destination.as_posix(): item.content for item in files}
+    else:
+        contents = {
+            name: (ROOT / name).read_bytes() for name in (
+                "el/product/demo_fixtures/agi2028.json", "DATA_CARD.md",
+                "docs/gtm-agi2028-demo-script-v1.md",
+            )
+        }
+    raw = contents["el/product/demo_fixtures/agi2028.json"]
+    case = json.loads(raw)
+    assert case["fixture_kind"] == "curated_real_contract_comparison"
+    assert "project-authored summaries" in case["provenance_note"]
+    assert b"reconstruction" in contents["DATA_CARD.md"]
+    assert not any(name.startswith("data/") for name in contents)
+    # A curated case must not accidentally become a serialized private packet.
+    for private_field in (
+        b'"normalization_decision_id"', b'"rules_capture_id"',
+        b'"accepted_state"', b'"market_pool"', b'"resolution_rules_text"',
+        b'"acceptance_origin"', b'"predecessor"',
+    ):
+        assert private_field not in raw
+    assert not any(part in raw for part in (b"http://", b"https://", b"sqlite"))
+
+
 def test_lockfile_is_exact_and_stale_source_fails(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()

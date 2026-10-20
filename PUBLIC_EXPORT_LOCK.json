@@ -18,11 +18,11 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "d718e3a1e7e782d3188ac598900f11ed4763ee43bc3124ea40a460f7bcb9ce28"
+      "sha256": "035df46f9176edcbada4ef61644310d06b56853e326ae83a4d65f4c2c5a88748"
     },
     {
       "path": "DATA_CARD.md",
-      "sha256": "c40927db9450740277f0e67324955f2b68dbb2d9268feb6f090233d0020d590c"
+      "sha256": "33403fcd1c919be8f6b3f33d26c72946ee3201ef67c95355a267dc044721837d"
     },
     {
       "path": "Dockerfile",
@@ -34,11 +34,11 @@
     },
     {
       "path": "PUBLIC_REPO_BOUNDARY.md",
-      "sha256": "e4588b165c2a348296ef47d565bf45a182eb9088f9aa44d49ed74b04a2216df8"
+      "sha256": "cf9f7438e9e9b4da5e4048c30c75d2f481d3837f3773ff4b7071ea4d8535eb6d"
     },
     {
       "path": "README.md",
-      "sha256": "ac7dc5be3ad464fb94fcba1af1598cac71e367dbc86966a1144aa704fe06bd28"
+      "sha256": "8eadbe005f70539dea8f0df55f5d818af03affb3333272b45adf3ee3c067c120"
     },
     {
       "path": "SECURITY.md",
@@ -46,7 +46,7 @@
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
-      "sha256": "1be38e94c9c7cff6779f5d8798783360f46c9c902530b36f0a0ca2cfef1ca9ad"
+      "sha256": "28ff7922812e0ec8d72ed339e5100104cf0f655543816e3145812a565e321407"
     },
     {
       "path": "alembic.ini",
@@ -121,6 +121,10 @@
       "sha256": "09d5ed8fa9c40b20ca5898f4db799340cdb558e7639f8f8fb37684d2bebe62e3"
     },
     {
+      "path": "docs/agi2028-curated-demo-ui-contract-v1.md",
+      "sha256": "9c73761aa840fb70dbfbf5ea3fa0b0939bd0e807ffcda4a9d8a5ef8f29e3482b"
+    },
+    {
       "path": "docs/assets/fitcheck-fixture-ui.png",
       "sha256": "bc61ac3050e7afe0098ab53823701532c64a2dffee1f0ae7eb20b74d32407f7c"
     },
@@ -159,6 +163,14 @@
     {
       "path": "docs/fitcheck-v3.1-ui-contract.md",
       "sha256": "db362b40158a7ad0540f0ebfa94f9ac7643c2f339bd8afbe73b725eb0980540b"
+    },
+    {
+      "path": "docs/gtm-agi2028-demo-script-v1.md",
+      "sha256": "ab21d589ea1fd04e760cf993443447266c2a736650e1a251cfe823a5c0bec510"
+    },
+    {
+      "path": "docs/private-historical-demo-ui-contract-v1.md",
+      "sha256": "8633a01c44c5cf9d602408843ab57c7e83206bc47003b1a3056ddf64e7ae048e"
     },
     {
       "path": "docs/reviewed-reference-dataset-spec-v0.md",
@@ -346,7 +358,7 @@
     },
     {
       "path": "el/marketpool/service.py",
-      "sha256": "3ea3eb385179756a045cc6d3f6dbf1009ad6a968fc1636bf0c6f29be29647fd7"
+      "sha256": "67622226056e0411b1d2e52d8d352ab6dbce6592b3aa59437678ff44c3979b0a"
     },
     {
       "path": "el/marketstructure/__init__.py",
@@ -374,7 +386,7 @@
     },
     {
       "path": "el/mcp/contracts.py",
-      "sha256": "34749b6dc614653e144d7f21bca25e11cda26c5127568fffc9edc4e9881ed445"
+      "sha256": "6548ef3f98458c94f9003aeb2613cd1fae932afa0e4b7fee873a622d9088c0d4"
     },
     {
       "path": "el/mcp/rate_limit.py",
@@ -398,7 +410,7 @@
     },
     {
       "path": "el/mcp/v3_tools.py",
-      "sha256": "0e6ccfceddbb8327adec343d721c8f240d5973934ae3ced9940d03066f092a25"
+      "sha256": "786ef0fae0491a5bcc89f045b12eeb6574d865d7c166663891ce6c1d3055ddef"
     },
     {
       "path": "el/mcp/vocab_guard.py",
@@ -462,11 +474,15 @@
     },
     {
       "path": "el/product/api.py",
-      "sha256": "f8290cf9ecb9257100469553cb9a01086356bb09d6143834fe944c5df0337042"
+      "sha256": "5a3db6f05a00e41ad6910ba619516a89b2ed03eaca49597d6f59eebb6a89e1de"
     },
     {
       "path": "el/product/app.py",
-      "sha256": "779734b20ac394243a65a30a6e741e9bcfae080956bebd41bc3e6af3aa14e8b5"
+      "sha256": "a0ce12a76cea9d84198ddef6fa05e301a861bae7da490dc3ed4eeca050f2ad3f"
+    },
+    {
+      "path": "el/product/curated_demo.py",
+      "sha256": "f323e8cac0cfc7accd71694a03d2f3c8d540dc151c8d197b03cc023018958da9"
     },
     {
       "path": "el/product/demo_admission.py",
@@ -475,6 +491,10 @@
     {
       "path": "el/product/demo_fixtures/__init__.py",
       "sha256": "6cd0647994c0777e594cda4536d52a91ec94f230e1ee3dfc02adf738ef5131b0"
+    },
+    {
+      "path": "el/product/demo_fixtures/agi2028.json",
+      "sha256": "dd2377a04a82e03f4beb48212ba52336ffc84c6608e34979077e69d1b090d58f"
     },
     {
       "path": "el/product/demo_fixtures/claims/eval_001_gemini_arena.json",
@@ -550,7 +570,7 @@
     },
     {
       "path": "el/product/demo_launcher.py",
-      "sha256": "f65a20b795d7e972cf2db8dec4ea9637c89f1f2ce930e81be6666a7d6585136b"
+      "sha256": "37b3eba1ac3a267e54ccc2193797c7d20834e592f8b00af2069c9f30cdd3ab43"
     },
     {
       "path": "el/product/demo_sessions.py",
@@ -570,7 +590,7 @@
     },
     {
       "path": "el/product/static/product_console.html",
-      "sha256": "64b39de71c1c2d0cb029613b98a24e5e5ab623cfb6b975f640122d7784bc8f79"
+      "sha256": "c2b79dc0bb0ab3ed23a267e6f7380597b016e149ce898d99664e910f6048d8f3"
     },
     {
       "path": "el/product/wiring.py",
@@ -798,7 +818,7 @@
     },
     {
       "path": "public-export.toml",
-      "sha256": "6c9804daedfe1d0caca4a56a80e1c630c4bc26d40b9be7ddb43b17be0680d0ec"
+      "sha256": "7cac1fd18bed655c6dd5f1cfb298759430393a0648aa1a248c70adacda332355"
     },
     {
       "path": "pyproject.toml",
@@ -846,11 +866,19 @@
     },
     {
       "path": "tests/product_console_accepted_thesis_resume_dom.js",
-      "sha256": "7bb1609bd08fd9407db92ee2543d242747f215fb1f47b4137b29de4aeaa2bd6a"
+      "sha256": "e961161ac02c0e304cfe8d5dbe1f1e83d106bb79f97a3464d923f1f405fe3465"
+    },
+    {
+      "path": "tests/product_console_curated_agi_dom.js",
+      "sha256": "c749ee4027d2f14cf3ccc1621175c3104c65c0970c34773a6aab4bef93c9cbda"
+    },
+    {
+      "path": "tests/product_console_history_dom.js",
+      "sha256": "1369b5092a4bfba300b2084c0bc4deab71bd5ccba35807fa25eb9ae0129c3d09"
     },
     {
       "path": "tests/product_console_manual_revisit_dom.js",
-      "sha256": "4b19175ff253f20e67f51a25d86341afa72b00462b28a0d59913617d0e7cd87e"
+      "sha256": "2dbb8ec095a93e613c1b93110d3f92b7c8240d061d059b7042c232c87b681e87"
     },
     {
       "path": "tests/product_console_market_explanation_dom.js",
@@ -891,6 +919,10 @@
     {
       "path": "tests/test_correction_loop.py",
       "sha256": "fc994f7e3474e84fa08da3386c95f5bf64ec29aef11c268e5350b0750c8bc2c5"
+    },
+    {
+      "path": "tests/test_curated_agi_demo.py",
+      "sha256": "c5afecf4fa474b183c55f66fa5b174238d1df2d5e7e2d124d7e76787a42e12c3"
     },
     {
       "path": "tests/test_db_url.py",
@@ -942,7 +974,7 @@
     },
     {
       "path": "tests/test_frozen_demo_markets.py",
-      "sha256": "6f7083981a7a999cf4c5e780240bd1aea784715e43744d7aee759ee33f65495b"
+      "sha256": "705d101971f1b9b1741400c603c56fc0d89ce03a2a519b2923b810cc9ee8c5cb"
     },
     {
       "path": "tests/test_job_store.py",
@@ -962,7 +994,7 @@
     },
     {
       "path": "tests/test_mcp_a7_guard.py",
-      "sha256": "f23d725579482f7cae7382fad5db09de42067eedf5719cc7ce9a53b4b348f483"
+      "sha256": "138341d1d95726c8b7b0c38339a8e531641188ab164016aa8be770be0f60f5d0"
     },
     {
       "path": "tests/test_mcp_auth.py",
@@ -1005,6 +1037,10 @@
       "sha256": "5058303126a67e245bb8f48ae0cde4c8150f7afb9a425f3638b663e8e7de63aa"
     },
     {
+      "path": "tests/test_private_historical_demo.py",
+      "sha256": "18ad91349d370e1c68a0de440e1a94ef841e19fe1399347d43076e46585f5326"
+    },
+    {
       "path": "tests/test_prod_entrypoint.py",
       "sha256": "b88c4a4481de03b3a790a4d4e65fe89a48de3ea8c51bde54a96efb717aac49f0"
     },
@@ -1030,7 +1066,7 @@
     },
     {
       "path": "tests/test_product_resume.py",
-      "sha256": "a854a30a0c03544bc3ba9b3692a0da79bdfe1aff4b02cca0bc31bf2069cb2ba9"
+      "sha256": "8f430837f6364549fc99abfad2d880f768a1c5d01cb7a6e280035e84582e2fac"
     },
     {
       "path": "tests/test_product_ui_page.py",
@@ -1042,7 +1078,7 @@
     },
     {
       "path": "tests/test_public_export.py",
-      "sha256": "a3a21f155bf45c56aa0bfd21fca25af50cd49db15633202f514982dfa3a98cf5"
+      "sha256": "43dc9ba323a3af9f3352a114b5c99f4d9e15e502f3a5792bd6369fe01326ccc9"
     },
     {
       "path": "tests/test_public_provider.py",
@@ -1055,6 +1091,10 @@
     {
       "path": "tests/test_recall_eval.py",
       "sha256": "77bd01be3f463d20a7fc40d9bb90d7b0d9eb38f0d98380dd06c1e85173866844"
+    },
+    {
+      "path": "tests/test_relatedness_projection.py",
+      "sha256": "252afb9dff9a3092a9fa9494431eaa225a0d050df78465c31ee69638651d004a"
     },
     {
       "path": "tests/test_review_candidates.py",

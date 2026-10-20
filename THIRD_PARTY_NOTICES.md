@@ -3,6 +3,16 @@
 This notice accompanies the FitCheck public distribution and its packaged
 artifacts.
 
+## Authored summaries of market topics
+
+`el/product/demo_fixtures/agi2028.json` refers to three real prediction-market
+topics using newly written titles, condition summaries and explanatory copy.
+It does not reproduce their original resolution rules or provider payloads.
+The project license covers this authored text, not the underlying market
+facts, company names, or third-party rules. The comparison is a labelled
+educational reconstruction; it is not live market data or an exact historical
+evidence packet.
+
 ## Retained historical market rules
 
 `el/product/demo_fixtures/hormuz_rules.json` contains the historical market

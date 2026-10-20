@@ -287,6 +287,7 @@ function prepare(kind = "market") {
     chain.selectedAssessmentId = ${kind === "market" ? `"${id.assessment}"` : "null"};
     chain.selectedMarket = ${kind === "market" ? "chain.marketCards[0]" : "null"};
     $("norm-summary").textContent = "${thesis}";
+    $("norm-summary").dataset.acceptedSummary = "${thesis}";
   `, context);
   $("submit-choice").disabled = false;
 }
@@ -310,6 +311,15 @@ async function activate() {
     return json({ activation: activation(), latest: null });
   };
   await $("activate-revisit").onclick();
+}
+
+async function fullAcceptedWordingDoesNotBreakCanonicalRevisitBinding() {
+  await recordChoice("market");
+  $("norm-summary").textContent = "Harbor publishes reserve notes or demonstrates the accepted alternative.";
+  assert.notEqual($("norm-summary").textContent, thesis);
+  await activate();
+  assert.equal(vm.runInContext("chain.revisitBinding.revision_id", context), id.revision);
+  assert.equal($("revisit-thesis").textContent, thesis);
 }
 function selectScenario(value) {
   $("revisit-fixture-scenario").value = value;
@@ -1204,6 +1214,7 @@ async function sourceEditDropsLateReloadResponse() {
 }
 
 noneChoiceIsExplicitlyUnavailable()
+  .then(fullAcceptedWordingDoesNotBreakCanonicalRevisitBinding)
   .then(choiceMismatchCannotUnlockFollowup)
   .then(activationAndReadProjectionStayBound)
   .then(anonymousDemoWithoutLaterCaptureHasNoSyntheticAction)

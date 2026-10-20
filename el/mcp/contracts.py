@@ -285,8 +285,11 @@ class V3MarketAssessmentResult(_McpOut):
     snapshot_id: str
     rules_capture_id: uuid.UUID
     frozen_demo_evidence: dict | None = None
+    relatedness_basis: dict | None = None
     SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
-        {"market_title", "resolution_conditions"}
+        {"market_title", "resolution_conditions",
+         "relatedness_basis.proposal.claim_quote",
+         "relatedness_basis.proposal.rules_quote"}
     )
 
 
@@ -295,6 +298,7 @@ class V3MarketPoolResult(_McpOut):
     fit_card_id: uuid.UUID
     thesis_analysis_id: uuid.UUID
     accepted_thesis_summary: str
+    accepted_thesis_wording: str | None = None
     candidate_set_id: uuid.UUID
     retrieval_scope: CandidateSetRetrievalScope | None
     snapshot_id: str
@@ -313,6 +317,8 @@ class V3MarketPoolResult(_McpOut):
         {
             "candidate_markets[].market_title",
             "candidate_markets[].resolution_conditions",
+            "candidate_markets[].relatedness_basis.proposal.claim_quote",
+            "candidate_markets[].relatedness_basis.proposal.rules_quote",
         }
     )
 

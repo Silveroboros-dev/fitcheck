@@ -3,6 +3,50 @@
 # differences are isolated below public/ and must remain explicit overlays.
 manifest_version = 1
 
+# Authored educational case and its public recording narrative.
+[[include]]
+source = "docs/agi2028-curated-demo-ui-contract-v1.md"
+destination = "docs/agi2028-curated-demo-ui-contract-v1.md"
+
+[[include]]
+source = "docs/gtm-agi2028-demo-script-v1.md"
+destination = "docs/gtm-agi2028-demo-script-v1.md"
+
+[[include]]
+source = "el/product/demo_fixtures/agi2028.json"
+destination = "el/product/demo_fixtures/agi2028.json"
+
+[[include]]
+source = "el/product/curated_demo.py"
+destination = "el/product/curated_demo.py"
+
+[[include]]
+source = "tests/test_curated_agi_demo.py"
+destination = "tests/test_curated_agi_demo.py"
+
+[[include]]
+source = "tests/product_console_curated_agi_dom.js"
+destination = "tests/product_console_curated_agi_dom.js"
+
+[[include]]
+source = "tests/test_relatedness_projection.py"
+destination = "tests/test_relatedness_projection.py"
+
+# These test fixtures generate random UUIDs and synthetic-research-* rules in
+# memory. Their full sources have been inspected; they contain no private run.
+[[include]]
+source = "tests/test_private_historical_demo.py"
+destination = "tests/test_private_historical_demo.py"
+
+[[include]]
+source = "tests/product_console_history_dom.js"
+destination = "tests/product_console_history_dom.js"
+
+# Generic schema/UI contract used by the synthetic history regression test.
+[[include]]
+source = "docs/private-historical-demo-ui-contract-v1.md"
+destination = "docs/private-historical-demo-ui-contract-v1.md"
+
 [export]
 max_file_bytes = 262144
 

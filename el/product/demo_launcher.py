@@ -56,9 +56,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--db", type=Path, default=Path("fitcheck-demo.sqlite"))
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8100)
+    parser.add_argument("--historical-case", type=Path,
+                        help="Explicit private historical case, loopback only")
+    parser.add_argument("--historical-case-sha256",
+                        help="Expected canonical case digest, pinned outside the case file")
     args = parser.parse_args(argv)
     if args.port < 1 or args.port > 65535:
         parser.error("--port must be between 1 and 65535")
+    history_path = None
+    if bool(args.historical_case) != bool(args.historical_case_sha256):
+        parser.error("--historical-case and --historical-case-sha256 are required together")
+    if args.historical_case is not None:
+        if args.host not in {"127.0.0.1", "::1", "localhost"}:
+            parser.error("--historical-case requires a loopback host")
+        from el.product.app import load_historical_demo_case
+        history_path = args.historical_case.expanduser().resolve()
+        load_historical_demo_case(history_path, args.historical_case_sha256)
     db_path = args.db.expanduser().resolve()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     for package, relative in REQUIRED_RESOURCES:
@@ -88,7 +101,9 @@ def main(argv: list[str] | None = None) -> int:
         children.append(subprocess.Popen(
             [sys.executable, "-m", "uvicorn", "el.product.app:app",
              "--host", args.host, "--port", str(args.port)],
-            env=env,
+            env={**env, **({"FITCHECK_PRIVATE_HISTORY_FILE": str(history_path),
+                           "FITCHECK_PRIVATE_HISTORY_SHA256": args.historical_case_sha256}
+                          if history_path is not None else {})},
         ))
         print(f"FitCheck fixture demo: http://{args.host}:{args.port}/", flush=True)
         while not stopping:

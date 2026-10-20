@@ -32,7 +32,7 @@ process. They do not own thesis meaning, confidence, commitment, or semantic
 review decisions. The intended source-selection and confirmation interaction
 is recorded in the [v3.1 UI contract](docs/fitcheck-v3.1-ui-contract.md).
 
-The local anonymous demo offers two offline journeys. Stablecoin/Robinhood
+The local anonymous demo offers three offline journeys. Stablecoin/Robinhood
 source interpretation runs through a fixture worker, explicit candidate
 choice, clarification, and human confirmation. Each supported accepted thesis
 compares three fixed, minimal synthetic test abstractions that preserve the
@@ -43,7 +43,13 @@ and fail-closed compatibility rules are in the
 [v3 frozen market demo contract](docs/fitcheck-frozen-market-demo-contract-v3.md).
 The separate Hormuz journey replays retained before/after market rules with
 visitor-owned, clearly labelled test setup for thesis acceptance and market
-choice. The MCP fixture path retains its separate market-pool reference flow.
+choice. The AGI 2028 journey presents a read-only, authored reconstruction of
+three real contract topics. It explains RSI as a weak proxy for a public
+autonomous-AI-research demonstration by 2028 and keeps the earlier automatic
+labels inspectable. Its condition summaries are paraphrases, not verbatim
+rules or live data. The [recording script](docs/gtm-agi2028-demo-script-v1.md)
+walks through the thesis, the mismatch and the scoped no-clean result.
+The MCP fixture path retains its separate market-pool reference flow.
 Legacy predecessor routes remain available for compatibility and are not the
 default journey.
 
@@ -106,6 +112,7 @@ handling behind those links, see the
 | --- | --- | --- |
 | Anonymous source -> selected candidate -> confirmed thesis | **Public, offline fixture demo** | A local fixture worker processes the frozen two-thesis source. Each supported 2027 thesis has three newly written minimal synthetic market abstractions, separately attributed curated expression-quality proposals and automatic diagnostics, full fixture rules, and an explicit market-or-none choice. Unsupported edits fail unavailable; this is not a catalog search or a governed golden. |
 | Hormuz retained-rules revisit | **Public, offline test reconstruction** | Exact retained old/new rules drive a visitor-owned change packet. Thesis acceptance and market choice are reconstructed test setup, not historical human decisions; semantic market fit is unassessed. |
+| AGI 2028 contract comparison | **Public, read-only curated reconstruction** | Three authored condition summaries explain the difference between related evidence and a clean expression. RSI's weak-proxy label is a proposal; earlier labels remain inspectable. No live prices, new inference, human adjudication or private historical packet is included. |
 | Accepted-thesis restoration | **Public, local fixture reference** | A read-only, actor-bound `accepted-state` view restores the original source and selected excerpt when their retained lineage is complete. It does not record another decision or automatically assess a market pool. |
 | Persisted journey resume | **Public, local fixture reference** | Read-only account-state, source, market-pool, and market-choice views return only IDs and records owned by the prebound local actor or anonymous visitor session. The private account adapter is excluded, so these routes do not establish production authentication or multitenancy. |
 | Legacy predecessor classify, blind-prior, draft, and simple-ledger routes | **Public compatibility reference** | Retained for replay and compatibility; they are not the default v3.1 journey. |
@@ -132,6 +139,10 @@ two synthetic event bindings identified in the data card. They preserve only
 the required demo edge cases, use FitCheck-owned schemas, and are not provider
 response bodies or provider schemas. Their identifiers, URLs, timestamps,
 liquidity values, and event relationships are fabricated.
+
+The AGI case instead uses authored summaries of real contract topics and says
+so explicitly. Its earlier and current views are explanatory reconstructions,
+not a new benchmark or an exact private-run replay.
 
 FitCheck `0.2.0` uses this v3 synthetic-fixture format exclusively. Persisted
 v1/v2 frozen-demo pools are unsupported at runtime and fail closed; they are
@@ -190,8 +201,8 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/fitcheck-demo \
   --db /tmp/fitcheck-demo.sqlite --host 127.0.0.1 --port 8100
 ```
 
-Open `http://127.0.0.1:8100` and choose **Source discovery** or **Changed
-market rules**. Source discovery queues a worker job for the frozen two-thesis
+Open `http://127.0.0.1:8100` and choose **Source discovery**, **Changed
+market rules**, or **AGI 2028**. Source discovery queues a worker job for the frozen two-thesis
 source; choose one candidate, answer its clarification, and accept or reject
 the proposal. Each supported thesis (December 31, 2027) then compares three
 frozen synthetic market fixtures, each with its own 2026 or 2027 rule deadline.
@@ -203,7 +214,10 @@ are synthetic metadata, and no current prices or final outcomes are asserted.
 The Hormuz journey shows exact retained before/after
 rules, an evidence-bound revisit packet, and separate dismiss, reaffirm, and
 revision-draft actions. Its prior acceptance and market choice are test-only
-reconstruction. Each visitor has an isolated expiring session; switching
+reconstruction. AGI 2028 compares three authored contract summaries with one
+fixed thesis and allows inspection of earlier labels and the current
+relatedness proposal. Open it directly with `?demo_history=agi2028`.
+Each visitor has an isolated expiring session; switching
 journeys resets it. The command creates or migrates a fresh local SQLite demo
 database and starts web plus worker against that same path. An existing
 unversioned database is rejected. No cloud account or provider/model credential

@@ -17,6 +17,7 @@ class Element {
     this.className = "";
     this.listeners = new Map();
     this.attributes = new Map();
+    this.children = [];
     this.classList = {
       add: () => {},
       remove: () => {},
@@ -24,7 +25,7 @@ class Element {
     };
   }
   addEventListener(name, callback) { this.listeners.set(name, callback); }
-  append() {}
+  append(...children) { this.children.push(...children); }
   setAttribute(name, value) { this.attributes.set(name, value); }
   removeAttribute(name) { this.attributes.delete(name); }
   focus() {}
@@ -199,6 +200,8 @@ async function maliciousSourceIsInertAndAnEditClearsTheRestoration() {
   assert.equal($("restored-source").hidden, true);
   assert.equal($("restored-source-text").textContent, "");
   assert.equal($("restored-source-note").hidden, true);
+  assert.equal($("norm-summary").textContent, "");
+  assert.equal($("norm-summary").dataset.acceptedSummary, undefined);
 }
 
 async function sourceEditDropsPendingResumeResponse() {
@@ -238,12 +241,154 @@ async function sourceEditBeforeHealthCompletesCancelsBootstrapResume() {
   assert.equal($("s1-out").hidden, true);
 }
 
+const savedPoolId = "16d09f09-f722-4111-a25f-fbdf3c5ca936";
+function savedPool(overrides = {}) {
+  return {
+    market_display_set_id: savedPoolId,
+    thesis_analysis_id: acceptedThesisId,
+    candidate_set_id: "saved-candidate-set",
+    snapshot_id: "saved-snapshot",
+    snapshot_as_of: "2026-09-18T02:41:00+00:00",
+    accepted_thesis_summary: acceptedState().accepted_thesis_summary,
+    displayed_count: 3, assessed_count: 3, target_count: 3,
+    assessment_complete: true, system_pool_outcome: "no_clean_expression",
+    incomplete_reasons: [], retrieval_scope: null,
+    display_policy_version: "test-policy",
+    candidate_markets: [1, 2, 3].map((rank) => ({
+      market_assessment_id: "assessment-" + rank,
+      candidate_set_member_id: "member-" + rank,
+      rules_capture_id: "rules-" + rank,
+      market_id: "market-" + rank, market_title: "Contract " + rank,
+      snapshot_id: "saved-snapshot", display_rank: rank, retrieval_rank: rank,
+      pair_class: "not_an_expression",
+      what_it_captures: "A narrower event.",
+      what_it_misses: "This contract's outcome does not settle your thesis.",
+      resolution_conditions: "Frozen rules for contract " + rank,
+    })),
+    ...overrides,
+  };
+}
+
+async function restoresAllCardsReadOnlyWithOnlyGets() {
+  prepareResume();
+  const before = fetchCalls.length;
+  response = (path) => {
+    if (path.endsWith("/accepted-state")) {
+      return jsonResponse(acceptedState({
+        latest_market_display_set_id: savedPoolId,
+        accepted_thesis_wording: "The complete accepted condition, including alternatives.",
+      }));
+    }
+    assert.equal(path, `/api/v3/market-pools/${savedPoolId}`);
+    return jsonResponse(savedPool());
+  };
+  await vm.runInContext("resumeAcceptedThesis()", context);
+  assert.equal(fetchCalls.length, before + 2);
+  assert(fetchCalls.slice(before).every((call) => !call.opts?.method || call.opts.method === "GET"));
+  assert.equal(vm.runInContext("chain.marketCards.length", context), 3);
+  assert.equal(vm.runInContext("chain.marketInspection", context), true);
+  assert.equal($("norm-summary").textContent, "The complete accepted condition, including alternatives.");
+  assert.equal($("norm-summary").dataset.acceptedSummary, acceptedState().accepted_thesis_summary);
+  assert.equal($("pool").hidden, false);
+  assert.equal($("saved-pool-note").hidden, false);
+  assert.equal($("pool-choice-controls").hidden, true);
+  assert.equal($("assessment-feedback").hidden, true);
+  for (const card of $("market-grid").children.slice(-3)) {
+    assert.equal(card.children[0].disabled, true);
+    assert(!card.children[1].children.some((child) => child.textContent === "Review this assessment"));
+  }
+  vm.runInContext('selectMarketChoice("none", null)', context);
+  assert.equal(vm.runInContext("chain.selectionKind", context), null);
+
+  response = (path, opts) => {
+    assert.equal(path, `/api/v3/theses/${acceptedThesisId}/market-pool`);
+    assert.equal(opts.method, "POST");
+    return jsonResponse(savedPool());
+  };
+  await $("find-markets").onclick();
+  assert.equal(vm.runInContext("chain.marketInspection", context), false);
+  assert.equal($("pool-choice-controls").hidden, false);
+  assert.equal($("saved-pool-note").hidden, true);
+}
+
+async function brokenSavedPoolLeavesAcceptedThesisAvailable() {
+  for (const invalid of [
+    savedPool({ market_display_set_id: decisionId }),
+    savedPool({ thesis_analysis_id: decisionId }),
+    savedPool({ snapshot_id: "wrong-snapshot" }),
+    null,
+  ]) {
+    prepareResume();
+    response = (path) => {
+      if (path.endsWith("/accepted-state")) {
+        return jsonResponse(acceptedState({ latest_market_display_set_id: savedPoolId }));
+      }
+      return invalid ? jsonResponse(invalid) : Promise.resolve({
+        ok: false, status: 404, json: async () => ({ error: "not_found" })
+      });
+    };
+    await vm.runInContext("resumeAcceptedThesis()", context);
+    assert.equal(vm.runInContext("chain.thesisId", context), acceptedThesisId);
+    assert.equal($("s1-out").hidden, false);
+    assert.equal($("pool").hidden, true);
+    assert.match($("s3-err").textContent, /Saved market comparison is unavailable/);
+  }
+}
+
+async function sourceEditClearsRestoredPoolAndAcceptedWording() {
+  prepareResume();
+  response = (path) => jsonResponse(path.endsWith("/accepted-state")
+    ? acceptedState({ latest_market_display_set_id: savedPoolId }) : savedPool());
+  await vm.runInContext("resumeAcceptedThesis()", context);
+  assert.equal(vm.runInContext("chain.marketInspection", context), true);
+  editSource("A new source journey");
+  assert.equal(vm.runInContext("chain.marketInspection", context), false);
+  assert.equal(vm.runInContext("chain.marketCards.length", context), 0);
+  assert.equal($("pool").hidden, true);
+  assert.equal($("saved-pool-note").hidden, true);
+  assert.equal($("pool-choice-controls").hidden, false);
+  assert.equal($("norm-summary").textContent, "");
+  assert.equal($("norm-summary").dataset.acceptedSummary, undefined);
+}
+
+async function lateSavedPoolCannotReplaceANewerJourneyOrFind() {
+  for (const change of ["source", "find"]) {
+    prepareResume();
+    let release, requested;
+    const poolRequested = new Promise((resolve) => { requested = resolve; });
+    response = (path) => {
+      if (path.endsWith("/accepted-state")) {
+        return jsonResponse(acceptedState({ latest_market_display_set_id: savedPoolId }));
+      }
+      return new Promise((resolve) => { release = resolve; requested(); });
+    };
+    const pending = vm.runInContext("resumeAcceptedThesis()", context);
+    await poolRequested;
+    if (change === "source") {
+      editSource("Another thesis");
+    } else {
+      const newPoolId = "bd1b351a-e909-4bcc-b7cc-2923d206ae81";
+      response = () => jsonResponse(savedPool({ market_display_set_id: newPoolId }));
+      await $("find-markets").onclick();
+      assert.equal(vm.runInContext("chain.marketDisplaySetId", context), newPoolId);
+    }
+    release({ ok: true, status: 200, json: async () => savedPool() });
+    await pending;
+    assert.notEqual(vm.runInContext("chain.marketDisplaySetId", context), savedPoolId);
+    assert.equal(vm.runInContext("chain.marketInspection", context), false);
+  }
+}
+
 restoresAcceptedThesisWithoutAutoFindingMarkets()
   .then(wrongIdentityOrOriginLeavesJourneyUnbound)
   .then(legacyAcceptanceShowsExplicitUnavailableSource)
   .then(maliciousSourceIsInertAndAnEditClearsTheRestoration)
   .then(sourceEditDropsPendingResumeResponse)
   .then(sourceEditBeforeHealthCompletesCancelsBootstrapResume)
+  .then(restoresAllCardsReadOnlyWithOnlyGets)
+  .then(brokenSavedPoolLeavesAcceptedThesisAvailable)
+  .then(sourceEditClearsRestoredPoolAndAcceptedWording)
+  .then(lateSavedPoolCannotReplaceANewerJourneyOrFind)
   .catch((error) => {
     console.error(error);
     process.exitCode = 1;

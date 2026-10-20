@@ -7,8 +7,9 @@ then applies a separately versioned display policy and records human choice.
 
 import uuid
 from datetime import date, datetime
+from hashlib import sha256
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -155,6 +156,152 @@ def _human_date(value: date) -> str:
     return value.strftime("%B %d, %Y").replace(" 0", " ")
 
 
+def accepted_thesis_wording(thesis: ThesisAnalysis) -> str:
+    """Prefer the full accepted criterion while retaining the copy guard."""
+    structure = thesis.extracted_structure
+    wording = structure.get("contractible_version") if isinstance(structure, dict) else None
+    return _safe_fact(
+        wording if isinstance(wording, str) else None,
+        thesis.normalized_claim_summary,
+    )
+
+
+RELATEDNESS_PROJECTION_VERSION = "source-bound-relatedness-v1"
+RELATEDNESS_PROPOSAL_AUTHORITY = "source_bound_relation_proposal"
+
+
+class RelatedPairProposal(_Out):
+    """Attributable semantic evidence, never a human adjudication or golden."""
+
+    proposal_id: uuid.UUID
+    proposer_id: str = Field(min_length=1)
+    thesis_analysis_id: uuid.UUID
+    accepted_wording_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    market_id: str = Field(min_length=1)
+    snapshot_id: str = Field(min_length=1)
+    rules_capture_id: uuid.UUID
+    rules_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    claim_quote: str = Field(min_length=1)
+    rules_quote: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
+def _validate_related_pair(
+    proposal: RelatedPairProposal,
+    assessment: MarketAssessment,
+    thesis: ThesisAnalysis,
+    capture: MarketRulesCapture,
+) -> None:
+    wording = accepted_thesis_wording(thesis)
+    rules = capture.resolution_rules_text
+    if (
+        proposal.thesis_analysis_id != thesis.id
+        or assessment.thesis_analysis_id != thesis.id
+        or proposal.market_id != assessment.market_id
+        or proposal.market_id != capture.market_id
+        or proposal.snapshot_id != assessment.snapshot_id
+        or proposal.snapshot_id != capture.snapshot_id
+        or proposal.rules_capture_id != capture.id
+        or assessment.rules_capture_id != capture.id
+        or proposal.accepted_wording_sha256 != sha256(wording.encode()).hexdigest()
+        or proposal.rules_sha256 != sha256(rules.encode()).hexdigest()
+        or not proposal.claim_quote.strip()
+        or proposal.claim_quote not in wording
+        or not proposal.rules_quote.strip()
+        or proposal.rules_quote not in rules
+        or not proposal.proposer_id.strip()
+        or not proposal.rationale.strip()
+        or vocabulary_violations(proposal.rationale)
+    ):
+        raise MarketPoolConflict("relatedness proposal is not bound to this thesis/rules pair")
+
+
+def _stacking_only(payload: dict) -> bool:
+    """Separate rejection of clean fit from a semantic claim of unrelatedness."""
+    checks = payload.get("checks") or []
+    hard = sum(check.get("hard") is True for check in checks)
+    return (
+        payload.get("authority") == "deterministic_only"
+        and payload.get("ceiling") == "no_clean_expression"
+        and payload.get("published") == "no_clean_expression"
+        and (payload.get("advisory") or {}).get("status") == "not_configured"
+        and hard >= 2
+        and hard == payload.get("hard_fails")
+        and all(check.get("cap") in {None, "direct", "indirect", "weak_proxy"}
+                for check in checks)
+        and any(check.get("cap") == "weak_proxy" for check in checks)
+    )
+
+
+def relatedness_projection(proposals: list[RelatedPairProposal]):
+    """Constructor-bound successor projection; no global lexical shortcuts."""
+    by_pair = {}
+    for proposal in proposals:
+        key = (proposal.thesis_analysis_id, proposal.market_id)
+        if key in by_pair:
+            raise MarketPoolConflict("duplicate relatedness proposal target")
+        by_pair[key] = proposal
+
+    def project(assessment, thesis, capture):
+        proposal = by_pair.get((thesis.id, assessment.market_id))
+        if proposal is None:
+            return assessment
+        _validate_related_pair(proposal, assessment, thesis, capture)
+        payload = (assessment.provenance or {}).get("per_market") or {}
+        if (
+            assessment.pair_class != "not_an_expression"
+            or assessment.authority != "deterministic_only"
+            or not _stacking_only(payload)
+        ):
+            return assessment
+        basis = {
+            "schema_version": RELATEDNESS_PROJECTION_VERSION,
+            "predecessor_pair_class": assessment.pair_class,
+            "authority": RELATEDNESS_PROPOSAL_AUTHORITY,
+            "proposal": proposal.model_dump(mode="json"),
+        }
+        assessment.pair_class = "weak_proxy"
+        assessment.authority = RELATEDNESS_PROPOSAL_AUTHORITY
+        assessment.fit_confidence = None
+        assessment.provenance = {
+            **assessment.provenance,
+            "pair_projection_policy_version": RELATEDNESS_PROJECTION_VERSION,
+            "relatedness_basis": basis,
+        }
+        return assessment
+
+    return project
+
+
+def relatedness_evidence(assessment, thesis, capture) -> dict | None:
+    """Validate retained proposal bindings on both HTTP and MCP read paths."""
+    provenance = assessment.provenance or {}
+    basis = provenance.get("relatedness_basis")
+    if basis is None:
+        if (assessment.authority == RELATEDNESS_PROPOSAL_AUTHORITY
+                or provenance.get("pair_projection_policy_version") == RELATEDNESS_PROJECTION_VERSION):
+            raise MarketPoolConflict("relatedness evidence is missing")
+        return None
+    if (
+        not isinstance(basis, dict)
+        or set(basis) != {"schema_version", "predecessor_pair_class", "authority", "proposal"}
+        or basis["schema_version"] != RELATEDNESS_PROJECTION_VERSION
+        or provenance.get("pair_projection_policy_version") != RELATEDNESS_PROJECTION_VERSION
+        or basis["predecessor_pair_class"] != "not_an_expression"
+        or basis["authority"] != RELATEDNESS_PROPOSAL_AUTHORITY
+        or assessment.authority != RELATEDNESS_PROPOSAL_AUTHORITY
+        or assessment.pair_class != "weak_proxy"
+        or not _stacking_only(provenance.get("per_market") or {})
+    ):
+        raise MarketPoolConflict("relatedness projection provenance mismatch")
+    try:
+        proposal = RelatedPairProposal.model_validate(basis["proposal"])
+    except ValueError as exc:
+        raise MarketPoolConflict("invalid relatedness proposal") from exc
+    _validate_related_pair(proposal, assessment, thesis, capture)
+    return basis
+
+
 def _structured_condition(structure: ExtractedStructure | MarketStructure) -> str:
     horizon = (
         structure.horizon.window_end
@@ -193,6 +340,15 @@ def _accepted_thesis_text(claim: ExtractedStructure) -> str:
 
 
 def _side_text(payload: dict) -> str:
+    if payload.get("published") in {
+        "weak_proxy", "no_clean_expression", "not_an_expression"
+    }:
+        return "This contract's outcome does not settle your thesis."
+    if payload.get("published") not in {"direct", "indirect"}:
+        return (
+            "The recorded fit result does not establish which contract outcome "
+            "corresponds to your thesis."
+        )
     side = payload.get("thesis_side")
     if side == "yes":
         return "The recorded fit result maps this contract to the YES outcome for your thesis."
@@ -250,15 +406,15 @@ def _assessment_text(
         if stage_differs:
             differences.append(
                 "It resolves "
-                f"{_STAGE_CONDITIONS[market.event_stage.value]}; your thesis "
-                f"requires {_STAGE_CONDITIONS[claim.event_stage.value]}."
+                f"{_STAGE_CONDITIONS[market.event_stage.value]}; compare that "
+                "condition with the complete accepted thesis above."
             )
         market_metric = _safe_fact(market.metric.what, "the stated outcome")
-        claim_metric = _safe_fact(claim.metric.what, "the stated outcome")
         metric_differs = market.metric.what.casefold() != claim.metric.what.casefold()
         if metric_differs:
             differences.append(
-                f"It asks about {market_metric}; your thesis asks about {claim_metric}."
+                f"It asks about {market_metric}. The complete accepted thesis "
+                "above defines the outcome you want to test."
             )
         horizon_differs = market.horizon.resolution_date != claim.horizon.window_end
         if horizon_differs:
@@ -321,9 +477,8 @@ def _assessment_text(
             )
         if stage_differs and metric_differs:
             differences.append(
-                f"{_STAGE_CONDITIONS[market.event_stage.value].capitalize()} "
-                "does not establish "
-                f"the {claim_metric} target."
+                "The recorded contract condition does not establish all "
+                "conditions of the accepted thesis."
             )
         misses = " ".join([*differences, *cautions, _side_text(payload)])
     for value in (captures, misses):

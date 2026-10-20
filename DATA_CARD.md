@@ -43,6 +43,23 @@ resolution rules remain accessible.
 The packaged Phase-0 snapshot remains a regression resource for other fixture
 and MCP paths, not a substitute pool in this journey.
 
+The third scenario, `el/product/demo_fixtures/agi2028.json`, is a
+project-authored reconstruction of a saved three-contract comparison. It
+compares a public autonomous-AI-research demonstration by the end of 2028 with
+recursive self-improvement, a Millennium Prize solution announcement, and an
+OpenAI AGI announcement. Its titles and condition summaries are newly written
+paraphrases of real contract topics. They are not synthetic market claims,
+verbatim provider rules, provider responses, or live prices. The content date
+versions this authored case; it is not a retrieval timestamp.
+
+Both views retain `no_clean_expression` over exactly three contracts. The
+earlier-label view reconstructs three `not_an_expression` results. The current
+view presents RSI as a `weak_proxy` relatedness proposal and keeps the other
+two labels unchanged. Neither view is a fresh inference, named human
+adjudication, golden, or exact replay of the private run. The private original
+and its human-decision and rule-capture lineage are excluded. This read-only
+case creates no thesis acceptance or market-selection record.
+
 The separate Hormuz resource is the locked
 `el/product/demo_fixtures/hormuz_rules.json` projection of retained historical
 Polymarket rules for market `2176270`: exact old and new rule text, observed
@@ -82,6 +99,9 @@ schemas. Their identifiers, event relationships, URLs, timestamps, and
 liquidity values are fabricated. No included resource is a hydrated social
 post or governed review row. The code and newly written minimal synthetic
 fixture abstractions are distributed under Apache License 2.0; see `LICENSE`.
+The newly authored AGI 2028 summaries and explanatory copy are also project
+text under that license; they make no claim to ownership of the underlying
+market facts, company names, or third-party rules.
 The historical title and rule wording are outside that grant; see
 `THIRD_PARTY_NOTICES.md`.
 
@@ -126,7 +146,10 @@ correct on fresh inputs.
 
 Every proposed public fixture must have a documented purpose and origin. New
 market and event fixtures must be newly written minimal synthetic test
-abstractions. The six market fixtures and two event bindings above do not rely
+abstractions, or an explicitly enumerated project-authored educational summary
+such as the AGI 2028 case above. An authored summary must identify real topics
+honestly and must not copy provider rules or private evidence records.
+The six market fixtures and two event bindings above do not rely
 on a provider-body redistribution exception. The retained Hormuz rules
 projection remains the sole declared external-content exception; any byte
 change, broader use, or addition needs a separate scope and rights review.
