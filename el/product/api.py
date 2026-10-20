@@ -392,7 +392,7 @@ class MarketAssessmentUiOut(_Out):
     market_id: str
     market_title: str
     resolution_conditions: str
-    pair_class: str
+    pair_class: str | None
     retrieval_rank: int
     display_rank: int
     what_it_captures: str
@@ -1382,17 +1382,45 @@ class ProductApi:
                 or candidate_set.snapshot_id != display_set.snapshot_id
             ):
                 raise MarketPoolConflict("market pool candidate-set binding is invalid")
-            try:
-                retrieval_scope = persisted_candidate_set_scope(
-                    candidate_set.retrieval_scope
-                )
-            except ValueError as exc:
-                raise MarketPoolConflict("candidate retrieval scope is invalid") from exc
-            if retrieval_scope is not None and (
-                retrieval_scope.snapshot_id != candidate_set.snapshot_id
-                or retrieval_scope.retrieval_id != candidate_set.retrieval_id
+            # The retained Hormuz rules replay has one displayed, explicitly
+            # unassessed card. Its narrow shape is also declared in the DB
+            # check constraint; it is never an assessed expression pool.
+            reconstruction_marker = "public-demo-hormuz-reconstruction-v1"
+            reconstruction_flags = {
+                "test_only": True,
+                "reconstructed": reconstruction_marker,
+                "semantic_fit_unassessed": True,
+                "no_provider_or_model_call": True,
+            }
+            reconstruction = display_set.display_policy_version == reconstruction_marker
+            if reconstruction and (
+                self.mode != "fixture"
+                or display_set.assessed_count != 0
+                or display_set.target_count != 1
+                or display_set.displayed_count != 1
+                or display_set.assessment_complete
+                or display_set.system_pool_outcome != "incomplete"
+                or display_set.incomplete_reasons != ["test_only_no_semantic_assessment"]
+                or fit_card.semantic_fit_class is not None
+                or fit_card.provenance != reconstruction_flags
+                or thesis.extracted_structure != reconstruction_flags
+                or candidate_set.retrieval_scope != reconstruction_flags
             ):
-                raise MarketPoolConflict("candidate retrieval scope is not bound")
+                raise MarketPoolConflict("reconstructed market pool binding is invalid")
+            if reconstruction:
+                retrieval_scope = None  # test setup performed no retrieval
+            else:
+                try:
+                    retrieval_scope = persisted_candidate_set_scope(
+                        candidate_set.retrieval_scope
+                    )
+                except ValueError as exc:
+                    raise MarketPoolConflict("candidate retrieval scope is invalid") from exc
+                if retrieval_scope is not None and (
+                    retrieval_scope.snapshot_id != candidate_set.snapshot_id
+                    or retrieval_scope.retrieval_id != candidate_set.retrieval_id
+                ):
+                    raise MarketPoolConflict("candidate retrieval scope is not bound")
             items = session.scalars(
                 select(MarketDisplayItem)
                 .where(
@@ -1406,7 +1434,10 @@ class ProductApi:
                 )
             if (
                 display_set.displayed_count > 3
-                or display_set.assessed_count < display_set.displayed_count
+                or (
+                    display_set.assessed_count < display_set.displayed_count
+                    and not reconstruction
+                )
                 or (
                     display_set.assessment_complete
                     and display_set.displayed_count != display_set.target_count
@@ -1450,6 +1481,12 @@ class ProductApi:
                     or member is None
                     or member.candidate_set_id != display_set.candidate_set_id
                     or member.market_id != assessment.market_id
+                    or (reconstruction and (
+                        assessment.pair_class is not None
+                        or assessment.authority != "demo_reconstruction_only"
+                        or assessment.fit_confidence is not None
+                        or assessment.provenance != reconstruction_flags
+                    ))
                 ):
                     raise MarketPoolConflict(
                         "cross-bound market assessment cannot be rendered"
@@ -1484,19 +1521,22 @@ class ProductApi:
                 raise MarketPoolConflict("display ranks are not contiguous")
             if len({card.market_id for card in cards}) != len(cards):
                 raise MarketPoolConflict("displayed market identities are not unique")
+            if not reconstruction and any(card.pair_class is None for card in cards):
+                raise MarketPoolConflict("assessed market pair class is missing")
             validate_frozen_display_pool(display_set, thesis, cards)
-            projected_complete, projected_outcome, projected_reasons = (
-                project_pool_outcome(
-                    [card.pair_class for card in cards],
-                    target_count=display_set.target_count,
+            if not reconstruction:
+                projected_complete, projected_outcome, projected_reasons = (
+                    project_pool_outcome(
+                        [card.pair_class for card in cards],
+                        target_count=display_set.target_count,
+                    )
                 )
-            )
-            if (
-                projected_complete != display_set.assessment_complete
-                or projected_outcome != display_set.system_pool_outcome
-                or projected_reasons != list(display_set.incomplete_reasons)
-            ):
-                raise MarketPoolConflict("market pool outcome binding is invalid")
+                if (
+                    projected_complete != display_set.assessment_complete
+                    or projected_outcome != display_set.system_pool_outcome
+                    or projected_reasons != list(display_set.incomplete_reasons)
+                ):
+                    raise MarketPoolConflict("market pool outcome binding is invalid")
             return self._guard(
                 MarketPoolUiOut(
                     market_display_set_id=display_set.id,

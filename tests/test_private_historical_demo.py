@@ -227,6 +227,8 @@ def test_v2_preserves_predecessor_and_serves_successor_read_only(tmp_path, histo
         rules_quote="Invented excerpt"),
     lambda p: p["market_pool"]["candidate_markets"][0]["relatedness_basis"]["proposal"].update(
         rationale="   "),
+    lambda p: p["market_pool"]["candidate_markets"][0]["relatedness_basis"]["proposal"].update(
+        rationale="You should buy this market."),
     lambda p: p["market_pool"]["candidate_markets"][0]["relatedness_basis"].update(
         authority="human_reviewed"),
     lambda p: p["market_pool"]["candidate_markets"][0].update(

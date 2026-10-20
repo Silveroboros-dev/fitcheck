@@ -139,8 +139,29 @@ const allText = element => [element.textContent, ...element.children.flatMap(all
   assert.equal($("curated-agi-case").hidden, true);
   assert.equal($("s1").hidden, false);
   assert.equal($("s3").hidden, false);
+  for (const id of ["s2", "s4", "s5"]) assert.equal($(id).hidden, true);
   assert.equal(window.location.search, "");
   assert.equal($("run").disabled, false);
+  assert.equal($("source-entry-controls").hidden, false);
+  assert.equal($("market-discovery-intro").hidden, false);
+  assert.equal($("pool").hidden, true);
+
+  // A source journey with accepted-thesis and market panels may switch to AGI
+  // and back without retaining its old records or hiding the two active steps.
+  $("s1-out").hidden = false;
+  $("pool").hidden = false;
+  run('chain.thesisId = "simulated-source-thesis"');
+  await run('beginDemoJourney("history")');
+  assert.equal($("curated-agi-case").hidden, false);
+  assert.equal($("s1-out").hidden, true);
+  assert.equal($("pool").hidden, true);
+  await run('beginDemoJourney("source")');
+  assert.equal($("s1").hidden, false);
+  assert.equal($("s3").hidden, false);
+  for (const id of ["s2", "s4", "s5"]) assert.equal($(id).hidden, true);
+  assert.equal($("s1-out").hidden, true);
+  assert.equal($("pool").hidden, true);
+  assert.equal(run("chain.thesisId"), null);
   assert.match(html, /id="demo-source"/);
   assert.match(html, /id="demo-hormuz"/);
   assert.match(html, /id="demo-history"/);

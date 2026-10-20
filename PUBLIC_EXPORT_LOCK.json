@@ -474,11 +474,11 @@
     },
     {
       "path": "el/product/api.py",
-      "sha256": "e124be1a11e5599a48dca82b9354d7f7b7c10a4b4be07065d3a0efb77637b381"
+      "sha256": "5a3db6f05a00e41ad6910ba619516a89b2ed03eaca49597d6f59eebb6a89e1de"
     },
     {
       "path": "el/product/app.py",
-      "sha256": "c3d8db38df55c8cae5c27f75019d4fd032d568e8d2b68f667868a1235c527ce7"
+      "sha256": "a0ce12a76cea9d84198ddef6fa05e301a861bae7da490dc3ed4eeca050f2ad3f"
     },
     {
       "path": "el/product/curated_demo.py",
@@ -870,7 +870,7 @@
     },
     {
       "path": "tests/product_console_curated_agi_dom.js",
-      "sha256": "c1d64bd1d160a0abe3ccb11fa1fe1a126f867bb36471971161ecfd87bb13bfef"
+      "sha256": "c749ee4027d2f14cf3ccc1621175c3104c65c0970c34773a6aab4bef93c9cbda"
     },
     {
       "path": "tests/product_console_history_dom.js",
@@ -1038,7 +1038,7 @@
     },
     {
       "path": "tests/test_private_historical_demo.py",
-      "sha256": "e1f2af7d86fd32424f1de77e731bf4e1a9f6f7e67cd058a92893c0d39d3ed26f"
+      "sha256": "18ad91349d370e1c68a0de440e1a94ef841e19fe1399347d43076e46585f5326"
     },
     {
       "path": "tests/test_prod_entrypoint.py",
@@ -1066,7 +1066,7 @@
     },
     {
       "path": "tests/test_product_resume.py",
-      "sha256": "1561bb84ebfa59faa2dd4292bc497d6cc0cf69c6c2a61e312de890645e748fe4"
+      "sha256": "8f430837f6364549fc99abfad2d880f768a1c5d01cb7a6e280035e84582e2fac"
     },
     {
       "path": "tests/test_product_ui_page.py",

@@ -17,10 +17,12 @@ from el.domain.tables import (
     SourceThesisCandidate, ThesisAnalysis, ThesisRevision, User,
 )
 from el.domain.vocabulary import vocabulary_violations
+from el.marketpool.service import MarketPoolConflict
 from el.mcp.contracts import NotFound
 from el.mcp.vocab_guard import A7Violation
 from el.product.api import ProductApi
 from el.product.app import build_app
+from el.product.demo_hormuz import ensure_hormuz
 from el.product.wiring import HumanActor, build_services
 from el.sourceinterpretation.jobs import SourceInterpretationWorker
 
@@ -292,6 +294,56 @@ def test_saved_pool_read_rejects_stale_exact_pool_result(env, corruption):
 
     response = client.get(f"/api/v3/market-pools/{pool_id}")
     assert response.status_code == 409, response.text
+
+
+def test_hormuz_reconstruction_keeps_unassessed_pool_and_public_boundary(env):
+    sessions, services, actor, client_for = env
+    identity = actor("hormuz-reconstruction@example.invalid")
+    revision_id = uuid.UUID(ensure_hormuz(services, identity)["revision_id"])
+    with sessions() as session:
+        revision = session.get(ThesisRevision, revision_id)
+        pool_id, choice_id = revision.market_display_set_id, revision.market_choice_id
+
+    api = ProductApi(services, identity)
+    pool = api._market_pool_out(pool_id)
+    assert (pool.assessed_count, pool.displayed_count, pool.target_count) == (0, 1, 1)
+    assert (pool.assessment_complete, pool.system_pool_outcome) == (False, "incomplete")
+    assert pool.candidate_markets[0].pair_class is None
+    assert pool.candidate_markets[0].authority == "demo_reconstruction_only"
+
+    client = client_for(identity)
+    assert client.get(f"/api/v3/market-pools/{pool_id}").status_code == 404
+    assert client.get(f"/api/v3/market-choices/{choice_id}").status_code == 404
+    account = client.get("/api/v3/account-state")
+    assert account.status_code == 200
+    assert account.json()["latest_market_display_set_id"] is None
+    assert account.json()["latest_market_choice_id"] is None
+
+
+def test_hormuz_exception_rejects_wrong_marker_and_ordinary_pool_spoof(env):
+    sessions, services, actor, client_for = env
+    identity = actor("hormuz-marker@example.invalid")
+    revision_id = uuid.UUID(ensure_hormuz(services, identity)["revision_id"])
+    with sessions() as session:
+        pool_id = session.get(ThesisRevision, revision_id).market_display_set_id
+        assessment_id = session.scalar(select(MarketDisplayItem.market_assessment_id).where(
+            MarketDisplayItem.market_display_set_id == pool_id
+        ))
+    api = ProductApi(services, identity)
+    with sessions.begin() as session:
+        assessment = session.get(MarketAssessment, assessment_id)
+        assessment.provenance = {**assessment.provenance, "reconstructed": "wrong-marker"}
+    with pytest.raises(MarketPoolConflict, match="cross-bound"):
+        api._market_pool_out(pool_id)
+
+    _, _, ordinary, _ = _journey(client_for(identity))
+    ordinary_id = uuid.UUID(ordinary["market_display_set_id"])
+    with sessions.begin() as session:
+        session.get(MarketDisplaySet, ordinary_id).display_policy_version = (
+            "public-demo-hormuz-reconstruction-v1"
+        )
+    with pytest.raises(MarketPoolConflict, match="reconstructed market pool"):
+        api._market_pool_out(ordinary_id)
 
 
 def test_durable_source_job_is_discovered_only_by_its_owner(env):

@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from starlette.routing import Match
 
+from el.domain.vocabulary import vocabulary_violations
 from el.extraction.service import NormalizationAttemptConflict
 from el.jobs import IdempotencyConflict
 from el.marketpool.service import MarketPoolConflict, RelatedPairProposal
@@ -255,6 +256,7 @@ class HistoricalDemoCaseV2(BaseModel):
                 or proposal.rules_quote not in card.resolution_conditions
                 or not proposal.proposer_id.strip()
                 or not proposal.rationale.strip()
+                or vocabulary_violations(proposal.rationale)
                 or proposal.proposal_id in proposal_ids
             ):
                 raise ValueError("historical successor relatedness evidence mismatch")
