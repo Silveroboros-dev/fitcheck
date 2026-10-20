@@ -1,0 +1,73 @@
+{
+  "schema_version": "fitcheck.agi2028-curated-demo.v1",
+  "case_id": "agi2028",
+  "title": "AGI by 2028: autonomous AI research",
+  "fixture_kind": "curated_real_contract_comparison",
+  "content_date": "2026-10-20",
+  "thesis_wording": "An AI system capable of independently conducting a full cycle of AI research is publicly launched or demonstrated on or before December 31, 2028.",
+  "criterion_note": "For this example, public launch or demonstration is the chosen criterion. A private capability or an achievement announcement alone does not establish it.",
+  "provenance_note": "Curated reconstruction of a saved comparison. The contract conditions below are project-authored summaries of three real contract topics, not verbatim resolution rules or live market data. The exact original private run is preserved separately.",
+  "pool_outcome": "no_clean_expression",
+  "pool_note": "No clean expression among these three compared contracts. This is a conclusion about this displayed pool, not the whole market catalog.",
+  "proposal_note": "The updated RSI label is an explanatory relatedness proposal, not a named human adjudication or a fresh model result. Automatic relatedness proposals for arbitrary new contracts are not demonstrated here.",
+  "next_steps": "Retain RSI as a related signal, look for a closer contract, or deliberately revise the thesis. A price for one of these contracts is not automatically a probability for this thesis.",
+  "markets": [
+    {
+      "key": "rsi",
+      "title": "OpenAI or Anthropic announces recursive self-improvement in 2026",
+      "deadline": "2026-12-31",
+      "conditions_summary": "An official OpenAI or Anthropic statement must report that recursive self-improvement has already been achieved by 11:59 p.m. Eastern Time on December 31, 2026. AI must perform the substantive research that materially improves the general capabilities of a frontier or near-frontier system, or produces a more capable successor, with the improved system capable of driving further improvements. Humans may set goals, provide resources, supervise and approve, but may not supply the substantive research choices or technical solution. Toy, narrow, sandboxed or proof-of-concept improvements, or gains limited to prompts, skills or benchmark scores, do not qualify. Public release, a technical demonstration and independent verification are not required.",
+      "captures": [
+        "Autonomous AI research is an explicit part of the capability described.",
+        "The work must materially improve advanced AI systems rather than merely assist a researcher."
+      ],
+      "misses": [
+        "It resolves on a company's achievement announcement, while the thesis requires public launch or demonstration.",
+        "Only OpenAI or Anthropic qualifies; the thesis allows any provider.",
+        "Its deadline is the end of 2026, two years before the thesis deadline.",
+        "Further recursive improvement is an additional requirement beyond a single independent research cycle."
+      ],
+      "earlier_class": "not_an_expression",
+      "current_class": "weak_proxy",
+      "relatedness_explanation": "The earlier automatic result counted several fit mismatches. Those mismatches prevent a clean expression but do not erase the explicit relationship to autonomous AI research. The current proposal preserves that relationship as a weak proxy.",
+      "outcome_example": "A qualifying announcement could occur without the public demonstration required by the thesis. Conversely, this contract could resolve No in 2026 while another provider meets the thesis in 2028. Either outcome can leave the thesis unsettled."
+    },
+    {
+      "key": "millennium",
+      "title": "An AI lab announces a qualifying Millennium Prize solution by 2027",
+      "deadline": "2027-12-31",
+      "conditions_summary": "An eligible AI lab must announce a solution by 11:59 p.m. Eastern Time on December 31, 2027. The covered problems are the Riemann hypothesis, P versus NP, Yang-Mills existence and mass gap, the Hodge conjecture, and the Birch and Swinnerton-Dyer conjecture; Navier-Stokes is excluded. The work may be attributed to the lab, its researchers, its models, or a combination, and does not require confirmation by the Clay Mathematics Institute.",
+      "captures": [
+        "A major research result associated with an AI lab."
+      ],
+      "misses": [
+        "A mathematical solution is not evidence of a full cycle of AI research.",
+        "The rules do not require AI to perform the research independently.",
+        "A lab announcement does not establish a public launch or demonstration of the specified capability.",
+        "Its deadline is the end of 2027 rather than 2028."
+      ],
+      "earlier_class": "not_an_expression",
+      "current_class": "not_an_expression",
+      "relatedness_explanation": "The lab affiliation and research theme alone do not establish the autonomous AI research capability defined by the thesis.",
+      "outcome_example": "A lab could announce a human-led mathematical breakthrough while the autonomous AI research thesis remains unresolved."
+    },
+    {
+      "key": "agi",
+      "title": "OpenAI announces that it has achieved AGI before 2027",
+      "deadline": "2026-12-31",
+      "conditions_summary": "OpenAI must officially announce that it has achieved artificial general intelligence by December 31, 2026, Eastern Time. The settlement event is the company's AGI announcement.",
+      "captures": [
+        "A claim of broad AI capability by a leading AI lab."
+      ],
+      "misses": [
+        "A general AGI announcement does not establish the specific independent AI research cycle in the thesis.",
+        "The announcement does not itself establish the required public launch or demonstration.",
+        "Only OpenAI qualifies, and the deadline is the end of 2026."
+      ],
+      "earlier_class": "not_an_expression",
+      "current_class": "not_an_expression",
+      "relatedness_explanation": "The AGI label is broader and less specific than the capability and evidence criterion selected for this thesis.",
+      "outcome_example": "An official AGI claim could satisfy this contract without publicly demonstrating the full independent research cycle we chose to test."
+    }
+  ]
+}

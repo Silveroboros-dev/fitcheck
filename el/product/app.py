@@ -5,12 +5,14 @@ and the single static page. Loop semantics live in the services; the typed
 errors carry the contract's explicit failure states.
 """
 
+import json
 import uuid
 from contextvars import ContextVar
 from copy import deepcopy
 from datetime import datetime
 from hashlib import sha256
 from importlib.resources import files
+from ipaddress import ip_address
 from pathlib import Path
 from typing import Literal, Protocol
 
@@ -22,7 +24,7 @@ from starlette.routing import Match
 
 from el.extraction.service import NormalizationAttemptConflict
 from el.jobs import IdempotencyConflict
-from el.marketpool.service import MarketPoolConflict
+from el.marketpool.service import MarketPoolConflict, RelatedPairProposal
 from el.mcp.contracts import (
     BlindPriorRequired,
     NotFound,
@@ -31,10 +33,13 @@ from el.mcp.contracts import (
 )
 from el.models.vertex_canary import VertexCanaryRefused
 from el.observability import configure_structured_stderr_logging, extract_traceparent
-from el.product.api import ProductApi, ProposerUnavailable
+from el.product.api import (
+    AcceptedThesisStateUiOut, MarketPoolUiOut, ProductApi, ProposerUnavailable,
+)
 from el.product.demo_admission import (
     DemoAdmission, DemoAdmissionDenied, MAX_REQUEST_BYTES,
 )
+from el.product.curated_demo import load_curated_agi_case
 from el.product.wiring import HumanActor, ProductServices, build_services, local_actor
 from el.product.demo_sessions import COOKIE_NAME, SESSION_SECONDS, DemoSessions
 from el.revisit.service import RevisitConflict, RevisitNotFound, RevisitUnavailable
@@ -60,6 +65,220 @@ SYNTHETIC_MARKET_FIXTURE_ASSETS = frozenset({
     "synthetic-market-broker-first-tokenized.json",
     "synthetic-market-broker-chain-token.json",
 })
+
+
+class HistoricalDemoCase(BaseModel):
+    """Private presentation evidence; never imported into visitor-owned rows."""
+
+    model_config = ConfigDict(extra="forbid")
+    schema_version: Literal["private-historical-demo-v1"]
+    case_id: Literal["agi2028"]
+    title: str = Field(min_length=1)
+    recorded_at: datetime
+    original_input: str = Field(min_length=1)
+    acceptance_note: str = Field(min_length=1)
+    provenance_note: str = Field(min_length=1)
+    accepted_state: AcceptedThesisStateUiOut
+    market_pool: MarketPoolUiOut
+
+    @model_validator(mode="after")
+    def bound_evidence(self):
+        accepted, pool = self.accepted_state, self.market_pool
+        if (
+            accepted.thesis_analysis_id != pool.thesis_analysis_id
+            or accepted.latest_market_display_set_id != pool.market_display_set_id
+            or accepted.accepted_thesis_summary != pool.accepted_thesis_summary
+            or not accepted.accepted_thesis_wording
+            or accepted.accepted_thesis_wording != pool.accepted_thesis_wording
+            or accepted.restored_source is not None
+        ):
+            raise ValueError("historical acceptance/pool binding mismatch")
+        if (
+            not pool.assessment_complete or pool.incomplete_reasons
+            or pool.assessed_count != 3 or pool.target_count != 3
+            or pool.displayed_count != 3 or len(pool.candidate_markets) != 3
+            or pool.system_pool_outcome != "no_clean_expression"
+            or pool.retrieval_scope is None
+            or pool.retrieval_scope.scope_kind != "frozen_snapshot"
+            or pool.retrieval_scope.snapshot_id != pool.snapshot_id
+            or pool.retrieval_scope.returned_count != 3
+        ):
+            raise ValueError("historical three-contract pool is incomplete or unbound")
+        for field in ("market_assessment_id", "candidate_set_member_id",
+                      "rules_capture_id", "market_id"):
+            if len({getattr(card, field) for card in pool.candidate_markets}) != 3:
+                raise ValueError("duplicate historical candidate identity")
+        for rank, card in enumerate(pool.candidate_markets, 1):
+            if (
+                card.snapshot_id != pool.snapshot_id or card.display_rank != rank
+                or card.pair_class != "not_an_expression"
+                or card.authority != "deterministic_only"
+                or not card.resolution_conditions or card.frozen_demo_evidence is not None
+                or card.relatedness_basis is not None
+            ):
+                raise ValueError("historical candidate evidence mismatch")
+        return self
+
+
+def _historical_case_digest(payload: dict) -> str:
+    return sha256(json.dumps(
+        payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    ).encode("utf-8")).hexdigest()
+
+
+class HistoricalDemoPredecessor(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    case: HistoricalDemoCase
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="before")
+    @classmethod
+    def pinned_predecessor(cls, value):
+        if (
+            not isinstance(value, dict)
+            or not isinstance(value.get("case"), dict)
+            or _historical_case_digest(value["case"]) != value.get("sha256")
+        ):
+            raise ValueError("historical predecessor digest mismatch")
+        return value
+
+
+class HistoricalRelatednessBasis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    schema_version: Literal["source-bound-relatedness-v1"]
+    predecessor_pair_class: Literal["not_an_expression"]
+    authority: Literal["source_bound_relation_proposal"]
+    proposal: RelatedPairProposal
+
+
+class HistoricalDemoPresentation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    original_input_en: str = Field(min_length=1)
+    acceptance_note_en: str = Field(min_length=1)
+
+
+class HistoricalDemoCaseV2(BaseModel):
+    """Successor presentation with the complete original packet retained."""
+
+    model_config = ConfigDict(extra="forbid")
+    schema_version: Literal["private-historical-demo-v2"]
+    case_id: Literal["agi2028"]
+    title: str = Field(min_length=1)
+    recorded_at: datetime
+    original_input: str = Field(min_length=1)
+    acceptance_note: str = Field(min_length=1)
+    provenance_note: str = Field(min_length=1)
+    presentation: HistoricalDemoPresentation
+    accepted_state: AcceptedThesisStateUiOut
+    market_pool: MarketPoolUiOut
+    predecessor: HistoricalDemoPredecessor
+
+    @model_validator(mode="after")
+    def bound_successor(self):
+        accepted, pool = self.accepted_state, self.market_pool
+        old = self.predecessor.case
+        old_accepted, old_pool = old.accepted_state, old.market_pool
+        if (
+            self.case_id != old.case_id or self.original_input != old.original_input
+            or self.acceptance_note != old.acceptance_note
+            or accepted.thesis_analysis_id != old_accepted.thesis_analysis_id
+            or accepted.normalization_decision_id != old_accepted.normalization_decision_id
+            or accepted.accepted_at != old_accepted.accepted_at
+            or accepted.acceptance_origin != old_accepted.acceptance_origin
+            or accepted.accepted_thesis_summary != old_accepted.accepted_thesis_summary
+            or accepted.accepted_thesis_wording != old_accepted.accepted_thesis_wording
+            or accepted.restored_source != old_accepted.restored_source
+            or accepted.latest_market_display_set_id != pool.market_display_set_id
+            or pool.thesis_analysis_id != accepted.thesis_analysis_id
+            or pool.accepted_thesis_summary != accepted.accepted_thesis_summary
+            or pool.accepted_thesis_wording != accepted.accepted_thesis_wording
+        ):
+            raise ValueError("historical successor acceptance binding mismatch")
+        if (
+            pool.market_display_set_id == old_pool.market_display_set_id
+            or pool.fit_card_id == old_pool.fit_card_id
+            or pool.candidate_set_id == old_pool.candidate_set_id
+            or pool.snapshot_id != old_pool.snapshot_id
+            or pool.snapshot_as_of != old_pool.snapshot_as_of
+            or not pool.assessment_complete or pool.incomplete_reasons
+            or pool.assessed_count != 3 or pool.target_count != 3
+            or pool.displayed_count != 3 or len(pool.candidate_markets) != 3
+            or pool.system_pool_outcome != "no_clean_expression"
+            or pool.retrieval_scope is None
+            or pool.retrieval_scope.scope_kind != "frozen_snapshot"
+            or pool.retrieval_scope.snapshot_id != pool.snapshot_id
+            or pool.retrieval_scope.returned_count != 3
+        ):
+            raise ValueError("historical successor pool binding mismatch")
+        old_cards = {card.market_id: card for card in old_pool.candidate_markets}
+        if {card.market_id for card in pool.candidate_markets} != set(old_cards):
+            raise ValueError("historical successor market set mismatch")
+        for field in ("market_assessment_id", "candidate_set_member_id",
+                      "rules_capture_id", "market_id"):
+            if len({getattr(card, field) for card in pool.candidate_markets}) != 3:
+                raise ValueError("duplicate historical successor candidate identity")
+        proposal_ids: set[uuid.UUID] = set()
+        related_count = 0
+        wording = accepted.accepted_thesis_wording or ""
+        for rank, card in enumerate(pool.candidate_markets, 1):
+            before = old_cards[card.market_id]
+            if (
+                card.display_rank != rank or card.snapshot_id != pool.snapshot_id
+                or card.market_title != before.market_title
+                or card.retrieval_rank != before.retrieval_rank
+                or card.resolution_conditions != before.resolution_conditions
+                or card.rules_capture_id != before.rules_capture_id
+                or card.market_assessment_id == before.market_assessment_id
+                or card.candidate_set_member_id == before.candidate_set_member_id
+                or card.frozen_demo_evidence is not None
+            ):
+                raise ValueError("historical successor rules or candidate identity mismatch")
+            if card.relatedness_basis is None:
+                if card.pair_class != before.pair_class or card.authority != before.authority:
+                    raise ValueError("unannotated historical successor class changed")
+                continue
+            basis = HistoricalRelatednessBasis.model_validate(card.relatedness_basis)
+            proposal = basis.proposal
+            if (
+                card.pair_class != "weak_proxy"
+                or card.authority != basis.authority
+                or basis.predecessor_pair_class != before.pair_class
+                or proposal.thesis_analysis_id != accepted.thesis_analysis_id
+                or proposal.accepted_wording_sha256 != sha256(wording.encode("utf-8")).hexdigest()
+                or proposal.market_id != card.market_id
+                or proposal.snapshot_id != card.snapshot_id
+                or proposal.rules_capture_id != card.rules_capture_id
+                or proposal.rules_sha256 != sha256(card.resolution_conditions.encode("utf-8")).hexdigest()
+                or not proposal.claim_quote.strip()
+                or proposal.claim_quote not in wording
+                or not proposal.rules_quote.strip()
+                or proposal.rules_quote not in card.resolution_conditions
+                or not proposal.proposer_id.strip()
+                or not proposal.rationale.strip()
+                or proposal.proposal_id in proposal_ids
+            ):
+                raise ValueError("historical successor relatedness evidence mismatch")
+            proposal_ids.add(proposal.proposal_id)
+            related_count += 1
+        if not related_count:
+            raise ValueError("historical successor lacks a relatedness proposal")
+        return self
+
+
+def load_historical_demo_case(path: Path, expected_sha256: str) -> dict:
+    """Check the local envelope, retaining its canonical digest as a UI pin."""
+    envelope = json.loads(path.read_text(encoding="utf-8"))
+    payload = envelope["case"]
+    digest = _historical_case_digest(payload)
+    if digest != envelope["sha256"] or digest != expected_sha256:
+        raise ValueError("historical demo digest mismatch")
+    if payload.get("schema_version") == "private-historical-demo-v1":
+        HistoricalDemoCase.model_validate(payload)
+    elif payload.get("schema_version") == "private-historical-demo-v2":
+        HistoricalDemoCaseV2.model_validate(payload)
+    else:
+        raise ValueError("unsupported historical demo schema")
+    return {"case": payload, "sha256": digest}
 
 
 class AccountVerifiedBinding(Protocol):
@@ -308,6 +527,7 @@ def build_app(
     account_sessions: AccountSessionManager | None = None,
     source_job_admission: SourceJobAdmission | None = None,
     demo_admission: DemoAdmission | None = None,
+    historical_case: dict | None = None,
 ) -> FastAPI:
     if account_resolver is not None and not isinstance(api, ProductServices):
         raise ValueError("account mode requires services, not a prebound actor")
@@ -335,6 +555,32 @@ def build_app(
         raise ValueError("offline account mode requires fixture services")
     if demo_services is not None and demo_services.mode != "fixture":
         raise ValueError("anonymous demo requires fixture mode")
+    if historical_case is not None:
+        if demo_services is None or demo_admission is not None:
+            raise ValueError("private history requires a local anonymous fixture demo")
+        if historical_case["case"].get("schema_version") == "private-historical-demo-v1":
+            payload = HistoricalDemoCase.model_validate(historical_case["case"])
+        elif historical_case["case"].get("schema_version") == "private-historical-demo-v2":
+            payload = HistoricalDemoCaseV2.model_validate(historical_case["case"])
+        else:
+            raise ValueError("unsupported historical demo schema")
+        history_digest = _historical_case_digest(historical_case["case"])
+        if history_digest != historical_case["sha256"]:
+            raise ValueError("historical demo digest mismatch")
+        history = deepcopy(historical_case)
+        history_metadata = {
+            "case_id": payload.case_id, "title": payload.title,
+            "sha256": history_digest, "schema_version": payload.schema_version,
+        }
+    else:
+        history = history_metadata = None
+    curated_agi = load_curated_agi_case() if demo_services is not None else None
+    curated_agi_metadata = (
+        {"case_id": curated_agi["case"]["case_id"],
+         "schema_version": curated_agi["case"]["schema_version"],
+         "sha256": curated_agi["sha256"]}
+        if curated_agi is not None else None
+    )
     if fixture_revisit_explanation is not None and api.mode != "fixture":
         raise ValueError("fixture explanation is available only in fixture mode")
     fixture_note = deepcopy(fixture_revisit_explanation)
@@ -535,6 +781,17 @@ def build_app(
     if demo_sessions is not None:
         @app.middleware("http")
         async def demo_identity(request: Request, call_next):
+            if history is not None:
+                try:
+                    local_client = request.client is not None and ip_address(
+                        request.client.host
+                    ).is_loopback
+                except ValueError:
+                    local_client = False
+                if not local_client or request.url.hostname not in {
+                    "localhost", "127.0.0.1", "::1"
+                }:
+                    return JSONResponse({"error": "private_history_local_only"}, status_code=403)
             # Count streamed bytes, including chunked bodies without a declared
             # Content-Length, before any identity lookup or database mutation.
             if demo_admission is not None:
@@ -570,6 +827,8 @@ def build_app(
                 path == "/api/health"
                 or path == "/api/demo/reset"
                 or path == "/api/demo/hormuz"
+                or (curated_agi is not None and path == "/api/demo/agi2028")
+                or (history is not None and path == "/api/demo/history/agi2028")
                 or (path.startswith("/api/v3/") and not path.endswith("/feedback"))
             ):
                 return JSONResponse({"error": "not_found"}, status_code=404)
@@ -779,6 +1038,8 @@ def build_app(
             )
             return {"ok": True, "mode": "fixture", "anonymous_demo": True,
                     "session_ref": request.state.demo_session_ref,
+                    "historical_case": history_metadata,
+                    "curated_agi_case": curated_agi_metadata,
                     "founder_acceptance": {"enabled": False},
                     "fixture_source_examples": [MULTI_THESIS_FIXTURE],
                     "fixture_clarification_examples": [
@@ -794,6 +1055,15 @@ def build_app(
         def start_hormuz():
             from el.product.demo_hormuz import ensure_hormuz
             return ensure_hormuz(demo_services, api._actor)
+
+        @app.get("/api/demo/agi2028")
+        def curated_agi_demo(request: Request):
+            return {**deepcopy(curated_agi), "session_ref": request.state.demo_session_ref}
+
+    if history is not None:
+        @app.get("/api/demo/history/agi2028")
+        def historical_demo(request: Request):
+            return {**deepcopy(history), "session_ref": request.state.demo_session_ref}
 
     @app.post("/api/thesis")
     def intake(payload: IntakeIn):
@@ -1105,9 +1375,17 @@ def build_app(
 
 
 def build_default_app() -> FastAPI:
+    import os
+    history_path = os.environ.get("FITCHECK_PRIVATE_HISTORY_FILE")
+    history_pin = os.environ.get("FITCHECK_PRIVATE_HISTORY_SHA256")
+    if bool(history_path) != bool(history_pin):
+        raise ValueError("private history requires an explicit file and digest pin")
+    if history_path and os.environ.get("FITCHECK_ANONYMOUS_DEMO") != "1":
+        raise ValueError("private history requires anonymous fixture mode")
     services = build_services()
-    if __import__("os").environ.get("FITCHECK_ANONYMOUS_DEMO") == "1":
-        return build_app(services)
+    if os.environ.get("FITCHECK_ANONYMOUS_DEMO") == "1":
+        history = load_historical_demo_case(Path(history_path), history_pin) if history_path else None
+        return build_app(services, historical_case=history)
     actor = local_actor(services.session_factory)
     return build_app(ProductApi(services, actor))
 

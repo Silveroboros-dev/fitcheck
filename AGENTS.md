@@ -16,6 +16,11 @@ review data, live-provider adapters, deployment state, or private history.
 
 ## Architecture invariants
 
+- Preserve the FitCheck logo in the top-left UI header through routine updates.
+  Removing it requires a direct instruction from the product owner.
+- Keep UI labels and demo presentation in English. Mark translated source text
+  as a translation and retain original wording in the saved evidence.
+
 - Models may propose. Deterministic checks enforce declared schemas, safety
   conditions, provenance, and other narrow invariants; human review governs
   semantic labels and durable decisions. Neither a model nor a deterministic

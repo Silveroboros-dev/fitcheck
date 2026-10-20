@@ -17,6 +17,12 @@ repository.
 
 - Core `el/` Python packages after automated boundary checks.
 - Selected deterministic tests and newly written minimal synthetic fixtures.
+- The explicitly enumerated `el/product/demo_fixtures/agi2028.json`
+  educational case, containing project-authored summaries of real contract
+  topics and explanatory labels. This is original explanatory text, not
+  another exception for redistributing provider text. No raw rules, provider
+  response, live price, private human decision or capture record is included.
+  Its reconstruction and proposal status must remain visible.
 - The exact locked `el/product/demo_fixtures/hormuz_rules.json` projection
   declared in `DATA_CARD.md` and `THIRD_PARTY_NOTICES.md`, solely for the
   versioned retained-rules fixture. File SHA-256

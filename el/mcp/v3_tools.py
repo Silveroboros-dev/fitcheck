@@ -36,6 +36,8 @@ from el.product.demo_frozen_markets import assessment_evidence, validate_frozen_
 from el.marketpool.service import (
     MarketPoolConflict,
     MarketPoolNotFound,
+    accepted_thesis_wording,
+    relatedness_evidence,
     project_pool_outcome,
 )
 from el.mcp.auth import Principal
@@ -511,6 +513,7 @@ class McpV3Tools:
                             snapshot_id=assessment.snapshot_id,
                             rules_capture_id=assessment.rules_capture_id,
                             frozen_demo_evidence=assessment_evidence(assessment, thesis, capture, session.get(FitCard, assessment.fit_card_id)),
+                            relatedness_basis=relatedness_evidence(assessment, thesis, capture),
                         )
                     )
                 if [card.display_rank for card in cards] != list(
@@ -544,6 +547,7 @@ class McpV3Tools:
                     fit_card_id=display_set.fit_card_id,
                     thesis_analysis_id=display_set.thesis_analysis_id,
                     accepted_thesis_summary=thesis.normalized_claim_summary,
+                    accepted_thesis_wording=accepted_thesis_wording(thesis),
                     candidate_set_id=display_set.candidate_set_id,
                     retrieval_scope=retrieval_scope,
                     snapshot_id=display_set.snapshot_id,

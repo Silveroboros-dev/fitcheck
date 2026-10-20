@@ -62,7 +62,10 @@ from el.extraction.service import NormalizationAttemptNotFound
 from el.jobs import JobNotFound
 from el.product.demo_admission import DemoAdmission
 from el.product.demo_frozen_markets import assessment_evidence, validate_frozen_display_pool
-from el.marketpool.service import MarketPoolConflict, MarketPoolNotFound
+from el.marketpool.service import (
+    MarketPoolConflict, MarketPoolNotFound, accepted_thesis_wording,
+    project_pool_outcome, relatedness_evidence,
+)
 from el.mcp.contracts import (
     BlindPriorRequired,
     NotFound,
@@ -245,10 +248,12 @@ class AcceptedThesisStateUiOut(_Out):
 
     thesis_analysis_id: uuid.UUID
     accepted_thesis_summary: str
+    accepted_thesis_wording: str | None = None
     normalization_decision_id: uuid.UUID
     accepted_at: str
     acceptance_origin: Literal["human_ui"]
     restored_source: RestoredSourceUiOut | None
+    latest_market_display_set_id: uuid.UUID | None = None
     SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
         {
             "restored_source.original_source_text",
@@ -399,8 +404,11 @@ class MarketAssessmentUiOut(_Out):
     snapshot_id: str
     rules_capture_id: uuid.UUID
     frozen_demo_evidence: dict | None = None
+    relatedness_basis: dict | None = None
     SOURCE_PATHS: ClassVar[frozenset[str]] = frozenset(
-        {"market_title", "resolution_conditions"}
+        {"market_title", "resolution_conditions",
+         "relatedness_basis.proposal.claim_quote",
+         "relatedness_basis.proposal.rules_quote"}
     )
 
 
@@ -409,6 +417,7 @@ class MarketPoolUiOut(_Out):
     fit_card_id: uuid.UUID
     thesis_analysis_id: uuid.UUID
     accepted_thesis_summary: str
+    accepted_thesis_wording: str | None = None
     candidate_set_id: uuid.UUID
     retrieval_scope: CandidateSetRetrievalScope | None
     snapshot_id: str
@@ -427,6 +436,8 @@ class MarketPoolUiOut(_Out):
         {
             "candidate_markets[].market_title",
             "candidate_markets[].resolution_conditions",
+            "candidate_markets[].relatedness_basis.proposal.claim_quote",
+            "candidate_markets[].relatedness_basis.proposal.rules_quote",
         }
     )
 
@@ -1006,14 +1017,22 @@ class ProductApi:
             restored_source = self._restored_source_for_acceptance(
                 session, thesis.id, decision.id, attempt
             )
+            latest_pool_id = session.scalar(
+                select(MarketDisplaySet.id)
+                .where(MarketDisplaySet.thesis_analysis_id == thesis.id)
+                .order_by(MarketDisplaySet.created_at.desc(), MarketDisplaySet.id.desc())
+                .limit(1)
+            )
             return self._guard(
                 AcceptedThesisStateUiOut(
                     thesis_analysis_id=thesis.id,
                     accepted_thesis_summary=thesis.normalized_claim_summary,
+                    accepted_thesis_wording=accepted_thesis_wording(thesis),
                     normalization_decision_id=decision.id,
                     accepted_at=self._iso_utc(decision.created_at),
                     acceptance_origin=ClientType.HUMAN_UI.value,
                     restored_source=restored_source,
+                    latest_market_display_set_id=latest_pool_id,
                 )
             )
 
@@ -1381,6 +1400,28 @@ class ProductApi:
                 )
                 .order_by(MarketDisplayItem.display_rank)
             ).all()
+            if len(items) != display_set.displayed_count:
+                raise MarketPoolConflict(
+                    "displayed market count does not match bound items"
+                )
+            if (
+                display_set.displayed_count > 3
+                or display_set.assessed_count < display_set.displayed_count
+                or (
+                    display_set.assessment_complete
+                    and display_set.displayed_count != display_set.target_count
+                )
+                or (
+                    display_set.system_pool_outcome == "no_clean_expression"
+                    and (
+                        not display_set.assessment_complete
+                        or display_set.displayed_count == 0
+                    )
+                )
+            ):
+                raise MarketPoolConflict(
+                    "market pool completeness binding is invalid"
+                )
             cards: list[MarketAssessmentUiOut] = []
             for item in items:
                 assessment = session.get(
@@ -1434,19 +1475,35 @@ class ProductApi:
                         snapshot_id=assessment.snapshot_id,
                         rules_capture_id=assessment.rules_capture_id,
                         frozen_demo_evidence=assessment_evidence(assessment, thesis, capture, fit_card),
+                        relatedness_basis=relatedness_evidence(assessment, thesis, capture),
                     )
                 )
             if [card.display_rank for card in cards] != list(
                 range(1, len(cards) + 1)
             ):
                 raise MarketPoolConflict("display ranks are not contiguous")
+            if len({card.market_id for card in cards}) != len(cards):
+                raise MarketPoolConflict("displayed market identities are not unique")
             validate_frozen_display_pool(display_set, thesis, cards)
+            projected_complete, projected_outcome, projected_reasons = (
+                project_pool_outcome(
+                    [card.pair_class for card in cards],
+                    target_count=display_set.target_count,
+                )
+            )
+            if (
+                projected_complete != display_set.assessment_complete
+                or projected_outcome != display_set.system_pool_outcome
+                or projected_reasons != list(display_set.incomplete_reasons)
+            ):
+                raise MarketPoolConflict("market pool outcome binding is invalid")
             return self._guard(
                 MarketPoolUiOut(
                     market_display_set_id=display_set.id,
                     fit_card_id=display_set.fit_card_id,
                     thesis_analysis_id=display_set.thesis_analysis_id,
                     accepted_thesis_summary=thesis.normalized_claim_summary,
+                    accepted_thesis_wording=accepted_thesis_wording(thesis),
                     candidate_set_id=display_set.candidate_set_id,
                     retrieval_scope=retrieval_scope,
                     snapshot_id=display_set.snapshot_id,

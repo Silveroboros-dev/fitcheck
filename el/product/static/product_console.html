@@ -301,6 +301,16 @@
   #pool-thesis, #pool-evidence { overflow-wrap:anywhere; }
   .market-grid { display:grid; grid-template-columns:minmax(0,1fr);
                  gap:16px; margin-top:18px; }
+  .curated-card { padding:18px 20px; border:1px solid var(--line);
+                  background:var(--panel-2); overflow-wrap:anywhere; }
+  .curated-card h3 { margin:0; font:400 19px/1.4 var(--serif); }
+  .curated-card h4 { margin:14px 0 5px; color:var(--brass-bright);
+                     font:12px/1.4 var(--sans); letter-spacing:.1em;
+                     text-transform:uppercase; }
+  .curated-card p, .curated-card li { color:var(--ink-dim); font:14px/1.55 var(--serif); }
+  .curated-card ul { margin:6px 0 0; padding-left:20px; }
+  .curated-card details { margin-top:12px; color:var(--mut); font:13px/1.55 var(--serif); }
+  .curated-card summary { cursor:pointer; }
   .market-option { display:grid; grid-template-columns:auto minmax(0,1fr); gap:14px;
                    padding:18px 20px; border:1px solid var(--line);
                    background:var(--panel-2); }
@@ -382,13 +392,46 @@
 <main>
 
 <section id="demo-journeys" data-plate="D" hidden>
-  <h2>Choose a demo journey <span class="tag">frozen fixture · independent cases</span></h2>
+  <h2>Choose a demo journey <span class="tag">saved evidence · independent cases</span></h2>
   <p class="notice">Each journey starts a fresh private visitor session. These are separate examples, not a continuous history.</p>
   <div class="row">
     <button id="demo-source" class="secondary">Stablecoin / Robinhood source discovery</button>
     <button id="demo-hormuz" class="secondary">Hormuz changed-rules review</button>
+    <button id="demo-history" class="secondary" hidden>AGI 2028 · historical comparison</button>
   </div>
   <div id="demo-journey-state" class="status" role="status" aria-live="polite"></div>
+</section>
+
+<section id="historical-case" data-plate="H" hidden>
+  <h2 id="historical-title"></h2>
+  <p class="notice" id="historical-date"></p>
+  <div id="historical-version-controls" class="row" hidden>
+    <button id="historical-current" class="secondary">Current relatedness proposal</button>
+    <button id="historical-original" class="secondary">Original saved run</button>
+  </div>
+  <p id="historical-version-note" class="notice"></p>
+  <dl class="kv">
+    <dt id="historical-input-label">Original thesis input</dt><dd id="historical-input"></dd>
+    <dt id="historical-acceptance-label">Human clarification</dt><dd id="historical-acceptance"></dd>
+  </dl>
+  <p class="evidence" id="historical-provenance"></p>
+</section>
+
+<section id="curated-agi-case" data-plate="H" hidden>
+  <h2 id="curated-agi-title"></h2>
+  <p class="notice">Curated reconstruction · authored summaries of three real contract topics · read-only</p>
+  <div class="row">
+    <button id="curated-agi-current" class="secondary">Current relatedness proposal</button>
+    <button id="curated-agi-earlier" class="secondary">Earlier automatic labels</button>
+  </div>
+  <p id="curated-agi-version-note" class="notice"></p>
+  <p id="curated-agi-thesis" class="pool-summary"></p>
+  <p id="curated-agi-criterion"></p>
+  <p id="curated-agi-pool" class="pool-summary"></p>
+  <div id="curated-agi-cards" class="market-grid"></div>
+  <p id="curated-agi-proposal" class="notice"></p>
+  <p id="curated-agi-next-steps"></p>
+  <p id="curated-agi-provenance" class="evidence"></p>
 </section>
 
 <section id="acceptance-catalog" class="acceptance-catalog" data-plate="A" hidden>
@@ -415,6 +458,7 @@
 <section id="s1" data-plate="01" aria-busy="false">
   <h2><span id="s1-heading">Source intake</span> <span class="tag" id="s1-tag">raw input, not yet a chosen thesis</span></h2>
   <div id="s1-fresh-controls">
+  <div id="source-entry-controls">
   <textarea id="input_text" placeholder="Paste a messy thesis, post, or source text…"></textarea>
   <p id="restored-source-note" class="notice" hidden>The field above starts a new source journey.
     Historical source context for the accepted thesis is shown read-only below.</p>
@@ -431,6 +475,7 @@
   <div id="source-pending" class="pending-feedback" role="status"
        aria-live="polite" hidden>
     Source received. Identifying distinct thesis candidates; this may take a moment.
+  </div>
   </div>
   <div id="source-review" class="proposal" aria-busy="false" hidden>
     <h3>Source-derived thesis candidates — your priority decides</h3>
@@ -550,15 +595,17 @@
 <section id="s3" class="stale" data-plate="02">
   <h2><span id="s3-heading">Market expressions</span> <span class="tag" id="s3-tag">up to three independent assessments</span></h2>
   <div id="s3-discovery-controls">
-  <p class="notice" style="margin:0">See what each contract can and cannot test,
+  <p id="market-discovery-intro" class="notice" style="margin:0">See what each contract can and cannot test,
     then make your own choice. Retrieval rank is evidence, not a verdict.</p>
   <div class="row"><button id="find-markets">Find market expressions</button></div>
   <p id="demo-market-pending" class="notice" hidden>Frozen candidate-bound evidence is unavailable for this thesis. No market pool or no-clean conclusion is available.</p>
   <div id="pool" hidden>
+    <p id="saved-pool-note" class="notice" hidden>Saved comparison. Viewing these frozen assessments records no new decision and makes no fresh market or model request.</p>
     <div class="evidence" id="pool-thesis"></div>
     <div id="pool-summary" class="pool-summary"></div>
     <div class="evidence" id="pool-evidence"></div>
     <div id="market-grid" class="market-grid" role="radiogroup" aria-label="Market expression choice"></div>
+    <div id="pool-choice-controls">
     <label class="choice-none row">
       <input type="radio" name="market-choice" id="choose-none" value="none">
       None of these contracts expresses my thesis
@@ -568,6 +615,7 @@
       <span id="choice-state" class="tag">unanswered</span>
     </div>
     <div id="choice-ack" class="ack" hidden></div>
+    </div>
     <div class="feedback" id="assessment-feedback" hidden>
       <h3 class="tag">Something wrong with this assessment?</h3>
       <span class="lens">feedback becomes a pending review candidate; the displayed assessment does not change</span>
@@ -831,6 +879,7 @@ const chain = {
   marketSnapshotAsOf: null,
   marketCandidateSetId: null,
   marketCards: [],
+  marketInspection: false,
   marketChoiceId: null,
   selectedAssessmentId: null,
   selectedMarket: null,
@@ -873,6 +922,13 @@ let activeAcceptanceCase = null;
 let productMode = null;
 let anonymousDemo = false;
 let demoSessionRef = null;
+let historicalCaseMetadata = null;
+let historicalInspection = false;
+let historicalSwitchPending = false;
+let curatedAgiMetadata = null;
+let curatedAgiInspection = false;
+let curatedAgiSwitchPending = false;
+let demoJourneyPending = false;
 let boundedSourceTerminal = null;
 
 const $ = (id) => document.getElementById(id);
@@ -1046,6 +1102,25 @@ $("start-new-source").onclick = () => {
 };
 
 function resetDownstream() {
+  historicalInspection = false;
+  curatedAgiInspection = false;
+  $("curated-agi-case").hidden = true;
+  delete $("curated-agi-case").dataset.binding;
+  $("curated-agi-cards").innerHTML = "";
+  $("curated-agi-version-note").textContent = "";
+  $("curated-agi-current").disabled = false;
+  $("curated-agi-earlier").disabled = false;
+  $("s1").hidden = false;
+  $("s3").hidden = false;
+  $("historical-case").hidden = true;
+  delete $("historical-case").dataset.binding;
+  $("historical-version-controls").hidden = true;
+  $("historical-version-note").textContent = "";
+  $("historical-current").disabled = false;
+  $("historical-original").disabled = false;
+  $("source-entry-controls").hidden = false;
+  $("market-discovery-intro").hidden = false;
+  $("find-markets").hidden = false;
   // A new/changed thesis clears ALL downstream state (AC-4).
   if (typeof window !== "undefined" && window.history?.replaceState) {
     const resumeParams = new URLSearchParams(window.location.search);
@@ -1073,6 +1148,7 @@ function resetDownstream() {
   chain.marketDisplaySetId = null; chain.marketSnapshotId = null;
   chain.marketSnapshotAsOf = null;
   chain.marketCandidateSetId = null; chain.marketCards = [];
+  chain.marketInspection = false;
   chain.marketChoiceId = null; chain.selectedAssessmentId = null;
   chain.selectedMarket = null;
   chain.selectionKind = null; chain.feedbackAssessmentId = null;
@@ -1112,6 +1188,8 @@ function resetDownstream() {
   $("submit-revision").disabled = false;
   $("cancel-revision").disabled = false;
   $("s1-out").hidden = true;
+  $("norm-summary").textContent = "";
+  delete $("norm-summary").dataset.acceptedSummary;
   $("restored-acceptance-label").hidden = true;
   $("restored-acceptance").hidden = true;
   $("restored-acceptance").textContent = "";
@@ -1127,6 +1205,8 @@ function resetDownstream() {
   $("restored-source-url").textContent = "";
   $("card").hidden = true; $("draft").hidden = true; $("noclean").hidden = true;
   $("pool").hidden = true; $("market-grid").innerHTML = "";
+  $("saved-pool-note").hidden = true;
+  $("pool-choice-controls").hidden = false;
   $("pool-thesis").textContent = ""; $("pool-evidence").textContent = "";
   $("choose-none").checked = false; $("choose-none").disabled = false;
   $("submit-choice").disabled = true;
@@ -1952,6 +2032,7 @@ $("accept-proposal").onclick = async () => {
         "selected thesis · normalization accepted for this run";
     }
     $("norm-summary").textContent = $("proposal-summary").textContent;
+    $("norm-summary").dataset.acceptedSummary = $("proposal-summary").textContent;
     $("thesis-id").textContent = out.thesis_analysis_id;
     $("restored-acceptance-label").hidden = true;
     $("restored-acceptance").hidden = true;
@@ -1977,6 +2058,8 @@ function acceptedStateIsBound(out, expectedThesisId) {
     UUID_PATTERN.test(String(out.normalization_decision_id || "")) &&
     typeof out.accepted_at === "string" && out.accepted_at.length > 0 &&
     out.acceptance_origin === "human_ui" &&
+    (out.latest_market_display_set_id == null ||
+      UUID_PATTERN.test(String(out.latest_market_display_set_id))) &&
     restoredSourceIsBound(out.restored_source, out);
 }
 
@@ -2008,7 +2091,8 @@ function renderRestoredAcceptedThesis(out) {
   enableFrozenDemoMarketStep();
   chain.normalizationDecisionId = out.normalization_decision_id;
   chain.sourceCandidateChoiceId = out.restored_source?.source_candidate_choice_id || null;
-  $("norm-summary").textContent = out.accepted_thesis_summary;
+  $("norm-summary").textContent = out.accepted_thesis_wording || out.accepted_thesis_summary;
+  $("norm-summary").dataset.acceptedSummary = out.accepted_thesis_summary;
   $("thesis-id").textContent = out.thesis_analysis_id;
   $("restored-acceptance").textContent =
     "Restored original human acceptance — no new decision was recorded. " +
@@ -2064,12 +2148,40 @@ async function resumeAcceptedThesis(
       throw new Error("saved accepted thesis did not bind to this journey");
     }
     renderRestoredAcceptedThesis(out);
+    await restoreSavedMarketPool(out, tokenAtCall);
   } catch (_) {
     if (tokenAtCall === chain.requestToken) {
       err("s1-err", "Saved accepted thesis is unavailable for this local session.");
     }
   }
   return true;
+}
+
+async function restoreSavedMarketPool(accepted, tokenAtCall) {
+  const poolId = accepted.latest_market_display_set_id;
+  if (!poolId) return;
+  const thesisId = accepted.thesis_analysis_id;
+  const sequenceAtCall = chain.marketRequestSequence;
+  const stillCurrent = () => tokenAtCall === chain.requestToken &&
+    chain.thesisId === thesisId &&
+    chain.marketRequestSequence === sequenceAtCall;
+  clearPoolProjection();
+  err("s3-err", null);
+  try {
+    const out = await api(`/api/v3/market-pools/${poolId}`);
+    if (!stillCurrent()) return;
+    if (out.market_display_set_id !== poolId ||
+        !validatePoolBinding(out, thesisId)) {
+      throw new Error("saved market evidence identity mismatch");
+    }
+    renderMarketPool(out, { readOnly: true });
+    step("st-retrieve", "done");
+    step("st-fit", out.assessment_complete ? "done" : "failed");
+  } catch (_) {
+    if (!stillCurrent()) return;
+    clearPoolProjection();
+    err("s3-err", "Saved market comparison is unavailable. Your accepted thesis remains available.");
+  }
 }
 
 function updateClarificationSubmitState() {
@@ -2264,7 +2376,7 @@ const PAIR_LABEL = {
 };
 
 function enableFrozenDemoMarketStep() {
-  if (!anonymousDemo || !chain.thesisId) return;
+  if (!anonymousDemo || !chain.thesisId || historicalInspection) return;
   $("demo-market-pending").hidden = true;
   $("find-markets").disabled = false;
 }
@@ -2274,10 +2386,13 @@ function clearPoolProjection() {
   chain.marketDisplaySetId = null; chain.marketSnapshotId = null;
   chain.marketSnapshotAsOf = null;
   chain.marketCandidateSetId = null; chain.marketCards = [];
+  chain.marketInspection = false;
   chain.marketChoiceId = null; chain.selectedAssessmentId = null;
   chain.selectedMarket = null;
   chain.selectionKind = null; chain.feedbackAssessmentId = null;
   $("pool").hidden = true; $("market-grid").innerHTML = "";
+  $("saved-pool-note").hidden = true;
+  $("pool-choice-controls").hidden = false;
   $("choose-none").checked = false; $("choose-none").disabled = false;
   $("submit-choice").disabled = true;
   $("choice-state").textContent = "unanswered";
@@ -2286,6 +2401,7 @@ function clearPoolProjection() {
 }
 
 function selectMarketChoice(kind, assessmentId) {
+  if (chain.marketInspection) return;
   clearRevisitFollowup();
   chain.marketChoiceId = null;
   chain.selectionKind = kind;
@@ -2303,13 +2419,14 @@ function selectMarketChoice(kind, assessmentId) {
   err("feedback-err", null);
 }
 
-function assessmentCard(card) {
+function assessmentCard(card, readOnly = false) {
   const shell = document.createElement("article");
   shell.className = "market-option";
 
   const radio = document.createElement("input");
   radio.type = "radio"; radio.name = "market-choice";
   radio.value = card.market_assessment_id;
+  radio.disabled = readOnly;
   radio.setAttribute("aria-label", "Select displayed market " + card.display_rank);
   radio.addEventListener("change", () =>
     selectMarketChoice("market", card.market_assessment_id));
@@ -2329,6 +2446,13 @@ function assessmentCard(card) {
   if (card.frozen_demo_evidence) {
     meta.textContent = (PAIR_LABEL[card.pair_class] || card.pair_class) +
       " · Frozen demo assessment";
+  }
+  if (card.relatedness_basis) {
+    meta.textContent = (PAIR_LABEL[card.pair_class] || card.pair_class) +
+      " proposal · predecessor automatic: " +
+      (PAIR_LABEL[card.relatedness_basis.predecessor_pair_class] ||
+       card.relatedness_basis.predecessor_pair_class) +
+      " · human semantic review pending";
   }
 
   const report = document.createElement("div"); report.className = "capmiss";
@@ -2364,6 +2488,33 @@ function assessmentCard(card) {
   });
 
   body.append(title, meta, report);
+  const relation = card.relatedness_basis;
+  if (relation) {
+    const panel = document.createElement("div");
+    panel.className = "proposal";
+    const heading = document.createElement("h3");
+    heading.textContent = "Why this may be a related weak proxy";
+    const status = document.createElement("p");
+    status.className = "market-meta";
+    status.textContent = "Source-bound relation proposal · " + relation.schema_version +
+      " · authority " + relation.authority + ". This is not a named human semantic judgment.";
+    const claimEvidence = document.createElement("p");
+    claimEvidence.textContent = "Accepted thesis excerpt: “" +
+      relation.proposal.claim_quote + "”";
+    const rulesEvidence = document.createElement("p");
+    rulesEvidence.textContent = "Frozen rule excerpt: “" +
+      relation.proposal.rules_quote + "”";
+    const rationale = document.createElement("p");
+    rationale.textContent = relation.proposal.rationale;
+    const provenance = document.createElement("p");
+    provenance.className = "market-meta";
+    provenance.textContent = "Proposal " + relation.proposal.proposal_id +
+      " · proposer " + relation.proposal.proposer_id +
+      " · predecessor class " + relation.predecessor_pair_class +
+      " · rules capture " + relation.proposal.rules_capture_id;
+    panel.append(heading, status, claimEvidence, rulesEvidence, rationale, provenance);
+    body.append(panel);
+  }
   const frozen = card.frozen_demo_evidence;
   if (frozen) {
     const conditions = document.createElement("div");
@@ -2423,7 +2574,7 @@ function assessmentCard(card) {
     body.append(conditions, fixtureStatus, snapshotDetails);
   }
   body.append(resolution);
-  if (!anonymousDemo) body.append(flag);
+  if (!anonymousDemo && !readOnly) body.append(flag);
   shell.append(radio, body);
   return shell;
 }
@@ -2458,13 +2609,16 @@ function validatePoolBinding(out, thesisId) {
   return true;
 }
 
-function renderMarketPool(out) {
+function renderMarketPool(out, { readOnly = false } = {}) {
+  chain.marketInspection = readOnly;
   chain.marketDisplaySetId = out.market_display_set_id;
   chain.marketSnapshotId = out.snapshot_id;
   chain.marketSnapshotAsOf = out.snapshot_as_of;
   chain.marketCandidateSetId = out.candidate_set_id;
   chain.marketCards = out.candidate_markets;
   $("pool").hidden = false;
+  $("saved-pool-note").hidden = !readOnly;
+  $("pool-choice-controls").hidden = readOnly;
   const summary = $("pool-summary"); summary.className = "pool-summary";
   if (out.system_pool_outcome === "candidate_expressions") {
     summary.textContent = out.displayed_count +
@@ -2480,10 +2634,14 @@ function renderMarketPool(out) {
       (out.incomplete_reasons.length ? out.incomplete_reasons.join("; ") : "reason unavailable") +
       ". No pool conclusion was made.";
   }
+  if (historicalInspection && readOnly &&
+      out.candidate_markets.some(card => Boolean(card.relatedness_basis))) {
+    summary.textContent += " The weak-proxy relatedness class is an unreviewed proposal.";
+  }
   const grid = $("market-grid"); grid.innerHTML = "";
-  out.candidate_markets.forEach((card) => grid.append(assessmentCard(card)));
+  out.candidate_markets.forEach((card) => grid.append(assessmentCard(card, readOnly)));
   $("pool-thesis").textContent = "Accepted thesis for this comparison: " +
-    out.accepted_thesis_summary;
+    (out.accepted_thesis_wording || out.accepted_thesis_summary);
   const scope = out.retrieval_scope;
   const scopeText = !scope
     ? "Search scope is unavailable for this historical candidate set."
@@ -2515,7 +2673,7 @@ function renderMarketPool(out) {
 }
 
 $("find-markets").onclick = async () => {
-  if (!chain.thesisId || chain.marketRequest !== null || $("find-markets").disabled) return;
+  if (historicalInspection || !chain.thesisId || chain.marketRequest !== null || $("find-markets").disabled) return;
   const request = beginMarketRequest();
   const thesisAtCall = request.thesisId;
   clearPoolProjection(); err("s3-err", null);
@@ -2553,7 +2711,7 @@ $("find-markets").onclick = async () => {
 $("choose-none").addEventListener("change", () => selectMarketChoice("none", null));
 
 $("submit-choice").onclick = async () => {
-  if (!chain.marketDisplaySetId || !chain.selectionKind) return;
+  if (chain.marketInspection || !chain.marketDisplaySetId || !chain.selectionKind) return;
   const displaySetAtCall = chain.marketDisplaySetId;
   const selectionAtCall = chain.selectionKind;
   const assessmentAtCall = chain.selectedAssessmentId;
@@ -2683,7 +2841,9 @@ function renderRevisitActivation(out) {
   const baselineBound = chain.revisitResumed
     ? revisitBaselineEquals(out?.baseline, chain.revisitBaseline)
     : out?.baseline && chain.selectedMarket &&
-      out.baseline.accepted_thesis === $("norm-summary").textContent &&
+      out.baseline.accepted_thesis === (
+        $("norm-summary").dataset.acceptedSummary || $("norm-summary").textContent
+      ) &&
       out.baseline.title === chain.selectedMarket.market_title &&
       out.baseline.rules === chain.selectedMarket.resolution_conditions &&
       out.baseline.snapshot_as_of === chain.marketSnapshotAsOf;
@@ -3761,48 +3921,348 @@ function setupFounderAcceptance(payload) {
   $("acceptance-catalog").hidden = false;
 }
 
+function setDemoJourneyUrl(kind, revisionId = null, historicalVersion = null) {
+  const params = new URLSearchParams(window.location.search);
+  params.delete(RESUME_THESIS_ID_PARAM);
+  params.delete(RESUME_REVISIT_REVISION_ID_PARAM);
+  params.delete("demo_history");
+  params.delete("history_version");
+  if (kind === "history") params.set("demo_history", "agi2028");
+  if (kind === "history" && historicalVersion === "original") {
+    params.set("history_version", "original");
+  }
+  if (revisionId) params.set(RESUME_REVISIT_REVISION_ID_PARAM, revisionId);
+  const suffix = params.toString();
+  window.history.replaceState(window.history.state, "",
+    (window.location.pathname || "/") + (suffix ? "?" + suffix : ""));
+}
+
+function requestedHistoricalVersion() {
+  const value = new URLSearchParams(window.location.search).get("history_version");
+  return value === null ? "current" : value === "original" ? "original" : null;
+}
+
+function historicalVersionsAreBound(successor, predecessor) {
+  if (!predecessor?.case || !predecessor.sha256 ||
+      predecessor.case.schema_version !== "private-historical-demo-v1") return false;
+  const currentAccepted = successor.accepted_state;
+  const originalAccepted = predecessor.case.accepted_state;
+  const currentPool = successor.market_pool;
+  const originalPool = predecessor.case.market_pool;
+  if (!currentAccepted || !originalAccepted || !currentPool || !originalPool ||
+      currentAccepted.thesis_analysis_id !== originalAccepted.thesis_analysis_id ||
+      currentAccepted.normalization_decision_id !== originalAccepted.normalization_decision_id ||
+      currentAccepted.accepted_thesis_wording !== originalAccepted.accepted_thesis_wording ||
+      currentAccepted.accepted_at !== originalAccepted.accepted_at ||
+      currentPool.market_display_set_id === originalPool.market_display_set_id ||
+      currentPool.snapshot_id !== originalPool.snapshot_id ||
+      currentPool.candidate_markets?.length !== originalPool.candidate_markets?.length) return false;
+  const originalCards = new Map(originalPool.candidate_markets.map(card => [card.market_id, card]));
+  return currentPool.candidate_markets.every(card => {
+    const old = originalCards.get(card.market_id);
+    return old && card.market_title === old.market_title &&
+      card.resolution_conditions === old.resolution_conditions &&
+      card.rules_capture_id === old.rules_capture_id &&
+      card.snapshot_id === old.snapshot_id;
+  });
+}
+
+async function loadHistoricalDemo(tokenAtCall = chain.requestToken) {
+  const sessionAtCall = demoSessionRef;
+  const current = () => tokenAtCall === chain.requestToken &&
+    sessionAtCall === demoSessionRef;
+  const metadata = historicalCaseMetadata;
+  historicalInspection = true;
+  $("run").disabled = true;
+  $("find-markets").disabled = true;
+  try {
+    if (!metadata || metadata.case_id !== "agi2028") {
+      throw new Error("This historical case is not configured on this server");
+    }
+    const out = await api("/api/demo/history/agi2028");
+    if (!current()) return;
+    const requestedVersion = requestedHistoricalVersion();
+    const successor = out.case;
+    const hasSuccessor = successor?.schema_version === "private-historical-demo-v2";
+    const hasOriginal = successor?.schema_version === "private-historical-demo-v1";
+    if (!requestedVersion || (!hasSuccessor && !hasOriginal) ||
+        (hasSuccessor && !historicalVersionsAreBound(successor, successor.predecessor))) {
+      throw new Error("Historical comparison versions are unavailable or unbound");
+    }
+    const version = hasSuccessor ? requestedVersion : "original";
+    const selected = hasSuccessor && version === "original"
+      ? successor.predecessor : out;
+    const item = selected.case;
+    const accepted = item?.accepted_state, pool = item?.market_pool;
+    if (out.sha256 !== metadata.sha256 || out.session_ref !== sessionAtCall ||
+        item?.case_id !== metadata.case_id ||
+        !acceptedStateIsBound(accepted, accepted?.thesis_analysis_id) ||
+        accepted.latest_market_display_set_id !== pool?.market_display_set_id ||
+        accepted.accepted_thesis_wording !== pool?.accepted_thesis_wording ||
+        !validatePoolBinding(pool, accepted.thesis_analysis_id)) {
+      throw new Error("Historical case identity mismatch; nothing was rendered");
+    }
+    renderRestoredAcceptedThesis(accepted);
+    renderMarketPool(pool, { readOnly: true });
+    const binding = JSON.stringify({
+      case_id: item.case_id, sha256: out.sha256,
+      selected_sha256: selected.sha256, history_version: version,
+      thesis_analysis_id: accepted.thesis_analysis_id,
+      normalization_decision_id: accepted.normalization_decision_id,
+      market_display_set_id: pool.market_display_set_id,
+      candidate_set_id: pool.candidate_set_id, fit_card_id: pool.fit_card_id,
+      snapshot_id: pool.snapshot_id
+    });
+    $("historical-case").dataset.binding = binding;
+    $("historical-case").hidden = false;
+    $("historical-version-controls").hidden = !hasSuccessor;
+    $("historical-current").disabled = version === "current";
+    $("historical-original").disabled = version === "original";
+    $("historical-version-note").textContent = version === "current"
+      ? "Current source-bound relatedness proposal. Human semantic review is pending; the original run remains available."
+      : "Original saved run. Its automatic labels are preserved exactly as recorded.";
+    $("historical-title").textContent = item.title;
+    $("historical-date").textContent = "Historical analysis recorded " +
+      item.recorded_at + ". The 2028 thesis outcome remains unknown.";
+    $("historical-input-label").textContent = hasSuccessor
+      ? "Original thesis input (English translation)" : "Original thesis input";
+    $("historical-acceptance-label").textContent = hasSuccessor
+      ? "Human clarification (English translation)" : "Human clarification";
+    $("historical-input").textContent = hasSuccessor
+      ? successor.presentation.original_input_en : item.original_input;
+    $("historical-acceptance").textContent = hasSuccessor
+      ? successor.presentation.acceptance_note_en : item.acceptance_note;
+    $("historical-provenance").textContent = item.provenance_note;
+    $("restored-acceptance").textContent =
+      "Original session's human acceptance, not a decision by this visitor. " +
+      "Decision " + accepted.normalization_decision_id + " · accepted " + accepted.accepted_at;
+    $("source-entry-controls").hidden = true;
+    $("market-discovery-intro").hidden = true;
+    $("find-markets").hidden = true;
+    $("s1-heading").textContent = "Historical accepted thesis";
+    $("s1-tag").textContent = "original acceptance · read-only";
+    $("mode").textContent = "mode: private historical replay · " + version;
+    $("run").disabled = true;
+    $("find-markets").disabled = true;
+    step("st-retrieve", "done"); step("st-fit", "done");
+    $("demo-journey-state").textContent =
+      "AGI 2028 · " + (version === "current" ? "current relatedness proposal" : "original saved run") +
+      ". Three real contracts; no fresh prices or model calls.";
+  } catch (e) {
+    if (!current()) return;
+    $("demo-journey-state").textContent = "Historical case unavailable: " + (e.detail || e.message);
+    err("s1-err", "Historical evidence could not be loaded. Choose another journey or reload.");
+  }
+}
+
+async function switchHistoricalVersion(version) {
+  if (!historicalInspection || historicalSwitchPending || demoJourneyPending ||
+      !["current", "original"].includes(version)) return;
+  historicalSwitchPending = true;
+  resetDownstream();
+  setDemoJourneyUrl("history", null, version);
+  $("historical-current").disabled = true;
+  $("historical-original").disabled = true;
+  try {
+    await loadHistoricalDemo(chain.requestToken);
+  } finally {
+    historicalSwitchPending = false;
+  }
+}
+
+function curatedAgiCaseIsBound(item) {
+  return item?.schema_version === "fitcheck.agi2028-curated-demo.v1" &&
+    item.case_id === "agi2028" &&
+    item.fixture_kind === "curated_real_contract_comparison" &&
+    item.pool_outcome === "no_clean_expression" &&
+    typeof item.thesis_wording === "string" && item.thesis_wording.trim() &&
+    typeof item.criterion_note === "string" &&
+    typeof item.provenance_note === "string" &&
+    Array.isArray(item.markets) && item.markets.length === 3 &&
+    item.markets.map(market => market.key).join(",") === "rsi,millennium,agi" &&
+    item.markets.every((market, rank) =>
+      market.earlier_class === "not_an_expression" &&
+      market.current_class === (rank === 0 ? "weak_proxy" : "not_an_expression") &&
+      typeof market.conditions_summary === "string" &&
+      Array.isArray(market.captures) && Array.isArray(market.misses)) &&
+    !Object.hasOwn(item, "accepted_state") && !Object.hasOwn(item, "market_pool");
+}
+
+function curatedAgiCard(market, rank, version) {
+  const card = document.createElement("article");
+  card.className = "curated-card";
+  card.dataset.marketKey = market.key;
+  const heading = document.createElement("h3");
+  heading.textContent = rank + ". " + market.title;
+  const label = document.createElement("p");
+  label.className = "market-meta";
+  const pairClass = version === "current" ? market.current_class : market.earlier_class;
+  label.textContent = "Deadline " + market.deadline + " · " +
+    (PAIR_LABEL[pairClass] || pairClass) +
+    (version === "current"
+      ? (market.key === "rsi"
+        ? " · unreviewed relatedness proposal" : " · unchanged automatic label")
+      : " · earlier automatic label");
+  const conditions = document.createElement("details");
+  const conditionHeading = document.createElement("summary");
+  conditionHeading.textContent = "Project-authored condition summary";
+  const conditionText = document.createElement("p");
+  conditionText.textContent = market.conditions_summary;
+  conditions.append(conditionHeading, conditionText);
+  const addList = (title, items) => {
+    const heading = document.createElement("h4");
+    heading.textContent = title;
+    const list = document.createElement("ul");
+    items.forEach(item => {
+      const row = document.createElement("li");
+      row.textContent = item;
+      list.append(row);
+    });
+    card.append(heading, list);
+  };
+  card.append(heading, label, conditions);
+  addList("What it captures", market.captures);
+  addList("Why it misses the thesis", market.misses);
+  const explanationHeading = document.createElement("h4");
+  explanationHeading.textContent = "Why this label";
+  const explanation = document.createElement("p");
+  explanation.textContent = market.relatedness_explanation;
+  const counterexampleHeading = document.createElement("h4");
+  counterexampleHeading.textContent = "Counterexample";
+  const counterexample = document.createElement("p");
+  counterexample.textContent = market.outcome_example;
+  card.append(explanationHeading, explanation, counterexampleHeading, counterexample);
+  return card;
+}
+
+async function loadCuratedAgiDemo(tokenAtCall = chain.requestToken) {
+  const sessionAtCall = demoSessionRef;
+  const current = () => tokenAtCall === chain.requestToken &&
+    sessionAtCall === demoSessionRef;
+  curatedAgiInspection = true;
+  $("run").disabled = true;
+  $("find-markets").disabled = true;
+  try {
+    const metadata = curatedAgiMetadata;
+    if (!metadata || metadata.case_id !== "agi2028") {
+      throw new Error("This curated case is not configured on this server");
+    }
+    const out = await api("/api/demo/agi2028");
+    if (!current()) return;
+    const version = requestedHistoricalVersion();
+    if (!version || out.sha256 !== metadata.sha256 ||
+        out.session_ref !== sessionAtCall || !curatedAgiCaseIsBound(out.case)) {
+      throw new Error("Curated AGI case identity mismatch; nothing was rendered");
+    }
+    const item = out.case;
+    $("curated-agi-case").dataset.binding = JSON.stringify({
+      case_id: item.case_id, sha256: out.sha256, history_version: version,
+      market_keys: item.markets.map(market => market.key)
+    });
+    $("curated-agi-title").textContent = item.title;
+    $("curated-agi-version-note").textContent = version === "current"
+      ? "Current relatedness proposal · curated reconstruction · not human-reviewed"
+      : "Earlier automatic labels · curated reconstruction, not the exact private saved run";
+    $("curated-agi-current").disabled = version === "current";
+    $("curated-agi-earlier").disabled = version === "original";
+    $("curated-agi-thesis").textContent = "Thesis: " + item.thesis_wording;
+    $("curated-agi-criterion").textContent = item.criterion_note;
+    $("curated-agi-pool").textContent = "3 of 3 compared contracts · " + item.pool_note;
+    const grid = $("curated-agi-cards");
+    grid.innerHTML = "";
+    item.markets.forEach((market, index) =>
+      grid.append(curatedAgiCard(market, index + 1, version)));
+    $("curated-agi-proposal").textContent = item.proposal_note;
+    $("curated-agi-next-steps").textContent = item.next_steps;
+    $("curated-agi-provenance").textContent =
+      item.provenance_note + " Content date " + item.content_date +
+      ". No fresh prices or model calls; the 2028 thesis outcome is unknown.";
+    $("curated-agi-case").hidden = false;
+    for (const id of ["s1", "s2", "s3", "s4", "s5"]) $(id).hidden = true;
+    $("mode").textContent = "mode: curated AGI demonstration · " +
+      (version === "current" ? "current proposal" : "earlier labels");
+    $("demo-journey-state").textContent =
+      "AGI 2028 · three authored contract summaries · no clean expression among these three.";
+  } catch (e) {
+    if (!current()) return;
+    $("curated-agi-case").hidden = true;
+    $("curated-agi-cards").innerHTML = "";
+    $("demo-journey-state").textContent =
+      "Curated AGI case unavailable: " + (e.detail || e.message);
+    err("s1-err", "Curated evidence could not be loaded. Choose another journey or reload.");
+  }
+}
+
+async function switchCuratedAgiVersion(version) {
+  if (!curatedAgiInspection || curatedAgiSwitchPending || demoJourneyPending ||
+      !["current", "original"].includes(version)) return;
+  curatedAgiSwitchPending = true;
+  resetDownstream();
+  setDemoJourneyUrl("history", null, version);
+  $("curated-agi-current").disabled = true;
+  $("curated-agi-earlier").disabled = true;
+  try {
+    await loadCuratedAgiDemo(chain.requestToken);
+  } finally {
+    curatedAgiSwitchPending = false;
+  }
+}
+
 async function beginDemoJourney(kind) {
-  if (!anonymousDemo) return;
+  if (!anonymousDemo || demoJourneyPending ||
+      !["source", "hormuz", "history"].includes(kind)) return;
+  demoJourneyPending = true;
   const status = $("demo-journey-state");
-  $("demo-source").disabled = true;
-  $("demo-hormuz").disabled = true;
+  for (const id of ["demo-source", "demo-hormuz", "demo-history"]) $(id).disabled = true;
+  resetDownstream();
+  const tokenAtCall = chain.requestToken;
+  $("run").disabled = true;
+  $("find-markets").disabled = true;
   status.textContent = "Starting a private fixture session…";
   try {
     const reset = await api("/api/demo/reset", { method: "POST" });
     demoSessionRef = reset.session_ref;
+    if (tokenAtCall !== chain.requestToken) return;
     localStorage.removeItem(SOURCE_JOB_STORAGE_KEY);
     sessionStorage.removeItem(ACCEPTANCE_CASE_STORAGE_KEY);
     clearAcceptanceCase();
-    resetDownstream();
+    setDemoJourneyUrl(kind);
+    $("mode").textContent = "mode: fixture";
     $("input_text").value = "";
     if (kind === "source") {
       $("input_text").value = fixtureSourceExample;
       $("run").disabled = false;
       status.textContent = "Stablecoin / Robinhood · synthetic source. Choose a candidate after finding theses; three synthetic contracts per supported accepted thesis are available.";
       $("s1").scrollIntoView({ block: "start" });
+    } else if (kind === "history") {
+      if (historicalCaseMetadata) await loadHistoricalDemo(tokenAtCall);
+      else await loadCuratedAgiDemo(tokenAtCall);
     } else {
       const seeded = await api("/api/demo/hormuz", { method: "POST" });
+      if (tokenAtCall !== chain.requestToken) return;
       if (!UUID_PATTERN.test(String(seeded.revision_id || ""))) {
         throw new Error("Hormuz fixture identity is unavailable");
       }
-      const params = new URLSearchParams(window.location.search);
-      params.set(RESUME_REVISIT_REVISION_ID_PARAM, seeded.revision_id);
-      window.history.replaceState(window.history.state, "",
-        (window.location.pathname || "/") + "?" + params.toString() +
-        "#revisit-followup");
+      setDemoJourneyUrl(kind, seeded.revision_id);
       status.textContent = "Hormuz · retained rules, reconstructed test-only baseline and decisions.";
       await resumeSavedRevisit(chain.requestToken);
     }
   } catch (e) {
-    status.textContent = "Could not start the selected fixture journey: " + (e.detail || e.message);
+    if (tokenAtCall === chain.requestToken) status.textContent =
+      "Could not start the selected fixture journey: " + (e.detail || e.message);
   } finally {
-    $("demo-source").disabled = false;
-    $("demo-hormuz").disabled = false;
+    demoJourneyPending = false;
+    for (const id of ["demo-source", "demo-hormuz", "demo-history"]) $(id).disabled = false;
   }
 }
 
 $("demo-source").onclick = () => beginDemoJourney("source");
 $("demo-hormuz").onclick = () => beginDemoJourney("hormuz");
+$("demo-history").onclick = () => beginDemoJourney("history");
+$("historical-current").onclick = () => switchHistoricalVersion("current");
+$("historical-original").onclick = () => switchHistoricalVersion("original");
+$("curated-agi-current").onclick = () => switchCuratedAgiVersion("current");
+$("curated-agi-earlier").onclick = () => switchCuratedAgiVersion("original");
 
 api("/api/health").catch((e) => {
   if (e.error !== "session_expired") throw e;
@@ -3814,6 +4274,10 @@ api("/api/health").catch((e) => {
   productMode = h.mode;
   anonymousDemo = h.anonymous_demo === true;
   demoSessionRef = h.session_ref || null;
+  historicalCaseMetadata = h.historical_case || null;
+  curatedAgiMetadata = h.curated_agi_case || null;
+  $("demo-history").hidden = !anonymousDemo ||
+    !(historicalCaseMetadata || curatedAgiMetadata);
   if (anonymousDemo) {
     $("demo-journeys").hidden = false;
     $("input_text").readOnly = true;
@@ -3834,6 +4298,20 @@ api("/api/health").catch((e) => {
   }
 }).then(async () => {
   if (!anonymousDemo) loadLedger();
+  const historyParam = new URLSearchParams(window.location.search).get("demo_history");
+  if (historyParam !== null) {
+    if (BOOTSTRAP_RESUME_TOKEN !== chain.requestToken) return;
+    if (historyParam !== "agi2028" || !anonymousDemo) {
+      err("s1-err", "Historical case is unavailable on this server.");
+      return;
+    }
+    if (historicalCaseMetadata) await loadHistoricalDemo(BOOTSTRAP_RESUME_TOKEN);
+    else {
+      resetDownstream();
+      await loadCuratedAgiDemo(chain.requestToken);
+    }
+    return;
+  }
   const revisitRequested = await resumeSavedRevisit(BOOTSTRAP_RESUME_TOKEN);
   if (revisitRequested) return;
   const resumeRequested = await resumeAcceptedThesis(BOOTSTRAP_RESUME_TOKEN);
